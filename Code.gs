@@ -473,45 +473,254 @@ class SheetRepository extends BaseRepository {
   }
 }
 
-// Placeholder functions for product handling (to be replaced with actual implementations)
+// Product handling functions using repository pattern
 function handleCreateProduct(params) {
-  // In a real implementation, we would use the repository pattern
-  // For now, return a mock response
-  return {
-    success: true,
-    message: 'Product created successfully',
-    data: Object.assign({ id: Date.now().toString() }, params)
-  };
+  try {
+    // Validate required fields
+    const requiredFields = ['codigo', 'nombre', 'categoria', 'unidadMedida', 'precioCosto', 'precioVenta', 'stockActual', 'stockMinimo', 'stockMaximo'];
+    for (const field of requiredFields) {
+      if (params[field] === undefined || params[field] === '') {
+        return {
+          success: false,
+          error: `Missing required field: ${field}`
+        };
+      }
+    }
+    
+    // Validate numeric fields
+    const numericFields = ['precioCosto', 'precioVenta', 'stockActual', 'stockMinimo', 'stockMaximo'];
+    for (const field of numericFields) {
+      if (isNaN(params[field]) || params[field] < 0) {
+        return {
+          success: false,
+          error: `Invalid value for ${field}: must be a non-negative number`
+        };
+      }
+    }
+    
+    // Validate business rule: precioVenta >= precioCosto
+    if (params.precioVenta < params.precioCosto) {
+      return {
+        success: false,
+        error: 'Sale price must be greater than or equal to cost price'
+      };
+    }
+    
+    // Validate business rule: stockMinimo <= stockMaximo
+    if (params.stockMinimo > params.stockMaximo) {
+      return {
+        success: false,
+        error: 'Minimum stock cannot be greater than maximum stock'
+      };
+    }
+    
+    // Check if product code already exists
+    const existingProduct = SheetRepository.findById(params.codigo); // Using codigo as ID for simplicity
+    if (existingProduct) {
+      return {
+        success: false,
+        error: 'Product code already exists'
+      };
+    }
+    
+    // Set timestamps
+    const now = new Date().toISOString();
+    const productData = Object.assign({}, params, {
+      fechaCreacion: now,
+      fechaActualizacion: now,
+      activo: params.activo !== undefined ? params.activo : true
+    });
+    
+    // Use repository to create product
+    const repository = RepositoryFactory.create('sheet', {
+      sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
+      sheetName: 'DB_Inventario'
+    });
+    
+    const createdProduct = repository.create(productData);
+    
+    return {
+      success: true,
+      message: 'Product created successfully',
+      data: createdProduct
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
 function handleGetProducts(params) {
-  // In a real implementation, we would use the repository pattern
-  // For now, return a mock response
-  return {
-    success: true,
-    message: 'Products retrieved successfully',
-    data: []
-  };
+  try {
+    // Parse query parameters
+    const page = parseInt(params.page) || 1;
+    const limit = Math.min(parseInt(params.limit) || 20, 100); // Max 100
+    const sortBy = params.sortBy || 'nombre';
+    const sortOrder = params.sortOrder || 'asc';
+    const filtro = params.filtro || '';
+    const categoria = params.categoria || '';
+    const activoParam = params.activo;
+    
+    // Use repository to get products
+    const repository = RepositoryFactory.create('sheet', {
+      sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
+      sheetName: 'DB_Inventario'
+    });
+    
+    // Get all products
+    let allProducts = repository.getAllRows();
+    
+    // Apply filters
+    if (filtro) {
+      const searchTerm = filtro.toLowerCase();
+      allProducts = allProducts.filter(product => 
+        (product.nombre && product.nombre.toLowerCase().includes(searchTerm)) ||
+        (product.codigo && product.codigo.toLowerCase().includes(searchTerm)) ||
+        (product.descripcion && product.descripcion.toLowerCase().includes(searchTerm))
+      );
+    }
+    
+    if (categoria) {
+      allProducts = allProducts.filter(product => product.categoria === categoria);
+    }
+    
+    if (activoParam !== undefined) {
+      const activoBool = activoParam === 'true';
+      allProducts = allProducts.filter(product => product.activo === activoBool.toString());
+    }
+    
+    // Apply sorting
+    const reverse = sortOrder === 'desc';
+    allProducts.sort((a, b) => {
+      if (a[sortBy] < b[sortBy]) return reverse ? 1 : -1;
+      if (a[sortBy] > b[sortBy]) return reverse ? -1 : 1;
+      return 0;
+    });
+    
+    // Apply pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedProducts = allProducts.slice(startIndex, endIndex);
+    
+    // Build pagination info
+    const pagination = {
+      page: page,
+      limit: limit,
+      totalItems: allProducts.length,
+      totalPages: Math.ceil(allProducts.length / limit),
+      hasNext: endIndex < allProducts.length,
+      hasPrev: page > 1
+    };
+    
+    return {
+      success: true,
+      message: 'Products retrieved successfully',
+      data: {
+        items: paginatedProducts,
+        pagination: pagination
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
 function handleGetProduct(params) {
-  // In a real implementation, we would use the repository pattern
-  // For now, return a mock response
-  return {
-    success: true,
-    message: 'Product retrieved successfully',
-    data: {}
-  };
+  try {
+    // Get product by ID (using codigo as ID for simplicity)
+    const repository = RepositoryFactory.create('sheet', {
+      sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
+      sheetName: 'DB_Inventario'
+    });
+    
+    const product = repository.findById(params.id || params.codigo);
+    
+    if (!product) {
+      return {
+        success: false,
+        error: 'Product not found'
+      };
+    }
+    
+    return {
+      success: true,
+      message: 'Product retrieved successfully',
+      data: product
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
 function handleUpdateProduct(params) {
-  // In a real implementation, we would use the repository pattern
-  // For now, return a mock response
-  return {
-    success: true,
-    message: 'Product updated successfully',
-    data: params
-  };
+  try {
+    // Validate required fields
+    if (!params.id && !params.codigo) {
+      return {
+        success: false,
+        error: 'Missing product ID or codigo'
+      };
+    }
+    
+    // Validate numeric fields if present
+    const numericFields = ['precioCosto', 'precioVenta', 'stockActual', 'stockMinimo', 'stockMaximo'];
+    for (const field of numericFields) {
+      if (params[field] !== undefined && (isNaN(params[field]) || params[field] < 0)) {
+        return {
+          success: false,
+          error: `Invalid value for ${field}: must be a non-negative number`
+        };
+      }
+    }
+    
+    // Validate business rule: precioVenta >= precioCosto
+    if (params.precioVenta !== undefined && params.precioCosto !== undefined && params.precioVenta < params.precioCosto) {
+      return {
+        success: false,
+        error: 'Sale price must be greater than or equal to cost price'
+      };
+    }
+    
+    // Validate business rule: stockMinimo <= stockMaximo
+    if (params.stockMinimo !== undefined && params.stockMaximo !== undefined && params.stockMinimo > params.stockMaximo) {
+      return {
+        success: false,
+        error: 'Minimum stock cannot be greater than maximum stock'
+      };
+    }
+    
+    // Set update timestamp
+    const updateData = Object.assign({}, params, {
+      fechaActualizacion: new Date().toISOString()
+    });
+    
+    // Use repository to update product
+    const repository = RepositoryFactory.create('sheet', {
+      sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
+      sheetName: 'DB_Inventario'
+    });
+    
+    const updatedProduct = repository.update(params.id || params.codigo, updateData);
+    
+    return {
+      success: true,
+      message: 'Product updated successfully',
+      data: updatedProduct
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
 function handleDeleteProduct(params) {
@@ -522,6 +731,95 @@ function handleDeleteProduct(params) {
     message: 'Product deleted successfully',
     data: params
   };
+}
+
+/**
+ * Initialize the product sheet with headers if it doesn't exist
+ * This function should be called once to set up the DB_Inventario sheet
+ */
+function initializeProductSheet() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('DB_Inventario');
+    
+    // If sheet doesn't exist, create it
+    if (!sheet) {
+      sheet = ss.insertSheet('DB_Inventario');
+      
+      // Define headers based on product entity schema
+      const headers = [
+        'id',
+        'codigo',
+        'nombre',
+        'descripcion',
+        'categoria',
+        'subcategoria',
+        'unidadMedida',
+        'precioCosto',
+        'precioVenta',
+        'stockActual',
+        'stockMinimo',
+        'stockMaximo',
+        'activo',
+        'fechaCreacion',
+        'fechaActualizacion',
+        'creadoPor',
+        'actualizadoPor'
+      ];
+      
+      // Set headers in the first row
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      
+      // Format header row (bold, background color)
+      sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold')
+                                           .setBackground('#f0f0f0');
+                                           
+      return {
+        success: true,
+        message: 'Product sheet initialized successfully',
+        data: { sheetName: 'DB_Inventario', headers: headers }
+      };
+    } else {
+      return {
+        success: true,
+        message: 'Product sheet already exists',
+        data: { sheetName: 'DB_Inventario' }
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+    
+    // Use repository to delete product
+    const repository = RepositoryFactory.create('sheet', {
+      sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
+      sheetName: 'DB_Inventario'
+    });
+    
+    const success = repository.delete(params.id || params.codigo);
+    
+    if (!success) {
+      return {
+        success: false,
+        error: 'Product not found'
+      };
+    }
+    
+    return {
+      success: true,
+      message: 'Product deleted successfully',
+      data: { id: params.id || params.codigo }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
 /**

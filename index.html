@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIAS ERP - Sistema de Gestión</title>
+    
+    <!-- Vue 3.5 -->
+    <script src="https://unpkg.com/vue@3.5.0/dist/vue.global.prod.js"></script>
+    
+    <!-- Pinia for state management -->
+    <script src="https://unpkg.com/pinia@latest/dist/pinia.iife.js"></script>
+    
+    <!-- Axios for HTTP requests -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+    
+    <!-- Zod for validation -->
+    <script src="https://cdn.jsdelivr.net/npm/zod@3.22.4/dist/zod.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PrimeVue -->
+    <link rel="stylesheet" href="https://unpkg.com/primevue@4.0.0/resources/themes/lara-light-indigo/theme.css">
+    <link rel="stylesheet" href="https://unpkg.com/primevue@4.0.0/resources/primevue.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/primeicons@6.0.1/primeicons.css">
+    <script src="https://unpkg.com/primevue@4.0.0/dist/primevue.umd.cjs"></script>
+    
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        tailwindcss = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#64748b',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        error: '#ef4444'
+                    }
+                }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <div id="app">
+        <!-- App content will be rendered here -->
+    </div>
+
+    <script>
+        // Initialize Vue 3 app
+        const { createApp } = Vue;
+        const { createPinia } = Pinia;
+        const { createRouter, createWebHistory } = VueRouter;
+        const { PrimeVue } = PrimeVuestd;
+
+        // Create app instance
+        const app = createApp({});
+
+        // Create Pinia instance
+        const pinia = createPinia();
+
+        // Use plugins
+        app.use(pinia);
+        app.use(PrimeVue);
+
+        // Mount app
+        app.mount('#app');
+    </script>
+</body>
+</html>
