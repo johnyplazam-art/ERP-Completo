@@ -4,7 +4,7 @@
  */
 
 // JWT Configuration
-const JWT_SECRET = 'SIAS_ERP_SECRET_KEY_2026'; // In production, use PropertiesService
+const JWT_SECRET = PropertiesService.getScriptProperties().getProperty('JWT_SECRET') || 'SIAS_ERP_SECRET_KEY_2026'; // Fallback for development
 const JWT_EXPIRY_HOURS = 24;
 
 /**
@@ -475,6 +475,8 @@ class SheetRepository extends BaseRepository {
 
 // Product handling functions using repository pattern
 function handleCreateProduct(params) {
+  const transactionBuffer = new TransactionBuffer();
+  
   try {
     // Validate required fields
     const requiredFields = ['codigo', 'nombre', 'categoria', 'unidadMedida', 'precioCosto', 'precioVenta', 'stockActual', 'stockMinimo', 'stockMaximo'];
@@ -514,9 +516,14 @@ function handleCreateProduct(params) {
       };
     }
     
-    // Check if product code already exists
-    const existingProduct = SheetRepository.findById(params.codigo); // Using codigo as ID for simplicity
-    if (existingProduct) {
+    // Check if product code already exists by searching for codigo field
+    const repository = RepositoryFactory.create('sheet', {
+      sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
+      sheetName: 'DB_Inventario'
+    });
+    
+    const existingProducts = repository.find({ codigo: params.codigo });
+    if (existingProducts.length > 0) {
       return {
         success: false,
         error: 'Product code already exists'
@@ -531,20 +538,29 @@ function handleCreateProduct(params) {
       activo: params.activo !== undefined ? params.activo : true
     });
     
-    // Use repository to create product
-    const repository = RepositoryFactory.create('sheet', {
-      sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
-      sheetName: 'DB_Inventario'
-    });
+    // Add create operation to transaction buffer
+    transactionBuffer.add(
+      (repo, data) => repo.create(data),
+      repository,
+      productData
+    );
     
-    const createdProduct = repository.create(productData);
+    // Process transaction buffer
+    const results = transactionBuffer.process();
+    const createResult = results[0];
+    
+    if (!createResult.success) {
+      throw new Error(createResult.error);
+    }
     
     return {
       success: true,
       message: 'Product created successfully',
-      data: createdProduct
+      data: createResult.data
     };
   } catch (error) {
+    // Clear buffer on error
+    transactionBuffer.clear();
     return {
       success: false,
       error: error.message
@@ -661,6 +677,8 @@ function handleGetProduct(params) {
 }
 
 function handleUpdateProduct(params) {
+  const transactionBuffer = new TransactionBuffer();
+  
   try {
     // Validate required fields
     if (!params.id && !params.codigo) {
@@ -708,14 +726,30 @@ function handleUpdateProduct(params) {
       sheetName: 'DB_Inventario'
     });
     
-    const updatedProduct = repository.update(params.id || params.codigo, updateData);
+    // Add update operation to transaction buffer
+    transactionBuffer.add(
+      (repo, id, data) => repo.update(id, data),
+      repository,
+      params.id || params.codigo,
+      updateData
+    );
+    
+    // Process transaction buffer
+    const results = transactionBuffer.process();
+    const updateResult = results[0];
+    
+    if (!updateResult.success) {
+      throw new Error(updateResult.error);
+    }
     
     return {
       success: true,
       message: 'Product updated successfully',
-      data: updatedProduct
+      data: updateResult.data
     };
   } catch (error) {
+    // Clear buffer on error
+    transactionBuffer.clear();
     return {
       success: false,
       error: error.message
@@ -724,13 +758,58 @@ function handleUpdateProduct(params) {
 }
 
 function handleDeleteProduct(params) {
-  // In a real implementation, we would use the repository pattern
-  // For now, return a mock response
-  return {
-    success: true,
-    message: 'Product deleted successfully',
-    data: params
-  };
+  const transactionBuffer = new TransactionBuffer();
+  
+  try {
+    // Validate required fields
+    if (!params.id && !params.codigo) {
+      return {
+        success: false,
+        error: 'Missing product ID or codigo'
+      };
+    }
+    
+    // Use repository to delete product
+    const repository = RepositoryFactory.create('sheet', {
+      sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
+      sheetName: 'DB_Inventario'
+    });
+    
+    // Add delete operation to transaction buffer
+    transactionBuffer.add(
+      (repo, id) => repo.delete(id),
+      repository,
+      params.id || params.codigo
+    );
+    
+    // Process transaction buffer
+    const results = transactionBuffer.process();
+    const deleteResult = results[0];
+    
+    if (!deleteResult.success) {
+      throw new Error(deleteResult.error);
+    }
+    
+    if (!deleteResult.data) {
+      return {
+        success: false,
+        error: 'Product not found'
+      };
+    }
+    
+    return {
+      success: true,
+      message: 'Product deleted successfully',
+      data: { id: params.id || params.codigo }
+    };
+  } catch (error) {
+    // Clear buffer on error
+    transactionBuffer.clear();
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
 /**
@@ -794,33 +873,6 @@ function initializeProductSheet() {
   }
 }
     
-    // Use repository to delete product
-    const repository = RepositoryFactory.create('sheet', {
-      sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
-      sheetName: 'DB_Inventario'
-    });
-    
-    const success = repository.delete(params.id || params.codigo);
-    
-    if (!success) {
-      return {
-        success: false,
-        error: 'Product not found'
-      };
-    }
-    
-    return {
-      success: true,
-      message: 'Product deleted successfully',
-      data: { id: params.id || params.codigo }
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
 
 /**
  * Handle authentication requests
