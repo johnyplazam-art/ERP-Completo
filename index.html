@@ -50,25 +50,23 @@
         <!-- App content will be rendered here -->
     </div>
 
-    <script>
-        // Initialize Vue 3 app
-        const { createApp } = Vue;
-        const { createPinia } = Pinia;
-        const { createRouter, createWebHistory } = VueRouter;
-        const { PrimeVue } = PrimeVuestd;
+    <!-- Load our Vue app -->
+    <script type="module">
+        // Import our Vue app components
+        import { createApp } from 'https://unpkg.com/vue@3.5.0/dist/vue.esm-browser.prod.js'
+        import { createPinia } from 'https://unpkg.com/pinia@latest/dist/pinia.esm.js'
+        import App from './src/App.vue'
+        import './src/main.js' // This will mount the app
 
         // Create app instance
-        const app = createApp({});
-
-        // Create Pinia instance
-        const pinia = createPinia();
-
-        // Use plugins
-        app.use(pinia);
-        app.use(PrimeVue);
-
-        // Mount app
-        app.mount('#app');
+        const app = createApp(App)
+        
+        // Create and use Pinia
+        const pinia = createPinia()
+        app.use(pinia)
+        
+        // Mount the app
+        app.mount('#app')
     </script>
 </body>
 </html>
