@@ -3,7 +3,7 @@ import axios from 'https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.esm.js'
 // Create axios instance with base URL from deployment
 // Replace the placeholder with your actual Google Apps Script Web App URL
 const api = axios.create({
-  baseURL: 'https://script.google.com/macros/s/AKfycbz.../exec', // TODO: Replace with your deployment URL
+  baseURL: 'https://script.google.com/macros/s/AKfycbywrQVqLS0FrsjT8ffbUrdU5CiiVyJYzckZpcvWkt1fciv1fnljqn7W7AxgkjdMg4_2Ng/exec',
   timeout: 10000
 })
 
