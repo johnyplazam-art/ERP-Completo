@@ -21,30 +21,53 @@ function doPost(e) {
     const action = data.action;
     const params = data.params || {};
     
+    let result;
+    
     // Route to appropriate handler based on action
     switch (action) {
       case 'createProduct':
-        return handleCreateProduct(params);
+        result = handleCreateProduct(params);
+        break;
       case 'getProducts':
-        return handleGetProducts(params);
+        result = handleGetProducts(params);
+        break;
       case 'updateProduct':
-        return handleUpdateProduct(params);
+        result = handleUpdateProduct(params);
+        break;
       case 'deleteProduct':
-        return handleDeleteProduct(params);
+        result = handleDeleteProduct(params);
+        break;
       case 'authenticate':
-        return handleAuthenticate(params);
+        result = handleAuthenticate(params);
+        break;
+      case 'setup':
+        result = handleSetup(params);
+        break;
       default:
-        return {
+        result = {
           success: false,
           error: 'Invalid action: ' + action
         };
     }
+    
+    return jsonResponse(result);
   } catch (error) {
-    return {
+    return jsonResponse({
       success: false,
       error: error.message
-    };
+    });
   }
+}
+
+/**
+ * Wraps an object as a JSON TextOutput for GAS web app
+ * @param {Object} data - Data to return as JSON
+ * @returns {TextOutput}
+ */
+function jsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
@@ -65,23 +88,29 @@ function doGet(e) {
       }
     }
     
+    let result;
+    
     // Route to appropriate handler based on action
     switch (action) {
       case 'getProducts':
-        return handleGetProducts(params);
+        result = handleGetProducts(params);
+        break;
       case 'getProduct':
-        return handleGetProduct(params);
+        result = handleGetProduct(params);
+        break;
       default:
-        return {
+        result = {
           success: false,
           error: 'Invalid action: ' + action
         };
     }
+    
+    return jsonResponse(result);
   } catch (error) {
-    return {
+    return jsonResponse({
       success: false,
       error: error.message
-    };
+    });
   }
 }
 
@@ -399,6 +428,16 @@ class SheetRepository extends BaseRepository {
   }
   
   /**
+   * Find entity by codigo
+   * @param {string} codigo - Product code
+   * @returns {Object|null} Found entity or null
+   */
+  findByCodigo(codigo) {
+    const allRows = this.getAllRows();
+    return allRows.find(row => row.codigo === codigo) || null;
+  }
+  
+  /**
    * Update entity by ID
    * @param {string|number} id - Entity ID
    * @param {Object} data - Update data
@@ -648,13 +687,17 @@ function handleGetProducts(params) {
 
 function handleGetProduct(params) {
   try {
-    // Get product by ID (using codigo as ID for simplicity)
     const repository = RepositoryFactory.create('sheet', {
       sheetId: PropertiesService.getScriptProperties().getProperty('SHEET_ID'),
       sheetName: 'DB_Inventario'
     });
     
-    const product = repository.findById(params.id || params.codigo);
+    let product = null;
+    if (params.id) {
+      product = repository.findById(params.id);
+    } else if (params.codigo) {
+      product = repository.findByCodigo(params.codigo);
+    }
     
     if (!product) {
       return {
@@ -726,11 +769,31 @@ function handleUpdateProduct(params) {
       sheetName: 'DB_Inventario'
     });
     
+    // Resolve the numeric ID from codigo if needed
+    let updateId = params.id;
+    if (!updateId && params.codigo) {
+      const existingProduct = repository.findByCodigo(params.codigo);
+      if (!existingProduct) {
+        return {
+          success: false,
+          error: 'Product not found with codigo: ' + params.codigo
+        };
+      }
+      updateId = existingProduct.id;
+    }
+    
+    if (!updateId) {
+      return {
+        success: false,
+        error: 'Missing product identifier'
+      };
+    }
+    
     // Add update operation to transaction buffer
     transactionBuffer.add(
       (repo, id, data) => repo.update(id, data),
       repository,
-      params.id || params.codigo,
+      updateId,
       updateData
     );
     
@@ -775,11 +838,31 @@ function handleDeleteProduct(params) {
       sheetName: 'DB_Inventario'
     });
     
+    // Resolve the numeric ID from codigo if needed
+    let deleteId = params.id;
+    if (!deleteId && params.codigo) {
+      const existingProduct = repository.findByCodigo(params.codigo);
+      if (!existingProduct) {
+        return {
+          success: false,
+          error: 'Product not found with codigo: ' + params.codigo
+        };
+      }
+      deleteId = existingProduct.id;
+    }
+    
+    if (!deleteId) {
+      return {
+        success: false,
+        error: 'Missing product identifier'
+      };
+    }
+    
     // Add delete operation to transaction buffer
     transactionBuffer.add(
       (repo, id) => repo.delete(id),
       repository,
-      params.id || params.codigo
+      deleteId
     );
     
     // Process transaction buffer
@@ -813,18 +896,56 @@ function handleDeleteProduct(params) {
 }
 
 /**
- * Initialize the product sheet with headers if it doesn't exist
- * This function should be called once to set up the DB_Inventario sheet
+ * Handler for system setup: creates spreadsheet and initializes product sheet
+ * @param {Object} params - Setup parameters
+ * @returns {Object} Setup result
  */
-function initializeProductSheet() {
+function handleSetup(params) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName('DB_Inventario');
+    let sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+    let ss;
     
-    // If sheet doesn't exist, create it
+    if (sheetId) {
+      // Try to open existing spreadsheet
+      try {
+        ss = SpreadsheetApp.openById(sheetId);
+      } catch (e) {
+        // Sheet doesn't exist anymore, create new one
+        sheetId = null;
+      }
+    }
+    
+    if (!sheetId) {
+      // Create a new spreadsheet
+      ss = SpreadsheetApp.create('SIAS ERP - Data');
+      sheetId = ss.getId();
+      
+      // Remove default sheets created by GAS (keep at least one)
+      const defaultSheets = ss.getSheets();
+      for (let i = defaultSheets.length - 1; i > 0; i--) {
+        ss.deleteSheet(defaultSheets[i]);
+      }
+      // Rename the first remaining sheet
+      ss.getSheets()[0].setName('DB_Inventario');
+      
+      // Save the sheet ID
+      PropertiesService.getScriptProperties().setProperty('SHEET_ID', sheetId);
+    }
+    
+    // Get or create the product sheet
+    let sheet = ss.getSheetByName('DB_Inventario');
+    let created = false;
+    
     if (!sheet) {
       sheet = ss.insertSheet('DB_Inventario');
-      
+      created = true;
+    }
+    
+    // Check if headers are already set (first row has data)
+    const lastCol = sheet.getLastColumn();
+    const isInitialized = lastCol > 0 && sheet.getRange(1, 1, 1, lastCol).getValues()[0][0] === 'id';
+    
+    if (!isInitialized) {
       // Define headers based on product entity schema
       const headers = [
         'id',
@@ -852,19 +973,20 @@ function initializeProductSheet() {
       // Format header row (bold, background color)
       sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold')
                                            .setBackground('#f0f0f0');
-                                           
-      return {
-        success: true,
-        message: 'Product sheet initialized successfully',
-        data: { sheetName: 'DB_Inventario', headers: headers }
-      };
-    } else {
-      return {
-        success: true,
-        message: 'Product sheet already exists',
-        data: { sheetName: 'DB_Inventario' }
-      };
     }
+    
+    // Set the sheetId property if it was just saved
+    PropertiesService.getScriptProperties().setProperty('SHEET_ID', sheetId);
+    
+    return {
+      success: true,
+      message: created ? 'Sheet created and initialized' : 'Sheet already exists',
+      data: {
+        sheetId: sheetId,
+        sheetName: 'DB_Inventario',
+        spreadsheetUrl: ss.getUrl()
+      }
+    };
   } catch (error) {
     return {
       success: false,
