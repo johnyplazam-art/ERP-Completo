@@ -28,6 +28,13 @@ const filteredIngredientes = computed(() => {
   <div>
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-2xl font-bold text-gray-900">Inventario de Materia Prima</h2>
+      <router-link
+        to="/panaderia/inventario/nuevo"
+        class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+      >
+        <i class="pi pi-plus mr-2"></i>
+        Nuevo Ingrediente
+      </router-link>
     </div>
 
     <!-- Filters -->

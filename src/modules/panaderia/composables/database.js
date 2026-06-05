@@ -177,7 +177,7 @@ export async function fetchOrdenesProduccion() {
     .from('ordenes_produccion')
     .select(`
       *,
-      responsable:perfiles!ordenes_produccion_usuario_responsable_id_fkey(nombre),
+      responsable:perfiles(nombre),
       detalles:orden_produccion_detalle(
         *,
         producto:productos(nombre),

@@ -43,6 +43,8 @@ async function handleLogout() {
             { to: '/panaderia', icon: 'pi pi-home', label: 'Panadería' },
             { to: '/panaderia/recetas', icon: 'pi pi-book', label: 'Recetas' },
             { to: '/panaderia/inventario', icon: 'pi pi-box', label: 'Inventario' },
+            { to: '/panaderia/productos', icon: 'pi pi-tag', label: 'Productos' },
+            { to: '/panaderia/proveedores', icon: 'pi pi-truck', label: 'Proveedores' },
             { to: '/panaderia/produccion', icon: 'pi pi-cog', label: 'Producción' },
           ]"
           :key="item.to"
