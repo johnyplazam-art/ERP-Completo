@@ -5,10 +5,7 @@ import { RouterLink, RouterView, createRouter, createWebHashHistory } from 'vue-
 import ProductTable from './components/ProductTable.js'
 import ProductFormModal from './components/ProductFormModal.js'
 
-// Use shared axios instance from api module
-import api from './api/axiosInstance.js'
-// Make it globally available for login in the template
-window.$api = api
+import { supabaseAuth } from './api/supabase.js'
 
 // Routes
 const routes = [
@@ -71,8 +68,8 @@ const app = createApp({
         <div v-if="loginError" class="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 text-sm mb-4">{{ loginError }}</div>
         <form @submit.prevent="handleLogin" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
-            <input v-model="loginForm.username" type="text" required
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input v-model="loginForm.email" type="email" required
               class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
           </div>
           <div>
@@ -84,6 +81,39 @@ const app = createApp({
             class="w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
             {{ loginLoading ? 'Ingresando...' : 'Ingresar' }}
           </button>
+          <p class="text-xs text-gray-500 text-center mt-2">
+            \u00bfNo ten\u00e9s cuenta? 
+            <a href="#" @click.prevent="showSignup = true; showLogin = false" class="text-indigo-600 hover:underline">Registrarse</a>
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div v-if="showSignup" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showSignup = false">
+      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Crear Cuenta</h2>
+        <div v-if="signupError" class="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 text-sm mb-4">{{ signupError }}</div>
+        <div v-if="signupSuccess" class="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 text-sm mb-4">{{ signupSuccess }}</div>
+        <form @submit.prevent="handleSignup" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input v-model="signupForm.email" type="email" required
+              class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Contrase\u00f1a</label>
+            <input v-model="signupForm.password" type="password" required minlength="6"
+              class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+          <button type="submit" :disabled="signupLoading"
+            class="w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+            {{ signupLoading ? 'Creando...' : 'Crear Cuenta' }}
+          </button>
+          <p class="text-xs text-gray-500 text-center mt-2">
+            \u00bfYa ten\u00e9s cuenta? 
+            <a href="#" @click.prevent="showSignup = false; showLogin = true" class="text-indigo-600 hover:underline">Iniciar sesi\u00f3n</a>
+          </p>
         </form>
       </div>
     </div>
@@ -91,18 +121,23 @@ const app = createApp({
   data() {
     return {
       showLogin: false,
-      loginForm: { username: '', password: '' },
+      showSignup: false,
+      loginForm: { email: '', password: '' },
+      signupForm: { email: '', password: '' },
+      signupSuccess: '',
       loginLoading: false,
+      signupLoading: false,
       loginError: '',
+      signupError: '',
       globalError: ''
     }
   },
   computed: {
     isLoggedIn() {
-      return !!this.$store?.token
+      return !!localStorage.getItem('sias_token')
     },
     username() {
-      return this.$store?.username || ''
+      return localStorage.getItem('sias_user') || ''
     }
   },
   methods: {
@@ -110,44 +145,46 @@ const app = createApp({
       this.loginLoading = true
       this.loginError = ''
       try {
-        const resp = await window.$api.post('', {
-          action: 'authenticate',
-          params: this.loginForm
-        })
-        if (resp.data.success) {
-          localStorage.setItem('sias_token', resp.data.data.token)
-          if (this.$store) {
-            this.$store.token = resp.data.data.token
-            this.$store.username = this.loginForm.username
-          }
-          this.showLogin = false
-          this.loginForm = { username: '', password: '' }
-          // Reload products
-          window.location.reload()
-        } else {
-          this.loginError = resp.data.error || 'Credenciales inv\u00e1lidas'
-        }
+        const data = await supabaseAuth.login(this.loginForm.email, this.loginForm.password)
+        localStorage.setItem('sias_token', data.access_token)
+        localStorage.setItem('sias_user', data.user?.email || this.loginForm.email)
+        this.showLogin = false
+        this.loginForm = { email: '', password: '' }
+        window.location.reload()
       } catch (err) {
-        this.loginError = err.message || 'Error de conexi\u00f3n'
+        this.loginError = err.message
       } finally {
         this.loginLoading = false
       }
     },
-    logout() {
-      localStorage.removeItem('sias_token')
-      if (this.$store) {
-        this.$store.token = null
-        this.$store.username = ''
+    async handleSignup() {
+      this.signupLoading = true
+      this.signupError = ''
+      this.signupSuccess = ''
+      try {
+        const data = await supabaseAuth.signup(this.signupForm.email, this.signupForm.password)
+        if (data?.user?.identities?.length === 0) {
+          this.signupError = 'Este email ya est\u00e1 registrado'
+        } else {
+          this.signupSuccess = 'Cuenta creada. Revis\u00e1 tu email para confirmar.'
+          this.signupForm = { email: '', password: '' }
+        }
+      } catch (err) {
+        this.signupError = err.message
+      } finally {
+        this.signupLoading = false
       }
+    },
+    logout() {
+      supabaseAuth.logout()
       this.$router.push('/')
     }
   }
 })
 
-// Simple global store for auth state
 app.config.globalProperties.$store = {
   token: localStorage.getItem('sias_token') || null,
-  username: ''
+  username: localStorage.getItem('sias_user') || ''
 }
 
 app.use(pinia)

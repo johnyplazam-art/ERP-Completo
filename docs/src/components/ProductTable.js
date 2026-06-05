@@ -72,8 +72,8 @@ export default {
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.codigo }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.nombre }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.categoria }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">\${{ Number(product.precioVenta).toFixed(2) }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.stockActual }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">\${{ Number(product.precio_venta).toFixed(2) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.stock_actual }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
                 <span v-if="product.activo" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Activo</span>
                 <span v-else class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>
@@ -155,8 +155,8 @@ export default {
       const headers = ['ID', 'C\u00f3digo', 'Nombre', 'Descripci\u00f3n', 'Categor\u00eda', 'Unidad Medida', 'Precio Costo', 'Precio Venta', 'Stock Actual', 'Stock M\u00ednimo', 'Stock M\u00e1ximo', 'Activo']
       const rows = productStore.products.map(p => [
         p.id, p.codigo, p.nombre, (p.descripcion || ''), p.categoria,
-        p.unidadMedida, p.precioCosto, p.precioVenta, p.stockActual,
-        p.stockMinimo, p.stockMaximo, p.activo ? 'S\u00ed' : 'No'
+        p.unidad_medida, p.precio_costo, p.precio_venta, p.stock_actual,
+        p.stock_minimo, p.stock_maximo, p.activo ? 'S\u00ed' : 'No'
       ])
       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })

@@ -142,12 +142,12 @@ export default {
           descripcion: product.descripcion || '',
           categoria: product.categoria || '',
           subcategoria: product.subcategoria || '',
-          unidadMedida: product.unidadMedida || '',
-          precioCosto: Number(product.precioCosto) || 0,
-          precioVenta: Number(product.precioVenta) || 0,
-          stockActual: Number(product.stockActual) || 0,
-          stockMinimo: Number(product.stockMinimo) || 0,
-          stockMaximo: Number(product.stockMaximo) || 0,
+          unidadMedida: product.unidad_medida || '',
+          precioCosto: Number(product.precio_costo) || 0,
+          precioVenta: Number(product.precio_venta) || 0,
+          stockActual: Number(product.stock_actual) || 0,
+          stockMinimo: Number(product.stock_minimo) || 0,
+          stockMaximo: Number(product.stock_maximo) || 0,
           activo: product.activo === true || product.activo === 'true'
         }
       }

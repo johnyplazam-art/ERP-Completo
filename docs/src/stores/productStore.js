@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
-import api from '../api/axiosInstance.js'
+import { supabase } from '../api/supabase.js'
+
+const TABLE = 'productos'
 
 export const useProductStore = defineStore('product', {
   state: () => ({
@@ -23,15 +25,26 @@ export const useProductStore = defineStore('product', {
       this.loading = true
       this.error = null
       try {
-        const response = await api.post('', {
-          action: 'getProducts',
-          params: params
+        const page = params.page || 1
+        const limit = params.limit || 20
+        const offset = (page - 1) * limit
+
+        const { data, count, error } = await supabase.from(TABLE).select('*', {
+          order: 'creado_en.desc',
+          limit,
+          offset,
         })
-        if (response.data.success) {
-          this.products = response.data.data.items
-          this.pagination = response.data.data.pagination
-        } else {
-          throw new Error(response.data.error || 'Failed to fetch products')
+
+        if (error) throw new Error(error)
+
+        this.products = data || []
+        this.pagination = {
+          page,
+          limit,
+          totalItems: count || 0,
+          totalPages: Math.ceil((count || 0) / limit),
+          hasNext: page * limit < (count || 0),
+          hasPrev: page > 1
         }
       } catch (error) {
         this.error = error.message
@@ -40,63 +53,83 @@ export const useProductStore = defineStore('product', {
         this.loading = false
       }
     },
+
     async createProduct(productData) {
       this.loading = true
       this.error = null
       try {
-        const response = await api.post('', {
-          action: 'createProduct',
-          params: productData
+        const { error } = await supabase.from(TABLE).insert({
+          codigo: productData.codigo,
+          nombre: productData.nombre,
+          descripcion: productData.descripcion || '',
+          categoria: productData.categoria,
+          subcategoria: productData.subcategoria || '',
+          unidad_medida: productData.unidadMedida,
+          precio_costo: Number(productData.precioCosto),
+          precio_venta: Number(productData.precioVenta),
+          stock_actual: Number(productData.stockActual),
+          stock_minimo: Number(productData.stockMinimo),
+          stock_maximo: Number(productData.stockMaximo),
         })
-        if (response.data.success) {
-          // Optionally refresh list
-          await this.fetchProducts()
-          return response.data
-        } else {
-          throw new Error(response.data.error || 'Failed to create product')
-        }
+
+        if (error) throw new Error(error)
+
+        await this.fetchProducts()
+        return { success: true }
       } catch (error) {
+        if (error.message?.includes('productos_codigo_unique') || error.message?.includes('duplicate key')) {
+          throw new Error('El c\u00f3digo de producto ya existe')
+        }
         this.error = error.message
         throw error
       } finally {
         this.loading = false
       }
     },
+
     async updateProduct(id, productData) {
       this.loading = true
       this.error = null
       try {
-        const response = await api.post('', {
-          action: 'updateProduct',
-          params: { id, ...productData }
-        })
-        if (response.data.success) {
-          await this.fetchProducts()
-          return response.data
-        } else {
-          throw new Error(response.data.error || 'Failed to update product')
-        }
+        const { error } = await supabase.from(TABLE).update({
+          codigo: productData.codigo,
+          nombre: productData.nombre,
+          descripcion: productData.descripcion || '',
+          categoria: productData.categoria,
+          subcategoria: productData.subcategoria || '',
+          unidad_medida: productData.unidadMedida,
+          precio_costo: Number(productData.precioCosto),
+          precio_venta: Number(productData.precioVenta),
+          stock_actual: Number(productData.stockActual),
+          stock_minimo: Number(productData.stockMinimo),
+          stock_maximo: Number(productData.stockMaximo),
+        }, { id })
+
+        if (error) throw new Error(error)
+
+        await this.fetchProducts()
+        return { success: true }
       } catch (error) {
+        if (error.message?.includes('productos_codigo_unique') || error.message?.includes('duplicate key')) {
+          throw new Error('El c\u00f3digo de producto ya existe')
+        }
         this.error = error.message
         throw error
       } finally {
         this.loading = false
       }
     },
+
     async deleteProduct(id) {
       this.loading = true
       this.error = null
       try {
-        const response = await api.post('', {
-          action: 'deleteProduct',
-          params: { id }
-        })
-        if (response.data.success) {
-          await this.fetchProducts()
-          return response.data
-        } else {
-          throw new Error(response.data.error || 'Failed to delete product')
-        }
+        const { error } = await supabase.from(TABLE).delete({ id })
+
+        if (error) throw new Error(error)
+
+        await this.fetchProducts()
+        return { success: true }
       } catch (error) {
         this.error = error.message
         throw error
@@ -104,6 +137,7 @@ export const useProductStore = defineStore('product', {
         this.loading = false
       }
     },
+
     clearError() {
       this.error = null
     }
