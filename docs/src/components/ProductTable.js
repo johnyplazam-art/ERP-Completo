@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '../stores/productStore.js'
 import ProductFormModal from './ProductFormModal.js'
 
@@ -121,12 +122,21 @@ export default {
     const showCreateModal = ref(false)
     const editProductId = ref(null)
 
+    const route = useRoute()
+    const router = useRouter()
+
     const loadProducts = async () => {
       try {
         await productStore.fetchProducts()
       } catch (err) {
         error.value = err.message
       }
+    }
+
+    // Open modal if navigated with ?newProduct=true
+    if (route.query.newProduct === 'true') {
+      showCreateModal.value = true
+      router.replace({ query: {} })
     }
 
     const handleProductSaved = () => {

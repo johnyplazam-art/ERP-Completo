@@ -5,6 +5,7 @@ import { validateProduct } from '../validations/productValidation.js'
 export default {
   name: 'ProductFormModal',
   props: {
+    show: { type: Boolean, default: false },
     productId: { type: [String, Number], default: null }
   },
   emits: ['update:show', 'saved'],
@@ -117,7 +118,6 @@ export default {
   `,
   setup(props, { emit }) {
     const productStore = useProductStore()
-    const show = ref(false)
     const isSubmitting = ref(false)
     const errors = ref({})
     const formError = ref('')
@@ -160,7 +160,10 @@ export default {
       if (isEdit.value) loadProductData()
     }
     
-    watch(() => props.productId, () => initForm())
+    // Watch show prop to init form when modal opens
+    watch(() => props.show, (newVal) => {
+      if (newVal) initForm()
+    })
     initForm()
     
     const onSubmit = async () => {
@@ -201,6 +204,6 @@ export default {
       initForm()
     }
     
-    return { show, isSubmitting, errors, formError, form, isEdit, onSubmit, onCancelClick }
+    return { isSubmitting, errors, formError, form, isEdit, onSubmit, onCancelClick }
   }
 }

@@ -7,11 +7,11 @@ import ProductFormModal from './components/ProductFormModal.js'
 
 import { supabaseAuth } from './api/supabase.js'
 
-// Routes
+// Routes - all views via ProductTable, modal opens via query params
 const routes = [
   { path: '/', name: 'ProductList', component: ProductTable },
-  { path: '/productos/nuevo', name: 'ProductCreate', component: ProductFormModal },
-  { path: '/productos/:id/editar', name: 'ProductEdit', component: ProductFormModal, props: true }
+  // /productos/nuevo redirects to home with modal trigger
+  { path: '/productos/nuevo', redirect: '/?newProduct=true' },
 ]
 
 const router = createRouter({
