@@ -5,10 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SIAS ERP - Sistema de Gestión</title>
   
-  <!-- Tailwind CSS -->
+  <!-- Tailwind CSS (CDN - dev only) -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- App entry: main.js handles everything (Vue, Pinia, Router) -->
+  <!-- Custom styles -->
+  <style>
+    :root { --primary: 25 118 210; --secondary: 100 116 139; --success: 16 185 129; --warning: 245 158 11; --error: 239 68 68; }
+    .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+  </style>
+  
+  <!-- App entry -->
   <script type="module" src="./src/main.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
