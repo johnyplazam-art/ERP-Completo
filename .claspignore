@@ -1,0 +1,31 @@
+# Frontend files (SPA for GitHub Pages)
+docs/**
+index.html
+
+# Node & build
+node_modules/**
+dist/**
+build/**
+
+# Logs & env
+*.log
+.env*
+
+# Git & IDE
+.git/**
+.gitignore
+.gitattributes
+.idea/**
+.vscode/**
+*~
+
+# GAS config (local only, not for deploy)
+.clasp.json
+.claspignore
+
+# Docs & specs
+**/*.md
+LICENSE
+
+# Temp
+tmp/**
