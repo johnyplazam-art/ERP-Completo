@@ -1,28 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIAS ERP - Sistema de Gestión</title>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Vue 3.5 -->
-  <script type="module">
-    import { createApp } from 'https://unpkg.com/vue@3.5.0/dist/vue.esm-browser.prod.js'
-    import { createPinia } from 'https://unpkg.com/pinia@latest/dist/pinia.esm.js'
-    import App from './src/App.vue'
-    import './src/main.js' // This will mount the app
-    
-    const app = createApp(App)
-    app.use(createPinia())
-    app.mount('#app')
-  </script>
-</head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
-  <div id="app">
-    <!-- App content will be rendered here -->
-  </div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="SIAS ERP - Sistema de Panadería" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>SIAS ERP</title>
+  </head>
+  <body class="bg-gray-50 antialiased">
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>
