@@ -30,6 +30,9 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_SUPABASE_URL: https://thnjjqenlnvsdfkbtwri.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRobmpqcWVubG52c2Rma2J0d3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMDQxNDUsImV4cCI6MjA5NDg4MDE0NX0.lfeJTDS6HoH9SsFU-c09BiT0bAnsTlTiIiyChbu_kRY
         run: npm run build
 
       - name: Upload artifact
