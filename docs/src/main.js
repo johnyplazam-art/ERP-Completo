@@ -2,39 +2,13 @@ import { createApp } from 'https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.esm-
 import { createPinia } from 'https://cdn.jsdelivr.net/npm/pinia@2.1.7/dist/pinia.esm-browser.js'
 import { RouterLink, RouterView } from 'https://cdn.jsdelivr.net/npm/vue-router@4.3.2/dist/vue-router.esm-browser.js'
 import { createRouter, createWebHashHistory } from 'https://cdn.jsdelivr.net/npm/vue-router@4.3.2/dist/vue-router.esm-browser.js'
-import axios from 'https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/esm/axios.js'
-
 import ProductTable from './components/ProductTable.js'
 import ProductFormModal from './components/ProductFormModal.js'
 
-// Configure API client
-const api = axios.create({
-  baseURL: 'https://script.google.com/macros/s/AKfycbwcWbxKD8ka7NVbo1pzmOOCOchEOaj9LoTYTfSkGS4fxRq0JfyLQRe66wI1w_MHseEIEg/exec',
-  timeout: 10000
-})
-
-// Attach JWT token to requests
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('sias_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-// Make api available globally for store and components
+// Use shared axios instance from api module
+import api from './api/axiosInstance.js'
+// Make it globally available for login in the template
 window.$api = api
-
-// Handle 401 globally
-api.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('sias_token')
-    }
-    return Promise.reject(error)
-  }
-)
 
 // Routes
 const routes = [
