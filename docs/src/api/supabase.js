@@ -20,8 +20,8 @@ function getAuthHeaders() {
 // ─── REST API ──────────────────────────────────────────────
 
 export const supabase = {
-  // Get list of rows with optional filters
-  async from(table) {
+  // Get table query builder
+  from(table) {
     const baseUrl = `${PROJECT_URL}/rest/v1/${table}`
 
     return {
@@ -47,13 +47,16 @@ export const supabase = {
 
         const url = `${baseUrl}?${params.toString()}`
         const resp = await fetch(url, {
-          headers: getAuthHeaders(),
+          headers: {
+            ...getAuthHeaders(),
+            'Prefer': 'count=exact',
+          },
         })
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({ message: resp.statusText }))
           throw new Error(err.message || `Error ${resp.status}`)
         }
-        // Read range from headers for total count
+        // Read total count from content-range header
         const contentRange = resp.headers.get('content-range')
         let count = 0
         if (contentRange) {
