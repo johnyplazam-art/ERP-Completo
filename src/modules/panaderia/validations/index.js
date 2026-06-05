@@ -1,5 +1,16 @@
 import { z } from 'zod'
 
+// ─── Helper: required number from <select> ──────────────
+// Los <select> empiezan con :value="null".
+// z.preprocess convierte null → undefined para que Zod
+// muestre required_error en vez de "Expected number, received null".
+function requiredNumber(msg) {
+  return z.preprocess(
+    (val) => (val === null ? undefined : val),
+    z.number({ required_error: msg }).positive(msg)
+  )
+}
+
 // ─── Catálogos ───────────────────────────────────────
 
 export const categoriaSchema = z.object({
@@ -13,8 +24,8 @@ export const unidadMedidaSchema = z.object({
 })
 
 export const conversionUnidadSchema = z.object({
-  unidad_origen_id: z.number().positive('Seleccioná la unidad origen'),
-  unidad_destino_id: z.number().positive('Seleccioná la unidad destino'),
+  unidad_origen_id: requiredNumber('Seleccioná la unidad origen'),
+  unidad_destino_id: requiredNumber('Seleccioná la unidad destino'),
   factor_multiplicacion: z.number().positive('El factor debe ser mayor a 0'),
 }).refine(
   data => data.unidad_origen_id !== data.unidad_destino_id,
@@ -25,8 +36,8 @@ export const conversionUnidadSchema = z.object({
 
 export const ingredienteSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(200),
-  categoria_id: z.number().positive('Seleccioná una categoría'),
-  unidad_base_id: z.number().positive('Seleccioná una unidad'),
+  categoria_id: requiredNumber('Seleccioná una categoría'),
+  unidad_base_id: requiredNumber('Seleccioná una unidad'),
   stock_minimo: z.number().min(0, 'No puede ser negativo').default(0),
   ubicacion: z.string().max(100).default(''),
   perecedero: z.boolean().default(false),
@@ -43,8 +54,8 @@ export const proveedorSchema = z.object({
 })
 
 export const ingredienteProveedorSchema = z.object({
-  ingrediente_id: z.number().positive(),
-  proveedor_id: z.number().positive(),
+  ingrediente_id: requiredNumber('Seleccioná un ingrediente'),
+  proveedor_id: requiredNumber('Seleccioná un proveedor'),
   precio_actual: z.number().min(0, 'El precio no puede ser negativo').default(0),
   plazo_entrega_dias: z.number().min(0).default(0),
   es_preferido: z.boolean().default(false),
@@ -53,20 +64,20 @@ export const ingredienteProveedorSchema = z.object({
 // ─── Recetas ──────────────────────────────────────────
 
 export const recetaIngredienteSchema = z.object({
-  ingrediente_id: z.number().positive('Seleccioná un ingrediente'),
+  ingrediente_id: requiredNumber('Seleccioná un ingrediente'),
   cantidad: z.number().positive('La cantidad debe ser mayor a 0'),
-  unidad_id: z.number().positive('Seleccioná una unidad'),
+  unidad_id: requiredNumber('Seleccioná una unidad'),
   es_opcional: z.boolean().default(false),
   orden: z.number().int().min(0).default(0),
 })
 
 export const recetaSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(200),
-  categoria_id: z.number().positive('Seleccioná una categoría'),
+  categoria_id: requiredNumber('Seleccioná una categoría'),
   instrucciones: z.string().default(''),
   tiempo_preparacion_min: z.number().positive('Debe ser mayor a 0').nullable().optional(),
   rendimiento_cantidad: z.number().positive('Debe ser mayor a 0').default(1),
-  rendimiento_unidad_id: z.number().positive('Seleccioná una unidad'),
+  rendimiento_unidad_id: requiredNumber('Seleccioná una unidad'),
   activa: z.boolean().default(true),
   ingredientes: z.array(recetaIngredienteSchema).min(1, 'Agregá al menos un ingrediente'),
 })
@@ -76,7 +87,7 @@ export const recetaSchema = z.object({
 export const productoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(200),
   descripcion: z.string().max(500).default(''),
-  categoria_id: z.number().positive('Seleccioná una categoría'),
+  categoria_id: requiredNumber('Seleccioná una categoría'),
   receta_id: z.number().positive().nullable().optional(),
   precio_venta: z.number().min(0, 'No puede ser negativo').default(0),
   peso_unitario_gr: z.number().positive('Debe ser mayor a 0').nullable().optional(),
@@ -87,8 +98,8 @@ export const productoSchema = z.object({
 // ─── Producción ───────────────────────────────────────
 
 export const ordenProduccionDetalleSchema = z.object({
-  producto_id: z.number().positive('Seleccioná un producto'),
-  receta_id: z.number().positive('Seleccioná una receta'),
+  producto_id: requiredNumber('Seleccioná un producto'),
+  receta_id: requiredNumber('Seleccioná una receta'),
   cantidad_programada: z.number().positive('Debe ser mayor a 0'),
   lote: z.string().max(50).default(''),
 })
@@ -103,17 +114,17 @@ export const ordenProduccionSchema = z.object({
 // ─── Inventario ──────────────────────────────────────
 
 export const movimientoMpSchema = z.object({
-  ingrediente_id: z.number().positive('Seleccioná un ingrediente'),
+  ingrediente_id: requiredNumber('Seleccioná un ingrediente'),
   tipo: z.enum(['ingreso', 'egreso', 'ajuste', 'merma']),
   cantidad: z.number().refine(val => val !== 0, 'La cantidad no puede ser 0'),
-  unidad_id: z.number().positive('Seleccioná una unidad'),
+  unidad_id: requiredNumber('Seleccioná una unidad'),
   motivo: z.string().max(200).default(''),
   proveedor_id: z.number().positive().nullable().optional(),
   nota: z.string().max(500).default(''),
 })
 
 export const movimientoPtSchema = z.object({
-  producto_id: z.number().positive('Seleccioná un producto'),
+  producto_id: requiredNumber('Seleccioná un producto'),
   tipo: z.enum(['ingreso', 'egreso', 'ajuste', 'merma']),
   cantidad: z.number().refine(val => val !== 0, 'La cantidad no puede ser 0'),
   nota: z.string().max(500).default(''),
@@ -132,5 +143,3 @@ export const mermaSchema = z.object({
   data => data.ingrediente_id || data.producto_id,
   { message: 'Debe especificar ingrediente o producto', path: ['ingrediente_id'] }
 )
-
-
