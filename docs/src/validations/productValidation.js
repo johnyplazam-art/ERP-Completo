@@ -1,4 +1,4 @@
-import { z } from 'https://cdn.jsdelivr.net/npm/zod@3.22.4/lib/index.mjs'
+import { z } from 'zod'
 
 export const productSchema = z.object({
   codigo: z.string().min(1, 'C\u00f3digo es requerido'),

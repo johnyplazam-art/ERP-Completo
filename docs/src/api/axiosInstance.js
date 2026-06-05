@@ -1,4 +1,4 @@
-import axios from 'https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/esm/axios.js'
+import axios from 'axios'
 
 // Create axios instance with base URL from deployment
 // Replace the placeholder with your actual Google Apps Script Web App URL

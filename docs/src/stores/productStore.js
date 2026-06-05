@@ -1,4 +1,4 @@
-import { defineStore } from 'https://cdn.jsdelivr.net/npm/pinia@2.1.7/dist/pinia.esm-browser.js'
+import { defineStore } from 'pinia'
 import api from '../api/axiosInstance.js'
 
 export const useProductStore = defineStore('product', {

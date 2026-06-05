@@ -1,4 +1,4 @@
-import { ref, watch, computed } from 'https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.esm-browser.prod.js'
+import { ref, watch, computed } from 'vue'
 import { useProductStore } from '../stores/productStore.js'
 import { validateProduct } from '../validations/productValidation.js'
 

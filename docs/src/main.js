@@ -1,7 +1,7 @@
-import { createApp } from 'https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.esm-browser.prod.js'
-import { createPinia } from 'https://cdn.jsdelivr.net/npm/pinia@2.1.7/dist/pinia.esm-browser.js'
-import { RouterLink, RouterView } from 'https://cdn.jsdelivr.net/npm/vue-router@4.3.2/dist/vue-router.esm-browser.js'
-import { createRouter, createWebHashHistory } from 'https://cdn.jsdelivr.net/npm/vue-router@4.3.2/dist/vue-router.esm-browser.js'
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import { RouterLink, RouterView, createRouter, createWebHashHistory } from 'vue-router'
+
 import ProductTable from './components/ProductTable.js'
 import ProductFormModal from './components/ProductFormModal.js'
 

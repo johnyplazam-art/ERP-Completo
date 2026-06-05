@@ -1,4 +1,4 @@
-import { ref } from 'https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.esm-browser.prod.js'
+import { ref } from 'vue'
 import { useProductStore } from '../stores/productStore.js'
 import ProductFormModal from './ProductFormModal.js'
 
