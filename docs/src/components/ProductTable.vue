@@ -141,11 +141,10 @@
 </template>
 
 <script>
-import { ref } from 'https://unpkg.com/vue@3.5.0/dist/vue.esm-browser.prod.js'
-import { useProductStore } from '@/stores/productStore.js'
-import { validateProduct } from '@/validations/productValidation.js'
+import { ref } from 'https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.esm-browser.prod.js'
+import { useProductStore } from '../stores/productStore.js'
+import { validateProduct } from '../validations/productValidation.js'
 import { saveAs } from 'https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js'
-import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
 
 export default {
   name: 'ProductTable',

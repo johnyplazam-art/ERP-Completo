@@ -8,17 +8,8 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Vue 3.5 -->
-  <script type="module">
-    import { createApp } from 'https://unpkg.com/vue@3.5.0/dist/vue.esm-browser.prod.js'
-    import { createPinia } from 'https://unpkg.com/pinia@latest/dist/pinia.esm.js'
-    import App from './src/App.vue'
-    import './src/main.js' // This will mount the app
-    
-    const app = createApp(App)
-    app.use(createPinia())
-    app.mount('#app')
-  </script>
+  <!-- App entry: main.js handles everything (Vue, Pinia, Router) -->
+  <script type="module" src="./src/main.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
   <div id="app">

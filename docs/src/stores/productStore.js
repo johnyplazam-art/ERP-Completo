@@ -1,5 +1,5 @@
-import { defineStore } from 'https://unpkg.com/pinia@latest/dist/pinia.esm.js'
-import api from '@/api/axiosInstance.js'
+import { defineStore } from 'https://cdn.jsdelivr.net/npm/pinia@2.1.7/dist/pinia.esm-browser.prod.js'
+import api from '../api/axiosInstance.js'
 
 export const useProductStore = defineStore('product', {
   state: () => ({
@@ -25,7 +25,7 @@ export const useProductStore = defineStore('product', {
       try {
         const response = await api.post('', {
           action: 'getProducts',
-          payload: params
+          params: params
         })
         if (response.data.success) {
           this.products = response.data.data.items
@@ -46,7 +46,7 @@ export const useProductStore = defineStore('product', {
       try {
         const response = await api.post('', {
           action: 'createProduct',
-          payload: productData
+          params: productData
         })
         if (response.data.success) {
           // Optionally refresh list
@@ -68,7 +68,7 @@ export const useProductStore = defineStore('product', {
       try {
         const response = await api.post('', {
           action: 'updateProduct',
-          payload: { id, ...productData }
+          params: { id, ...productData }
         })
         if (response.data.success) {
           await this.fetchProducts()
@@ -89,7 +89,7 @@ export const useProductStore = defineStore('product', {
       try {
         const response = await api.post('', {
           action: 'deleteProduct',
-          payload: { id }
+          params: { id }
         })
         if (response.data.success) {
           await this.fetchProducts()

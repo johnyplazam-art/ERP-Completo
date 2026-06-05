@@ -235,9 +235,9 @@
 </template>
 
 <script>
-import { ref, watch } from 'https://unpkg.com/vue@3.5.0/dist/vue.esm-browser.prod.js'
-import { useProductStore } from '@/stores/productStore.js'
-import { validateProduct } from '@/validations/productValidation.js'
+import { ref, watch } from 'https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.esm-browser.prod.js'
+import { useProductStore } from '../stores/productStore.js'
+import { validateProduct } from '../validations/productValidation.js'
 
 export default {
   name: 'ProductFormModal',

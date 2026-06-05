@@ -1,9 +1,8 @@
-import { createApp } from 'https://unpkg.com/vue@3.5.0/dist/vue.esm-browser.prod.js'
-import { createPinia } from 'https://unpkg.com/pinia@latest/dist/pinia.esm.js'
-import { RouterLink, RouterView } from 'https://unpkg.com/vue-router@4.4.0/dist/vue-router.esm-browser.prod.js'
-import { createRouter, createWebHashHistory } from 'https://unpkg.com/vue-router@4.4.0/dist/vue-router.esm-browser.prod.js'
+import { createApp } from 'https://cdn.jsdelivr.net/npm/vue@3.4.27/dist/vue.esm-browser.prod.js'
+import { createPinia } from 'https://cdn.jsdelivr.net/npm/pinia@2.1.7/dist/pinia.esm-browser.prod.js'
+import { RouterLink, RouterView } from 'https://cdn.jsdelivr.net/npm/vue-router@4.3.2/dist/vue-router.esm-browser.prod.js'
+import { createRouter, createWebHashHistory } from 'https://cdn.jsdelivr.net/npm/vue-router@4.3.2/dist/vue-router.esm-browser.prod.js'
 import axios from 'https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.esm.js'
-import { Message } from 'https://unpkg.com/primevue@4.0.0/dist/primevue.esm.js'
 import '../styles/tailwind.css'
 
 import ProductTable from './components/ProductTable.vue'
@@ -81,7 +80,6 @@ const app = createApp({
 
 app.use(pinia)
 app.use(router)
-app.component('Message', Message)
 app.mount('#app')
 
 function logout() {
