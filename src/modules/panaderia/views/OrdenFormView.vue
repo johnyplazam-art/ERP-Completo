@@ -1,8 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
-import { useProductosQuery, useRecetasQuery, useCreateOrdenMutation } from '../composables/queries'
+import { useForm } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { z } from 'zod'
+import { useProductosQuery, useRecetasQuery, useCreateOrdenMutation, useCalculoIngredientesQuery } from '../composables/queries'
 
 const router = useRouter()
 
@@ -10,20 +13,58 @@ const { data: productos } = useProductosQuery()
 const { data: recetas } = useRecetasQuery()
 const createMutation = useCreateOrdenMutation()
 
-const form = ref({
-  fecha_programada: new Date().toISOString().split('T')[0],
-  nota: '',
-  detalles: [{ producto_id: null, receta_id: null, cantidad_programada: 1, lote: '' }],
+// Cálculo automático de ingredientes
+const detallesValidos = computed(() =>
+  values.detalles?.filter(d => d.producto_id && d.receta_id && d.cantidad_programada > 0) || []
+)
+const { data: ingredientesCalculados, isFetching: calculandoIng } = useCalculoIngredientesQuery(detallesValidos)
+
+// ── Schema ──────────────────────────────────────────
+const detalleSchema = z.object({
+  producto_id: z
+    .number({ required_error: 'Seleccioná un producto', invalid_type_error: 'Seleccioná un producto' })
+    .positive('Seleccioná un producto'),
+  receta_id: z
+    .number({ required_error: 'Seleccioná una receta', invalid_type_error: 'Seleccioná una receta' })
+    .positive('Seleccioná una receta'),
+  cantidad_programada: z
+    .number({ required_error: 'La cantidad es requerida' })
+    .min(1, 'La cantidad debe ser mayor a 0'),
+  lote: z.string().default(''),
 })
 
-const errors = ref({})
+const ordenSchema = z.object({
+  fecha_programada: z.string().min(1, 'La fecha es requerida'),
+  nota: z.string().default(''),
+  detalles: z.array(detalleSchema).min(1, 'Agregá al menos un producto válido'),
+})
+
+// ── Form ──────────────────────────────────────────
+const { handleSubmit, values, errors, setFieldValue, validate } = useForm({
+  validationSchema: toTypedSchema(ordenSchema),
+  initialValues: {
+    fecha_programada: new Date().toISOString().split('T')[0],
+    nota: '',
+    detalles: [{ producto_id: null, receta_id: null, cantidad_programada: 1, lote: '' }],
+  },
+})
+
+// Helper: extrae el valor real de un <select> (Vue guarda el valor real en option._value)
+const getSelectValue = (event) => {
+  const option = event.target.options[event.target.selectedIndex]
+  return option ? option._value : null
+}
 
 const addDetalle = () => {
-  form.value.detalles.push({ producto_id: null, receta_id: null, cantidad_programada: 1, lote: '' })
+  setFieldValue('detalles', [
+    ...values.detalles,
+    { producto_id: null, receta_id: null, cantidad_programada: 1, lote: '' },
+  ])
 }
 
 const removeDetalle = (index) => {
-  form.value.detalles.splice(index, 1)
+  const next = values.detalles.filter((_, i) => i !== index)
+  setFieldValue('detalles', next)
 }
 
 const recetasDeProducto = (productoId) => {
@@ -35,31 +76,15 @@ const recetasDeProducto = (productoId) => {
   return recetas.value?.filter(r => r.activa) ?? []
 }
 
-const submit = async () => {
-  errors.value = {}
-
-  if (!form.value.fecha_programada) {
-    errors.value.fecha = 'La fecha es requerida'
-    return
-  }
-
-  const detallesValidos = form.value.detalles.filter(d => d.producto_id && d.receta_id && d.cantidad_programada > 0)
-  if (!detallesValidos.length) {
-    errors.value.detalles = 'Agregá al menos un producto válido'
-    return
-  }
-
+const onSubmit = handleSubmit(async (formValues) => {
   try {
-    await createMutation.mutateAsync({
-      ...form.value,
-      detalles: detallesValidos,
-    })
+    await createMutation.mutateAsync(formValues)
     toast.success('Orden creada exitosamente')
     router.push('/panaderia/produccion')
   } catch (err) {
     toast.error(err.message || 'Error al crear orden')
   }
-}
+})
 </script>
 
 <template>
@@ -71,7 +96,7 @@ const submit = async () => {
       <h2 class="text-2xl font-bold text-gray-900">Nueva Orden de Producción</h2>
     </div>
 
-    <form @submit.prevent="submit" class="max-w-3xl space-y-6">
+    <form @submit="onSubmit" class="max-w-3xl space-y-6">
       <!-- Info -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h3 class="text-lg font-semibold text-gray-900">Información</h3>
@@ -79,17 +104,19 @@ const submit = async () => {
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Fecha programada *</label>
           <input
-            v-model="form.fecha_programada"
+            :value="values.fecha_programada"
+            @input="setFieldValue('fecha_programada', $event.target.value)"
             type="date"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
           />
-          <p v-if="errors.fecha" class="mt-1 text-sm text-red-600">{{ errors.fecha }}</p>
+          <p v-if="errors.fecha_programada" class="mt-1 text-sm text-red-600">{{ errors.fecha_programada }}</p>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Nota</label>
           <textarea
-            v-model="form.nota"
+            :value="values.nota"
+            @input="setFieldValue('nota', $event.target.value)"
             rows="2"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             placeholder="Nota opcional..."
@@ -114,7 +141,7 @@ const submit = async () => {
         <p v-if="errors.detalles" class="text-sm text-red-600">{{ errors.detalles }}</p>
 
         <div
-          v-for="(det, index) in form.detalles"
+          v-for="(det, index) in values.detalles"
           :key="index"
           class="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-gray-50 rounded-lg"
         >
@@ -122,7 +149,8 @@ const submit = async () => {
 
           <div class="flex-1">
             <select
-              v-model="det.producto_id"
+              :value="values.detalles[index].producto_id"
+              @change="setFieldValue('detalles[' + index + '].producto_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
             >
               <option :value="null" disabled>Producto...</option>
@@ -130,11 +158,15 @@ const submit = async () => {
                 {{ p.nombre }}
               </option>
             </select>
+            <p v-if="errors[`detalles[${index}].producto_id`]" class="mt-1 text-sm text-red-600">
+              {{ errors[`detalles[${index}].producto_id`] }}
+            </p>
           </div>
 
           <div class="flex-1">
             <select
-              v-model="det.receta_id"
+              :value="values.detalles[index].receta_id"
+              @change="setFieldValue('detalles[' + index + '].receta_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
             >
               <option :value="null" disabled>Receta...</option>
@@ -142,25 +174,62 @@ const submit = async () => {
                 {{ r.nombre }}
               </option>
             </select>
+            <p v-if="errors[`detalles[${index}].receta_id`]" class="mt-1 text-sm text-red-600">
+              {{ errors[`detalles[${index}].receta_id`] }}
+            </p>
           </div>
 
           <div class="w-24">
             <input
-              v-model.number="det.cantidad_programada"
+              :value="values.detalles[index].cantidad_programada"
+              @input="setFieldValue('detalles[' + index + '].cantidad_programada', $event.target.valueAsNumber)"
               type="number"
               min="1"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm text-center focus:ring-2 focus:ring-primary-500"
             />
+            <p v-if="errors[`detalles[${index}].cantidad_programada`]" class="mt-1 text-sm text-red-600">
+              {{ errors[`detalles[${index}].cantidad_programada`] }}
+            </p>
           </div>
 
           <button
             type="button"
             @click="removeDetalle(index)"
             class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-            :disabled="form.detalles.length <= 1"
+            :disabled="values.detalles.length <= 1"
           >
             <i class="pi pi-trash"></i>
           </button>
+        </div>
+      </div>
+
+      <!-- Materia prima calculada -->
+      <div
+        v-if="detallesValidos.length && ingredientesCalculados?.length"
+        class="bg-white rounded-xl border border-gray-200 p-6"
+      >
+        <h3 class="text-lg font-semibold text-gray-900 mb-3">Materia prima necesaria</h3>
+        <div v-if="calculandoIng" class="text-sm text-gray-400">
+          <i class="pi pi-spin pi-spinner mr-1"></i> Calculando...
+        </div>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-gray-500 font-medium">
+                <th class="pb-2 pr-4">Ingrediente</th>
+                <th class="pb-2 text-right">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="ing in ingredientesCalculados" :key="ing.ingrediente_id">
+                <td class="py-1.5 pr-4 text-gray-700">{{ ing.nombre }}</td>
+                <td class="py-1.5 text-right text-gray-900 font-medium tabular-nums">
+                  {{ Number(ing.cantidad_total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                  {{ ing.simbolo_unidad }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 

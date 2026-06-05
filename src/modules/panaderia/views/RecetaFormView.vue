@@ -1,6 +1,6 @@
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import { useForm, useFieldArray } from 'vee-validate'
+import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
 import { recetaSchema } from '../validations/index'
@@ -16,7 +16,7 @@ const { data: ingredientes } = useIngredientesQuery({ activo: true })
 const { data: recetas } = useRecetasQuery()
 const createMutation = useCreateRecetaMutation()
 
-const { handleSubmit, values, setFieldValue, resetForm, errors } = useForm({
+const { handleSubmit, values, setFieldValue, errors, validate } = useForm({
   validationSchema: toTypedSchema(recetaSchema),
   initialValues: {
     nombre: '',
@@ -30,16 +30,31 @@ const { handleSubmit, values, setFieldValue, resetForm, errors } = useForm({
   },
 })
 
-const { push, remove, fields } = useFieldArray('ingredientes')
+// Helper: extrae el valor real de un <select> (Vue guarda el valor real en option._value)
+const getSelectValue = (event) => {
+  const option = event.target.options[event.target.selectedIndex]
+  return option ? option._value : null
+}
 
 const addIngrediente = () => {
-  push({
-    ingrediente_id: null,
-    cantidad: 0,
-    unidad_id: null,
-    es_opcional: false,
-    orden: fields.value.length,
-  })
+  setFieldValue('ingredientes', [
+    ...values.ingredientes,
+    { ingrediente_id: null, cantidad: 0, unidad_id: null, es_opcional: false, orden: values.ingredientes.length },
+  ])
+}
+
+const removeIngrediente = (index) => {
+  const next = values.ingredientes.filter((_, i) => i !== index)
+  setFieldValue('ingredientes', next)
+}
+
+const onIngredienteChange = (index, event) => {
+  const selectedId = getSelectValue(event)
+  if (!selectedId) return
+  const ing = ingredientes.value?.find(i => i.id === selectedId)
+  if (ing) {
+    setFieldValue(`ingredientes[${index}].unidad_id`, ing.unidad_base_id)
+  }
 }
 
 const onSubmit = handleSubmit(async (formValues) => {
@@ -73,7 +88,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
             <input
-              v-model="values.nombre"
+              :value="values.nombre"
+              @input="setFieldValue('nombre', $event.target.value)"
               type="text"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
@@ -85,7 +101,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
             <select
-              v-model="values.categoria_id"
+              :value="values.categoria_id"
+              @change="setFieldValue('categoria_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
               <option :value="null" disabled>Seleccionar...</option>
@@ -100,7 +117,8 @@ const onSubmit = handleSubmit(async (formValues) => {
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Instrucciones</label>
           <textarea
-            v-model="values.instrucciones"
+            :value="values.instrucciones"
+            @input="setFieldValue('instrucciones', $event.target.value)"
             rows="3"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
           ></textarea>
@@ -110,7 +128,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Tiempo (min)</label>
             <input
-              v-model.number="values.tiempo_preparacion_min"
+              :value="values.tiempo_preparacion_min"
+              @input="setFieldValue('tiempo_preparacion_min', $event.target.value === '' ? null : $event.target.valueAsNumber)"
               type="number"
               min="1"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
@@ -120,7 +139,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Rendimiento *</label>
             <input
-              v-model.number="values.rendimiento_cantidad"
+              :value="values.rendimiento_cantidad"
+              @input="setFieldValue('rendimiento_cantidad', $event.target.valueAsNumber)"
               type="number"
               min="0.01"
               step="0.01"
@@ -131,7 +151,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Unidad *</label>
             <select
-              v-model="values.rendimiento_unidad_id"
+              :value="values.rendimiento_unidad_id"
+              @change="setFieldValue('rendimiento_unidad_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
               <option :value="null" disabled>Seleccionar...</option>
@@ -160,41 +181,44 @@ const onSubmit = handleSubmit(async (formValues) => {
 
         <p v-if="errors.ingredientes" class="text-sm text-red-600">{{ errors.ingredientes }}</p>
 
-        <div v-for="(field, index) in fields" :key="field.key" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-          <span class="text-sm text-gray-400 w-6">{{ index + 1 }}</span>
+        <div v-for="(ing, index) in values.ingredientes" :key="index" class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+          <span class="text-sm text-gray-400 w-6 mt-2">{{ index + 1 }}</span>
 
           <div class="flex-1">
             <select
-              v-model="field.value.ingrediente_id"
+              :value="values.ingredientes[index].ingrediente_id"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
-              @change="
-                const ing = ingredientes?.find(i => i.id === Number($event.target.value));
-                if (ing) {
-                  setFieldValue(`ingredientes.${index}.unidad_id`, ing.unidad_base_id);
-                }
-              "
+              @change="setFieldValue('ingredientes[' + index + '].ingrediente_id', getSelectValue($event)); onIngredienteChange(index, $event)"
             >
               <option :value="null" disabled>Ingrediente...</option>
-              <option v-for="ing in ingredientes" :key="ing.id" :value="ing.id">
-                {{ ing.nombre }}
+              <option v-for="item in ingredientes" :key="item.id" :value="item.id">
+                {{ item.nombre }}
               </option>
             </select>
+            <p v-if="errors[`ingredientes[${index}].ingrediente_id`]" class="mt-1 text-sm text-red-600">
+              {{ errors[`ingredientes[${index}].ingrediente_id`] }}
+            </p>
           </div>
 
           <div class="w-24">
             <input
-              v-model.number="field.value.cantidad"
+              :value="values.ingredientes[index].cantidad"
+              @input="setFieldValue('ingredientes[' + index + '].cantidad', $event.target.valueAsNumber)"
               type="number"
               min="0.01"
               step="0.01"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm text-center focus:ring-2 focus:ring-primary-500"
               placeholder="Cant."
             />
+            <p v-if="errors[`ingredientes[${index}].cantidad`]" class="mt-1 text-sm text-red-600">
+              {{ errors[`ingredientes[${index}].cantidad`] }}
+            </p>
           </div>
 
           <div class="w-28">
             <select
-              v-model="field.value.unidad_id"
+              :value="values.ingredientes[index].unidad_id"
+              @change="setFieldValue('ingredientes[' + index + '].unidad_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
             >
               <option :value="null" disabled>Unidad</option>
@@ -202,23 +226,26 @@ const onSubmit = handleSubmit(async (formValues) => {
                 {{ u.simbolo }}
               </option>
             </select>
+            <p v-if="errors[`ingredientes[${index}].unidad_id`]" class="mt-1 text-sm text-red-600">
+              {{ errors[`ingredientes[${index}].unidad_id`] }}
+            </p>
           </div>
 
-          <label class="flex items-center gap-1 text-xs text-gray-500">
-            <input type="checkbox" v-model="field.value.es_opcional" class="rounded" />
+          <label class="flex items-center gap-1 text-xs text-gray-500 mt-2">
+            <input type="checkbox" :checked="values.ingredientes[index].es_opcional" @change="setFieldValue('ingredientes[' + index + '].es_opcional', $event.target.checked)" class="rounded" />
             Opc.
           </label>
 
           <button
             type="button"
-            @click="remove(index)"
-            class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+            @click="removeIngrediente(index)"
+            class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg mt-2"
           >
             <i class="pi pi-trash"></i>
           </button>
         </div>
 
-        <div v-if="!fields.length" class="text-center py-6 text-gray-400 text-sm">
+        <div v-if="!values.ingredientes.length" class="text-center py-6 text-gray-400 text-sm">
           No hay ingredientes. Agregá al menos uno.
         </div>
       </div>

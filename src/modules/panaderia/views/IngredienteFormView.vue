@@ -36,6 +36,12 @@ const { handleSubmit, values, resetForm, errors, setFieldValue } = useForm({
   },
 })
 
+// Helper: extrae el valor real de un <select> (Vue guarda el valor real en option._value)
+const getSelectValue = (event) => {
+  const option = event.target.options[event.target.selectedIndex]
+  return option ? option._value : null
+}
+
 // Cargar datos existentes en modo edición
 if (isEdit.value) {
   const ingrediente = computed(() =>
@@ -97,7 +103,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
             <input
-              v-model="values.nombre"
+              :value="values.nombre"
+              @input="setFieldValue('nombre', $event.target.value)"
               type="text"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
@@ -109,7 +116,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
             <select
-              v-model="values.categoria_id"
+              :value="values.categoria_id"
+              @change="setFieldValue('categoria_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
               <option :value="null" disabled>Seleccionar...</option>
@@ -125,7 +133,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Unidad base *</label>
             <select
-              v-model="values.unidad_base_id"
+              :value="values.unidad_base_id"
+              @change="setFieldValue('unidad_base_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
               <option :value="null" disabled>Seleccionar...</option>
@@ -139,7 +148,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Stock mínimo</label>
             <input
-              v-model.number="values.stock_minimo"
+              :value="values.stock_minimo"
+              @input="setFieldValue('stock_minimo', $event.target.valueAsNumber)"
               type="number"
               min="0"
               step="0.01"
@@ -150,7 +160,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
             <input
-              v-model="values.ubicacion"
+              :value="values.ubicacion"
+              @input="setFieldValue('ubicacion', $event.target.value)"
               type="text"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
               placeholder="Estante A3"
@@ -167,7 +178,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <input
             id="perecedero"
             type="checkbox"
-            v-model="values.perecedero"
+            :checked="values.perecedero"
+            @change="setFieldValue('perecedero', $event.target.checked)"
             class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
           <label for="perecedero" class="text-sm font-medium text-gray-700">Es perecedero</label>
@@ -177,7 +189,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Vida útil (días)</label>
             <input
-              v-model.number="values.vida_util_dias"
+              :value="values.vida_util_dias"
+              @input="setFieldValue('vida_util_dias', $event.target.value === '' ? null : $event.target.valueAsNumber)"
               type="number"
               min="1"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
@@ -191,7 +204,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <input
             id="activo"
             type="checkbox"
-            v-model="values.activo"
+            :checked="values.activo"
+            @change="setFieldValue('activo', $event.target.checked)"
             class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
           <label for="activo" class="text-sm font-medium text-gray-700">Activo</label>

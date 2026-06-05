@@ -1,9 +1,11 @@
 <script setup>
 import { ref } from 'vue'
-import { useIngredientesQuery, useCategoriasIngredienteQuery } from '../composables/queries'
+import { toast } from 'vue-sonner'
+import { useIngredientesQuery, useCategoriasIngredienteQuery, useUpdateIngredienteMutation } from '../composables/queries'
 
 const { data: ingredientes, isLoading } = useIngredientesQuery({ activo: true })
 const { data: categorias } = useCategoriasIngredienteQuery()
+const updateMutation = useUpdateIngredienteMutation()
 
 const selectedCategoria = ref(null)
 const searchQuery = ref('')
@@ -22,6 +24,16 @@ const filteredIngredientes = computed(() => {
 
   return list
 })
+
+async function desactivar(ing) {
+  if (!confirm(`¿Desactivar "${ing.nombre}"?\nEl ingrediente dejará de aparecer en el inventario, pero las recetas que lo usan no se verán afectadas.`)) return
+  try {
+    await updateMutation.mutateAsync({ id: ing.id, values: { activo: false } })
+    toast.success(`"${ing.nombre}" desactivado`)
+  } catch (err) {
+    toast.error(err.message || 'Error al desactivar ingrediente')
+  }
+}
 </script>
 
 <template>
@@ -111,6 +123,22 @@ const filteredIngredientes = computed(() => {
             <span class="text-gray-500">Ubicación:</span>
             <span class="font-medium">{{ ing.ubicacion }}</span>
           </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-4 pt-3 border-t border-gray-100 flex justify-end gap-2">
+          <router-link
+            :to="`/panaderia/inventario/${ing.id}`"
+            class="text-sm text-primary-600 hover:text-primary-800 font-medium"
+          >
+            Editar
+          </router-link>
+          <button
+            @click="desactivar(ing)"
+            class="text-sm text-red-500 hover:text-red-700 font-medium"
+          >
+            Desactivar
+          </button>
         </div>
       </div>
     </div>

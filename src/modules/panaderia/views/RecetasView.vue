@@ -1,7 +1,20 @@
 <script setup>
-import { useRecetasQuery } from '../composables/queries'
+import { useRecetasQuery, useDeleteRecetaMutation } from '../composables/queries'
+import { ref } from 'vue'
 
 const { data: recetas, isLoading, error } = useRecetasQuery()
+const { mutate: eliminarReceta } = useDeleteRecetaMutation()
+const expandedRow = ref('')
+
+const toggleRow = (id) => {
+  expandedRow.value = expandedRow.value === id ? '' : id
+}
+
+const confirmarDesactivar = (receta) => {
+  if (window.confirm(`¿Desactivar la receta "${receta.nombre}"?`)) {
+    eliminarReceta(receta.id)
+  }
+}
 </script>
 
 <template>
@@ -49,32 +62,88 @@ const { data: recetas, isLoading, error } = useRecetasQuery()
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="receta in recetas" :key="receta.id" class="hover:bg-gray-50">
-              <td class="px-4 py-3 font-medium text-gray-900">{{ receta.nombre }}</td>
-              <td class="px-4 py-3 text-gray-600">{{ receta.categoria?.nombre }}</td>
-              <td class="px-4 py-3 text-gray-600">
-                {{ receta.rendimiento_cantidad }} {{ receta.unidad?.simbolo }}
-              </td>
-              <td class="px-4 py-3 text-gray-600">
-                {{ receta.tiempo_preparacion_min ? `${receta.tiempo_preparacion_min} min` : '-' }}
-              </td>
-              <td class="px-4 py-3">
-                <span
-                  class="px-2 py-1 text-xs font-medium rounded-full"
-                  :class="receta.activa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
-                >
-                  {{ receta.activa ? 'Activa' : 'Inactiva' }}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                <router-link
-                  :to="`/panaderia/recetas/${receta.id}`"
-                  class="text-primary-600 hover:text-primary-800 text-sm font-medium"
-                >
-                  Editar
-                </router-link>
-              </td>
-            </tr>
+            <template v-for="receta in recetas" :key="receta.id">
+              <tr
+                @click="toggleRow(receta.id)"
+                class="hover:bg-gray-50 cursor-pointer"
+                :class="{ 'bg-primary-50': expandedRow === receta.id }"
+              >
+                <td class="px-4 py-3 font-medium text-gray-900 flex items-center gap-2">
+                  <i
+                    class="pi text-xs transition-transform duration-200"
+                    :class="expandedRow === receta.id ? 'pi-chevron-down' : 'pi-chevron-right'"
+                  ></i>
+                  {{ receta.nombre }}
+                  <span
+                    v-if="receta.ingredientes?.length"
+                    class="text-xs text-gray-400 font-normal"
+                  >
+                    ({{ receta.ingredientes.length }} ingredientes)
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-gray-600">{{ receta.categoria?.nombre }}</td>
+                <td class="px-4 py-3 text-gray-600">
+                  {{ receta.rendimiento_cantidad }} {{ receta.unidad?.simbolo }}
+                </td>
+                <td class="px-4 py-3 text-gray-600">
+                  {{ receta.tiempo_preparacion_min ? `${receta.tiempo_preparacion_min} min` : '-' }}
+                </td>
+                <td class="px-4 py-3">
+                  <span
+                    class="px-2 py-1 text-xs font-medium rounded-full"
+                    :class="receta.activa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                  >
+                    {{ receta.activa ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3" @click.stop>
+                  <div class="flex items-center gap-3">
+                    <router-link
+                      :to="`/panaderia/recetas/${receta.id}`"
+                      class="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                    >
+                      Editar
+                    </router-link>
+                    <button
+                      v-if="receta.activa"
+                      @click="confirmarDesactivar(receta)"
+                      class="text-red-500 hover:text-red-700 text-sm font-medium"
+                    >
+                      Desactivar
+                    </button>
+                    <span v-else class="text-gray-400 text-sm">Desactivada</span>
+                  </div>
+                </td>
+              </tr>
+              <!-- Expanded detail row -->
+              <tr v-if="expandedRow === receta.id" :key="`${receta.id}-detail`">
+                <td colspan="6" class="px-4 py-0 bg-gray-50">
+                  <div class="py-3 animate-fadeIn">
+                    <div v-if="!receta.ingredientes?.length" class="text-sm text-gray-400 text-center py-2">
+                      Sin ingredientes
+                    </div>
+                    <div v-else class="max-w-lg">
+                      <div
+                        v-for="ing in receta.ingredientes"
+                        :key="ing.id"
+                        class="flex items-center justify-between py-1.5 text-sm"
+                      >
+                        <span class="text-gray-700 font-medium">
+                          {{ ing.ingrediente?.nombre }}
+                        </span>
+                        <span class="text-gray-500">
+                          {{ ing.cantidad }} {{ ing.unidad?.simbolo }}
+                          <span
+                            v-if="ing.es_opcional"
+                            class="ml-1 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded"
+                          >Opcional</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>

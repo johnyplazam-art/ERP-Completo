@@ -1,7 +1,14 @@
 <script setup>
-import { useProductosQuery } from '../composables/queries'
+import { useProductosQuery, useDeleteProductoMutation } from '../composables/queries'
 
 const { data: productos, isLoading, error } = useProductosQuery()
+const { mutate: eliminarProducto } = useDeleteProductoMutation()
+
+const confirmarDesactivar = (producto) => {
+  if (window.confirm(`¿Desactivar el producto "${producto.nombre}"?`)) {
+    eliminarProducto(producto.id)
+  }
+}
 
 const formatPeso = (gr) => {
   if (!gr) return '-'
@@ -73,12 +80,22 @@ const formatPeso = (gr) => {
                 </span>
               </td>
               <td class="px-4 py-3">
-                <router-link
-                  :to="`/panaderia/productos/${producto.id}`"
-                  class="text-primary-600 hover:text-primary-800 text-sm font-medium"
-                >
-                  Editar
-                </router-link>
+                <div class="flex items-center gap-3">
+                  <router-link
+                    :to="`/panaderia/productos/${producto.id}`"
+                    class="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                  >
+                    Editar
+                  </router-link>
+                  <button
+                    v-if="producto.activo"
+                    @click="confirmarDesactivar(producto)"
+                    class="text-red-500 hover:text-red-700 text-sm font-medium"
+                  >
+                    Desactivar
+                  </button>
+                  <span v-else class="text-gray-400 text-sm">Desactivado</span>
+                </div>
               </td>
             </tr>
           </tbody>

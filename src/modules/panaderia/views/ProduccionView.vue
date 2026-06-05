@@ -1,14 +1,62 @@
 <script setup>
-import { useOrdenesProduccionQuery, useUpdateOrdenEstadoMutation } from '../composables/queries'
+import { useOrdenesProduccionQuery, useUpdateOrdenEstadoMutation, useDescontarInventarioMutation, calcularIngredientesNecesarios } from '../composables/queries'
+import { ref } from 'vue'
+import { toast } from 'vue-sonner'
 
 const { data: ordenes, isLoading } = useOrdenesProduccionQuery()
 const updateEstado = useUpdateOrdenEstadoMutation()
+const descontarInventario = useDescontarInventarioMutation()
+const expandedRow = ref('')
+const calculosMap = ref({}) // ordenId -> { ingredientes, loading }
+
+const toggleRow = async (id) => {
+  if (expandedRow.value === id) {
+    expandedRow.value = ''
+    return
+  }
+  expandedRow.value = id
+
+  // Cargar cálculo de ingredientes al expandir
+  if (!calculosMap.value[id]) {
+    calculosMap.value = { ...calculosMap.value, [id]: { ingredientes: null, loading: true } }
+    const orden = ordenes.value?.find(o => o.id === id)
+    if (orden?.detalles?.length) {
+      try {
+        const detalles = orden.detalles.map(d => ({
+          producto_id: d.producto_id,
+          receta_id: d.receta_id,
+          cantidad_programada: d.cantidad_programada,
+        }))
+        const ingredientes = await calcularIngredientesNecesarios(detalles)
+        calculosMap.value = { ...calculosMap.value, [id]: { ingredientes, loading: false } }
+      } catch {
+        calculosMap.value = { ...calculosMap.value, [id]: { ingredientes: null, loading: false } }
+      }
+    } else {
+      calculosMap.value = { ...calculosMap.value, [id]: { ingredientes: null, loading: false } }
+    }
+  }
+}
 
 const cambiarEstado = async (id, nuevoEstado) => {
   try {
+    // Si va a en_proceso, descontar inventario automáticamente
+    if (nuevoEstado === 'en_proceso') {
+      const orden = ordenes.value?.find(o => o.id === id)
+      if (orden?.detalles?.length) {
+        const detalles = orden.detalles.map(d => ({
+          producto_id: d.producto_id,
+          receta_id: d.receta_id,
+          cantidad_programada: d.cantidad_programada,
+          id: d.id,
+        }))
+        await descontarInventario.mutateAsync({ ordenId: id, detalles })
+        toast.success('Inventario descontado automáticamente')
+      }
+    }
     await updateEstado.mutateAsync({ id, estado: nuevoEstado })
   } catch (err) {
-    console.error(err)
+    toast.error(err.message || 'Error al cambiar estado')
   }
 }
 
@@ -55,9 +103,17 @@ const puedeCancelar = (estado) => {
         :key="orden.id"
         class="bg-white rounded-xl border border-gray-200 overflow-hidden"
       >
-        <!-- Header -->
-        <div class="flex items-center justify-between p-4 bg-gray-50 border-b">
+        <!-- Header / click to expand -->
+        <div
+          @click="toggleRow(orden.id)"
+          class="flex items-center justify-between p-4 bg-gray-50 border-b cursor-pointer hover:bg-gray-100 transition-colors"
+          :class="{ 'border-b-0': expandedRow !== orden.id }"
+        >
           <div class="flex items-center gap-3">
+            <i
+              class="pi text-xs transition-transform duration-200"
+              :class="expandedRow === orden.id ? 'pi-chevron-down' : 'pi-chevron-right'"
+            ></i>
             <h3 class="font-semibold text-gray-900">Orden #{{ orden.id }}</h3>
             <span
               class="px-2 py-1 text-xs font-medium rounded-full"
@@ -71,7 +127,7 @@ const puedeCancelar = (estado) => {
               {{ orden.estado.replace('_', ' ') }}
             </span>
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2" @click.stop>
             <button
               v-if="puedeAvanzar(orden.estado)"
               @click="cambiarEstado(orden.id, orden.estado === 'pendiente' ? 'en_proceso' : 'completada')"
@@ -89,8 +145,8 @@ const puedeCancelar = (estado) => {
           </div>
         </div>
 
-        <!-- Info -->
-        <div class="p-4">
+        <!-- Expanded content -->
+        <div v-if="expandedRow === orden.id" class="p-4 animate-fadeIn">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-3">
             <div>
               <span class="text-gray-500">Programada:</span>
@@ -118,6 +174,36 @@ const puedeCancelar = (estado) => {
               <span class="text-sm text-gray-600">
                 {{ det.cantidad_programada }} {{ det.cantidad_producida ? `/ ${det.cantidad_producida}` : '' }}
               </span>
+            </div>
+          </div>
+
+          <!-- Matteria prima calculada -->
+          <div v-if="calculosMap[orden.id]" class="border-t pt-3 mt-3">
+            <p class="text-xs text-gray-500 mb-2">Materia prima necesaria:</p>
+            <div v-if="calculosMap[orden.id].loading" class="text-sm text-gray-400">
+              <i class="pi pi-spin pi-spinner mr-1"></i> Calculando...
+            </div>
+            <div v-else-if="!calculosMap[orden.id].ingredientes?.length" class="text-sm text-gray-400">
+              Sin datos de receta para calcular
+            </div>
+            <div v-else class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-gray-500 font-medium text-xs">
+                    <th class="pb-1 pr-4">Ingrediente</th>
+                    <th class="pb-1 text-right">Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                  <tr v-for="ing in calculosMap[orden.id].ingredientes" :key="ing.ingrediente_id">
+                    <td class="py-1 pr-4 text-gray-700">{{ ing.nombre }}</td>
+                    <td class="py-1 text-right text-gray-900 tabular-nums">
+                      {{ Number(ing.cantidad_total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                      {{ ing.simbolo_unidad }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 

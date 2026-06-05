@@ -14,16 +14,61 @@ export async function createCategoriaReceta(values) {
   return data
 }
 
+export async function updateCategoriaReceta(id, values) {
+  const { data, error } = await supabase.from('categorias_receta').update(values).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteCategoriaReceta(id) {
+  const { error } = await supabase.from('categorias_receta').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function fetchCategoriasIngrediente() {
   const { data, error } = await supabase.from('categorias_ingrediente').select('*').order('nombre')
   if (error) throw error
   return data
 }
 
+export async function createCategoriaIngrediente(values) {
+  const { data, error } = await supabase.from('categorias_ingrediente').insert(values).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateCategoriaIngrediente(id, values) {
+  const { data, error } = await supabase.from('categorias_ingrediente').update(values).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteCategoriaIngrediente(id) {
+  const { error } = await supabase.from('categorias_ingrediente').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function fetchCategoriasProducto() {
   const { data, error } = await supabase.from('categorias_producto').select('*').order('nombre')
   if (error) throw error
   return data
+}
+
+export async function createCategoriaProducto(values) {
+  const { data, error } = await supabase.from('categorias_producto').insert(values).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateCategoriaProducto(id, values) {
+  const { data, error } = await supabase.from('categorias_producto').update(values).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteCategoriaProducto(id) {
+  const { error } = await supabase.from('categorias_producto').delete().eq('id', id)
+  if (error) throw error
 }
 
 // ─── Unidades de Medida ──────────────────────────────
@@ -38,6 +83,17 @@ export async function createUnidadMedida(values) {
   const { data, error } = await supabase.from('unidades_medida').insert(values).select().single()
   if (error) throw error
   return data
+}
+
+export async function updateUnidadMedida(id, values) {
+  const { data, error } = await supabase.from('unidades_medida').update(values).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteUnidadMedida(id) {
+  const { error } = await supabase.from('unidades_medida').delete().eq('id', id)
+  if (error) throw error
 }
 
 // ─── Ingredientes ────────────────────────────────────
@@ -76,14 +132,40 @@ export async function updateIngrediente(id, values) {
   return data
 }
 
+export async function deleteIngrediente(id) {
+  const { error } = await supabase.from('ingredientes').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function fetchProveedores() {
-  const { data, error } = await supabase.from('proveedores').select('*').order('nombre')
+  const { data, error } = await supabase
+    .from('proveedores')
+    .select(`
+      *,
+      ingredientes:ingrediente_proveedor(
+        *,
+        ingrediente:ingredientes(nombre)
+      )
+    `)
+    .order('nombre')
   if (error) throw error
   return data
 }
 
 export async function createProveedor(values) {
   const { data, error } = await supabase.from('proveedores').insert(values).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateProveedor(id, values) {
+  const { data, error } = await supabase.from('proveedores').update(values).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteProveedor(id) {
+  const { data, error } = await supabase.from('proveedores').update({ activo: false }).eq('id', id).select().single()
   if (error) throw error
   return data
 }
@@ -97,7 +179,12 @@ export async function fetchRecetas() {
       *,
       categoria:categorias_receta(nombre),
       unidad:unidades_medida(nombre, simbolo),
-      creador:perfiles(nombre)
+      creador:perfiles(nombre),
+      ingredientes:receta_ingredientes(
+        *,
+        ingrediente:ingredientes(nombre),
+        unidad:unidades_medida(nombre, simbolo)
+      )
     `)
     .order('nombre')
   if (error) throw error
@@ -143,6 +230,18 @@ export async function createReceta(values) {
   return fetchRecetaById(recetaCreada.id)
 }
 
+export async function updateReceta(id, values) {
+  const { data, error } = await supabase.from('recetas').update(values).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteReceta(id) {
+  const { data, error } = await supabase.from('recetas').update({ activa: false }).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
 // ─── Productos ───────────────────────────────────────
 
 export async function fetchProductos() {
@@ -166,6 +265,12 @@ export async function createProducto(values) {
 
 export async function updateProducto(id, values) {
   const { data, error } = await supabase.from('productos').update(values).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteProducto(id) {
+  const { data, error } = await supabase.from('productos').update({ activo: false }).eq('id', id).select().single()
   if (error) throw error
   return data
 }
@@ -262,4 +367,130 @@ export async function fetchStockIngrediente(id) {
   const { data, error } = await supabase.rpc('stock_ingrediente', { p_ingrediente_id: id })
   if (error) throw error
   return data
+}
+
+// ─── Cálculo de Materia Prima ──────────────────────────
+
+/**
+ * Toma los detalles de una orden y calcula las cantidades escaladas de ingredientes.
+ * @param {Array} detalles - [{ producto_id, receta_id, cantidad_programada }]
+ * @returns {Array} - [{ ingrediente_id, nombre, cantidad_total, simbolo_unidad }] agregados
+ */
+export async function calcularIngredientesNecesarios(detalles) {
+  if (!detalles?.length) return []
+
+  const uniqRecetas = [...new Set(detalles.map(d => d.receta_id))]
+  const uniqProductos = [...new Set(detalles.map(d => d.producto_id))]
+
+  // 1. Unidad de referencia — buscamos 'Gramo' por símbolo 'g'
+  const { data: todasUnidades } = await supabase.from('unidades_medida').select('id, nombre, simbolo')
+  const gramoId = todasUnidades?.find(u => u.simbolo === 'g')?.id
+
+  // 2. Conversiones disponibles
+  const { data: conversiones } = await supabase.from('conversiones_unidades').select('*')
+
+  const encontrarConversion = (origenId, destinoId) => {
+    if (origenId === destinoId) return 1
+    return conversiones?.find(c => c.unidad_origen_id === origenId && c.unidad_destino_id === destinoId)?.factor_multiplicacion ?? null
+  }
+
+  // 3. Recetas con sus ingredientes
+  const { data: recetasConIng } = await supabase
+    .from('recetas')
+    .select(`
+      id, rendimiento_cantidad, rendimiento_unidad_id,
+      ingredientes:receta_ingredientes(
+        *,
+        ingrediente:ingredientes(nombre),
+        unidad:unidades_medida(simbolo)
+      )
+    `)
+    .in('id', uniqRecetas)
+
+  // 4. Productos (solo necesitamos peso)
+  const { data: productos } = await supabase
+    .from('productos')
+    .select('id, peso_unitario_gr')
+    .in('id', uniqProductos)
+
+  const recetaMap = new Map(recetasConIng?.map(r => [r.id, r]))
+  const productoMap = new Map(productos?.map(p => [p.id, p]))
+
+  const agregados = new Map() // ingrediente_id -> { nombre, cantidad_total, simbolo_unidad }
+
+  for (const det of detalles) {
+    const receta = recetaMap.get(det.receta_id)
+    const producto = productoMap.get(det.producto_id)
+    if (!receta || !producto || !producto.peso_unitario_gr) continue
+
+    // Convertir rendimiento de receta a gramos
+    let rendimientoGr = Number(receta.rendimiento_cantidad)
+    const factorConv = encontrarConversion(receta.rendimiento_unidad_id, gramoId)
+    if (factorConv !== null) {
+      rendimientoGr = rendimientoGr * factorConv
+    } else {
+      // Sin conversión a gramos — salteamos este detalle
+      continue
+    }
+
+    if (rendimientoGr <= 0) continue
+
+    const pesoTotalGr = Number(det.cantidad_programada) * Number(producto.peso_unitario_gr)
+    const factor = pesoTotalGr / rendimientoGr
+
+    for (const ing of (receta.ingredientes || [])) {
+      const cantidadEscalada = Number(ing.cantidad) * factor
+      const existente = agregados.get(ing.ingrediente_id)
+      if (existente) {
+        existente.cantidad_total += cantidadEscalada
+      } else {
+        agregados.set(ing.ingrediente_id, {
+          ingrediente_id: ing.ingrediente_id,
+          nombre: ing.ingrediente?.nombre || '?',
+          cantidad_total: cantidadEscalada,
+          simbolo_unidad: ing.unidad?.simbolo || '',
+        })
+      }
+    }
+  }
+
+  return [...agregados.values()].sort((a, b) => a.nombre.localeCompare(b.nombre))
+}
+
+/**
+ * Descuenta del inventario los ingredientes necesarios para una orden.
+ * Crea movimientos de egreso por cada ingrediente calculado.
+ * @param {number} ordenId
+ * @param {Array} detalles - [{ producto_id, receta_id, cantidad_programada, id }]
+ */
+export async function descontarIngredientesOrden(ordenId, detalles) {
+  const ingredientes = await calcularIngredientesNecesarios(detalles)
+  if (!ingredientes.length) return
+
+  const user = (await supabase.auth.getUser()).data.user
+
+  const movimientos = ingredientes.map(ing => ({
+    ingrediente_id: ing.ingrediente_id,
+    tipo: 'egreso',
+    cantidad: -ing.cantidad_total, // negativo = egreso
+    unidad_id: null, // se resuelve del ingrediente
+    motivo: `Consumo orden #${ordenId}`,
+    orden_detalle_id: null,
+    nota: `Consumo automático`,
+    creado_por: user?.id,
+  }))
+
+  // Necesitamos la unidad_base de cada ingrediente
+  const ids = ingredientes.map(i => i.ingrediente_id)
+  const { data: ingreds } = await supabase.from('ingredientes').select('id, unidad_base_id').in('id', ids)
+  const baseMap = new Map(ingreds?.map(i => [i.id, i.unidad_base_id]))
+
+  for (const m of movimientos) {
+    const uid = baseMap.get(m.ingrediente_id)
+    if (!uid) throw new Error(`Ingrediente ${m.ingrediente_id} sin unidad_base`)
+    m.unidad_id = uid
+  }
+
+  const { error } = await supabase.from('movimientos_inventario_mp').insert(movimientos)
+  if (error) throw error
 }

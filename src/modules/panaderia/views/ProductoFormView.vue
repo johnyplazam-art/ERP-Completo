@@ -22,7 +22,7 @@ const { data: recetas } = useRecetasQuery()
 const createMutation = useCreateProductoMutation()
 const updateMutation = useUpdateProductoMutation()
 
-const { handleSubmit, values, resetForm, errors } = useForm({
+const { handleSubmit, values, resetForm, errors, setFieldValue } = useForm({
   validationSchema: toTypedSchema(productoSchema),
   initialValues: {
     nombre: '',
@@ -35,6 +35,12 @@ const { handleSubmit, values, resetForm, errors } = useForm({
     activo: true,
   },
 })
+
+// Helper: extrae el valor real de un <select> (Vue guarda el valor real en option._value)
+const getSelectValue = (event) => {
+  const option = event.target.options[event.target.selectedIndex]
+  return option ? option._value : null
+}
 
 // Cargar datos existentes en modo edición
 if (isEdit.value) {
@@ -97,7 +103,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
             <input
-              v-model="values.nombre"
+              :value="values.nombre"
+              @input="setFieldValue('nombre', $event.target.value)"
               type="text"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
@@ -109,7 +116,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
             <select
-              v-model="values.categoria_id"
+              :value="values.categoria_id"
+              @change="setFieldValue('categoria_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
               <option :value="null" disabled>Seleccionar...</option>
@@ -124,7 +132,8 @@ const onSubmit = handleSubmit(async (formValues) => {
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
           <textarea
-            v-model="values.descripcion"
+            :value="values.descripcion"
+            @input="setFieldValue('descripcion', $event.target.value)"
             rows="2"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             placeholder="Descripción opcional..."
@@ -135,7 +144,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Receta asociada</label>
             <select
-              v-model="values.receta_id"
+              :value="values.receta_id"
+              @change="setFieldValue('receta_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
               <option :value="null">Sin receta</option>
@@ -148,7 +158,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Código de barras</label>
             <input
-              v-model="values.codigo_barras"
+              :value="values.codigo_barras"
+              @input="setFieldValue('codigo_barras', $event.target.value)"
               type="text"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
               placeholder="779..."
@@ -167,7 +178,8 @@ const onSubmit = handleSubmit(async (formValues) => {
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
               <input
-                v-model.number="values.precio_venta"
+                :value="values.precio_venta"
+                @input="setFieldValue('precio_venta', $event.target.valueAsNumber)"
                 type="number"
                 min="0"
                 step="0.01"
@@ -180,7 +192,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Peso unitario (gramos)</label>
             <input
-              v-model.number="values.peso_unitario_gr"
+              :value="values.peso_unitario_gr"
+              @input="setFieldValue('peso_unitario_gr', $event.target.value === '' ? null : $event.target.valueAsNumber)"
               type="number"
               min="0"
               step="1"
@@ -195,7 +208,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <input
             id="activo"
             type="checkbox"
-            v-model="values.activo"
+            :checked="values.activo"
+            @change="setFieldValue('activo', $event.target.checked)"
             class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
           <label for="activo" class="text-sm font-medium text-gray-700">Activo</label>

@@ -24,7 +24,7 @@ const proveedorFormSchema = z.object({
   direccion: z.string().max(300).default(''),
 })
 
-const { handleSubmit, values, resetForm, errors } = useForm({
+const { handleSubmit, values, resetForm, errors, setFieldValue } = useForm({
   validationSchema: toTypedSchema(proveedorFormSchema),
   initialValues: {
     nombre: '',
@@ -109,7 +109,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
             <input
-              v-model="values.nombre"
+              :value="values.nombre"
+              @input="setFieldValue('nombre', $event.target.value)"
               type="text"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
@@ -121,7 +122,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Contacto</label>
             <input
-              v-model="values.contacto"
+              :value="values.contacto"
+              @input="setFieldValue('contacto', $event.target.value)"
               type="text"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
               placeholder="Juan Pérez"
@@ -133,7 +135,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
             <input
-              v-model="values.telefono"
+              :value="values.telefono"
+              @input="setFieldValue('telefono', $event.target.value)"
               type="text"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
               placeholder="+54 11 5555-1234"
@@ -143,7 +146,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
-              v-model="values.email"
+              :value="values.email"
+              @input="setFieldValue('email', $event.target.value)"
               type="email"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
               placeholder="contacto@distribuidora.com"
@@ -154,9 +158,10 @@ const onSubmit = handleSubmit(async (formValues) => {
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-          <input
-            v-model="values.direccion"
-            type="text"
+            <input
+              :value="values.direccion"
+              @input="setFieldValue('direccion', $event.target.value)"
+              type="text"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             placeholder="Av. Siempre Viva 123"
           />

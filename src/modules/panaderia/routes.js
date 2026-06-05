@@ -82,6 +82,14 @@ export default [
     meta: { title: 'Editar Proveedor' },
   },
 
+  // Catálogos
+  {
+    path: 'catalogos',
+    name: 'panaderia-catalogos',
+    component: () => import('./views/CatalogosView.vue'),
+    meta: { title: 'Catálogos' },
+  },
+
   // Ingredientes (bajo /inventario)
   {
     path: 'inventario/nuevo',

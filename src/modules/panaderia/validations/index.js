@@ -6,7 +6,7 @@ import { z } from 'zod'
 // muestre required_error en vez de "Expected number, received null".
 function requiredNumber(msg) {
   return z.preprocess(
-    (val) => (val === null ? undefined : val),
+    (val) => (val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
     z.number({ required_error: msg }).positive(msg)
   )
 }
