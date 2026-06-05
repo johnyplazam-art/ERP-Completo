@@ -9,7 +9,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!user.value && !!session.value)
   const userEmail = computed(() => user.value?.email ?? '')
-  const userRole = computed(() => user.value?.role ?? '')
 
   async function initialize() {
     loading.value = true
@@ -53,7 +52,6 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     isAuthenticated,
     userEmail,
-    userRole,
     initialize,
     login,
     signup,
