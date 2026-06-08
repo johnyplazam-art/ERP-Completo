@@ -4,9 +4,10 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
 import { z } from 'zod'
-import { supabase } from '@/core/supabase'
 import {
   useProveedoresQuery,
+  useCreateProveedorMutation,
+  useUpdateProveedorMutation,
 } from '../composables/queries'
 
 const router = useRouter()
@@ -14,6 +15,8 @@ const route = useRoute()
 const isEdit = computed(() => !!route.params.id)
 
 const { data: proveedores } = useProveedoresQuery()
+const { mutateAsync: crearProveedor } = useCreateProveedorMutation()
+const { mutateAsync: actualizarProveedor } = useUpdateProveedorMutation()
 
 // Schema inline — proveedorSchema no tiene todos los campos que necesitamos
 const proveedorFormSchema = z.object({
@@ -63,21 +66,10 @@ const onSubmit = handleSubmit(async (formValues) => {
   isSaving.value = true
   try {
     if (isEdit.value) {
-      const { error } = await supabase
-        .from('proveedores')
-        .update(formValues)
-        .eq('id', Number(route.params.id))
-        .select()
-        .single()
-      if (error) throw error
+      await actualizarProveedor({ id: Number(route.params.id), values: formValues })
       toast.success('Proveedor actualizado exitosamente')
     } else {
-      const { error } = await supabase
-        .from('proveedores')
-        .insert(formValues)
-        .select()
-        .single()
-      if (error) throw error
+      await crearProveedor(formValues)
       toast.success('Proveedor creado exitosamente')
     }
     router.push('/panaderia/proveedores')

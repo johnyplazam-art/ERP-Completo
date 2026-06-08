@@ -82,6 +82,14 @@ export default [
     meta: { title: 'Editar Proveedor' },
   },
 
+  // Usuarios (solo admin)
+  {
+    path: 'usuarios',
+    name: 'panaderia-usuarios',
+    component: () => import('./views/UsersManagement.vue'),
+    meta: { title: 'Usuarios' },
+  },
+
   // Catálogos
   {
     path: 'catalogos',

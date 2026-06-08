@@ -16,6 +16,10 @@ async function handleLogout() {
     console.error('Logout error:', error)
   }
 }
+
+function getSelectValue(event) {
+  return event.target.options[event.target.selectedIndex]._value
+}
 </script>
 
 <template>
@@ -28,12 +32,34 @@ async function handleLogout() {
         appStore.sidebarCollapsed ? 'w-16' : 'w-64',
       ]"
     >
-      <!-- Logo -->
-      <div class="h-16 flex items-center px-4 border-b border-gray-200">
-        <span v-if="!appStore.sidebarCollapsed" class="text-xl font-bold text-primary-600">
-          SIAS ERP
-        </span>
-        <span v-else class="text-xl font-bold text-primary-600 mx-auto">S</span>
+      <!-- Logo + Empresa selector -->
+      <div class="border-b border-gray-200">
+        <div class="h-12 flex items-center px-4">
+          <span v-if="!appStore.sidebarCollapsed" class="text-xl font-bold text-primary-600">
+            SIAS ERP
+          </span>
+          <span v-else class="text-xl font-bold text-primary-600 mx-auto">S</span>
+        </div>
+        <div v-if="!appStore.sidebarCollapsed && authStore.empresas.length" class="px-3 pb-3">
+          <select
+            :value="authStore.currentEmpresa?.id"
+            @change="authStore.seleccionarEmpresa(
+              authStore.empresas.find(e => e.id === getSelectValue($event))
+            )"
+            class="w-full text-sm rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-gray-700 focus:ring-2 focus:ring-primary-500"
+          >
+            <option
+              v-for="emp in authStore.empresas"
+              :key="emp.id"
+              :value="emp.id"
+            >
+              {{ emp.nombre }}
+            </option>
+          </select>
+          <p v-if="authStore.currentRol" class="mt-1 text-xs text-gray-400 pl-1">
+            {{ authStore.currentRol.charAt(0).toUpperCase() + authStore.currentRol.slice(1) }}
+          </p>
+        </div>
       </div>
 
       <!-- Navigation -->
@@ -47,6 +73,7 @@ async function handleLogout() {
             { to: '/panaderia/proveedores', icon: 'pi pi-truck', label: 'Proveedores' },
             { to: '/panaderia/produccion', icon: 'pi pi-cog', label: 'Producción' },
             { to: '/panaderia/catalogos', icon: 'pi pi-wrench', label: 'Catálogos' },
+            ...(authStore.esAdmin ? [{ to: '/panaderia/usuarios', icon: 'pi pi-users', label: 'Usuarios' }] : []),
           ]"
           :key="item.to"
           :to="item.to"
@@ -62,10 +89,10 @@ async function handleLogout() {
       <div class="border-t border-gray-200 p-4">
         <div class="flex items-center">
           <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-semibold text-sm">
-            {{ authStore.userEmail?.charAt(0).toUpperCase() || 'U' }}
+            {{ (authStore.perfil?.nombre || authStore.userEmail)?.charAt(0).toUpperCase() || 'U' }}
           </div>
           <div v-if="!appStore.sidebarCollapsed" class="ml-3 flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-900 truncate">{{ authStore.userEmail }}</p>
+            <p class="text-sm font-medium text-gray-900 truncate">{{ authStore.perfil?.nombre || authStore.userEmail }}</p>
           </div>
           <button
             @click="appStore.toggleSidebar"

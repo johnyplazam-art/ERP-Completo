@@ -114,6 +114,9 @@ export async function fetchIngredientes(params = {}) {
   if (params.categoria_id) {
     query = query.eq('categoria_id', params.categoria_id)
   }
+  if (params.empresa_id) {
+    query = query.eq('empresa_id', params.empresa_id)
+  }
 
   const { data, error } = await query
   if (error) throw error
@@ -137,8 +140,8 @@ export async function deleteIngrediente(id) {
   if (error) throw error
 }
 
-export async function fetchProveedores() {
-  const { data, error } = await supabase
+export async function fetchProveedores(empresaId) {
+  let query = supabase
     .from('proveedores')
     .select(`
       *,
@@ -148,6 +151,12 @@ export async function fetchProveedores() {
       )
     `)
     .order('nombre')
+
+  if (empresaId) {
+    query = query.eq('empresa_id', empresaId)
+  }
+
+  const { data, error } = await query
   if (error) throw error
   return data
 }
@@ -172,8 +181,8 @@ export async function deleteProveedor(id) {
 
 // ─── Recetas ─────────────────────────────────────────
 
-export async function fetchRecetas() {
-  const { data, error } = await supabase
+export async function fetchRecetas(empresaId) {
+  let query = supabase
     .from('recetas')
     .select(`
       *,
@@ -187,6 +196,12 @@ export async function fetchRecetas() {
       )
     `)
     .order('nombre')
+
+  if (empresaId) {
+    query = query.eq('empresa_id', empresaId)
+  }
+
+  const { data, error } = await query
   if (error) throw error
   return data
 }
@@ -212,6 +227,7 @@ export async function fetchRecetaById(id) {
 
 export async function createReceta(values) {
   const { ingredientes, ...receta } = values
+  const empresaId = values.empresa_id
 
   const { data: recetaCreada, error: errReceta } = await supabase
     .from('recetas')
@@ -223,7 +239,7 @@ export async function createReceta(values) {
   if (ingredientes?.length) {
     const { error: errIng } = await supabase
       .from('receta_ingredientes')
-      .insert(ingredientes.map(i => ({ ...i, receta_id: recetaCreada.id })))
+      .insert(ingredientes.map(i => ({ ...i, receta_id: recetaCreada.id, empresa_id: empresaId })))
     if (errIng) throw errIng
   }
 
@@ -244,8 +260,8 @@ export async function deleteReceta(id) {
 
 // ─── Productos ───────────────────────────────────────
 
-export async function fetchProductos() {
-  const { data, error } = await supabase
+export async function fetchProductos(empresaId) {
+  let query = supabase
     .from('productos')
     .select(`
       *,
@@ -253,6 +269,12 @@ export async function fetchProductos() {
       receta:recetas(nombre)
     `)
     .order('nombre')
+
+  if (empresaId) {
+    query = query.eq('empresa_id', empresaId)
+  }
+
+  const { data, error } = await query
   if (error) throw error
   return data
 }
@@ -277,8 +299,8 @@ export async function deleteProducto(id) {
 
 // ─── Órdenes de Producción ───────────────────────────
 
-export async function fetchOrdenesProduccion() {
-  const { data, error } = await supabase
+export async function fetchOrdenesProduccion(empresaId) {
+  let query = supabase
     .from('ordenes_produccion')
     .select(`
       *,
@@ -290,6 +312,12 @@ export async function fetchOrdenesProduccion() {
       )
     `)
     .order('fecha_programada', { ascending: false })
+
+  if (empresaId) {
+    query = query.eq('empresa_id', empresaId)
+  }
+
+  const { data, error } = await query
   if (error) throw error
   return data
 }
@@ -297,6 +325,7 @@ export async function fetchOrdenesProduccion() {
 export async function createOrdenProduccion(values) {
   const { detalles, ...orden } = values
   const user = (await supabase.auth.getUser()).data.user
+  const empresaId = orden.empresa_id
 
   const { data: ordenCreada, error: errOrden } = await supabase
     .from('ordenes_produccion')
@@ -308,7 +337,7 @@ export async function createOrdenProduccion(values) {
   if (detalles?.length) {
     const { error: errDet } = await supabase
       .from('orden_produccion_detalle')
-      .insert(detalles.map(d => ({ ...d, orden_id: ordenCreada.id })))
+      .insert(detalles.map(d => ({ ...d, orden_id: ordenCreada.id, empresa_id: empresaId })))
     if (errDet) throw errDet
   }
 
@@ -463,7 +492,7 @@ export async function calcularIngredientesNecesarios(detalles) {
  * @param {number} ordenId
  * @param {Array} detalles - [{ producto_id, receta_id, cantidad_programada, id }]
  */
-export async function descontarIngredientesOrden(ordenId, detalles) {
+export async function descontarIngredientesOrden(ordenId, detalles, empresaId) {
   const ingredientes = await calcularIngredientesNecesarios(detalles)
   if (!ingredientes.length) return
 
@@ -474,6 +503,7 @@ export async function descontarIngredientesOrden(ordenId, detalles) {
     tipo: 'egreso',
     cantidad: -ing.cantidad_total, // negativo = egreso
     unidad_id: null, // se resuelve del ingrediente
+    empresa_id: empresaId,
     motivo: `Consumo orden #${ordenId}`,
     orden_detalle_id: null,
     nota: `Consumo automático`,

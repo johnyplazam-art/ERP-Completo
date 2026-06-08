@@ -1,4 +1,6 @@
+import { computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useAuthStore } from '@/core/store/auth'
 import {
   fetchCategoriasReceta,
   fetchCategoriasIngrediente,
@@ -193,16 +195,19 @@ export function useDeleteUnidadMedidaMutation() {
 // ─── Ingredientes ────────────────────────────────────
 
 export function useIngredientesQuery(filters = {}) {
+  const authStore = useAuthStore()
+  const queryKey = computed(() => queryKeys.ingredientes({ ...filters, empresa_id: authStore.currentEmpresaId }))
   return useQuery({
-    queryKey: queryKeys.ingredientes(filters),
-    queryFn: () => fetchIngredientes(filters),
+    queryKey,
+    queryFn: () => fetchIngredientes({ ...filters, empresa_id: authStore.currentEmpresaId }),
   })
 }
 
 export function useCreateIngredienteMutation() {
   const queryClient = useQueryClient()
+  const authStore = useAuthStore()
   return useMutation({
-    mutationFn: createIngrediente,
+    mutationFn: (values) => createIngrediente({ ...values, empresa_id: authStore.currentEmpresaId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ingredientes'] }),
   })
 }
@@ -226,16 +231,19 @@ export function useDeleteIngredienteMutation() {
 // ─── Proveedores ─────────────────────────────────────
 
 export function useProveedoresQuery() {
+  const authStore = useAuthStore()
+  const queryKey = computed(() => [...queryKeys.proveedores, authStore.currentEmpresaId])
   return useQuery({
-    queryKey: queryKeys.proveedores,
-    queryFn: fetchProveedores,
+    queryKey,
+    queryFn: () => fetchProveedores(authStore.currentEmpresaId),
   })
 }
 
 export function useCreateProveedorMutation() {
   const queryClient = useQueryClient()
+  const authStore = useAuthStore()
   return useMutation({
-    mutationFn: createProveedor,
+    mutationFn: (values) => createProveedor({ ...values, empresa_id: authStore.currentEmpresaId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.proveedores }),
   })
 }
@@ -259,16 +267,19 @@ export function useDeleteProveedorMutation() {
 // ─── Recetas ─────────────────────────────────────────
 
 export function useRecetasQuery() {
+  const authStore = useAuthStore()
+  const queryKey = computed(() => [...queryKeys.recetas, authStore.currentEmpresaId])
   return useQuery({
-    queryKey: queryKeys.recetas,
-    queryFn: fetchRecetas,
+    queryKey,
+    queryFn: () => fetchRecetas(authStore.currentEmpresaId),
   })
 }
 
 export function useCreateRecetaMutation() {
   const queryClient = useQueryClient()
+  const authStore = useAuthStore()
   return useMutation({
-    mutationFn: createReceta,
+    mutationFn: (values) => createReceta({ ...values, empresa_id: authStore.currentEmpresaId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recetas'] }),
   })
 }
@@ -292,16 +303,19 @@ export function useDeleteRecetaMutation() {
 // ─── Productos ───────────────────────────────────────
 
 export function useProductosQuery() {
+  const authStore = useAuthStore()
+  const queryKey = computed(() => [...queryKeys.productos, authStore.currentEmpresaId])
   return useQuery({
-    queryKey: queryKeys.productos,
-    queryFn: fetchProductos,
+    queryKey,
+    queryFn: () => fetchProductos(authStore.currentEmpresaId),
   })
 }
 
 export function useCreateProductoMutation() {
   const queryClient = useQueryClient()
+  const authStore = useAuthStore()
   return useMutation({
-    mutationFn: createProducto,
+    mutationFn: (values) => createProducto({ ...values, empresa_id: authStore.currentEmpresaId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['productos'] }),
   })
 }
@@ -325,16 +339,19 @@ export function useDeleteProductoMutation() {
 // ─── Órdenes de Producción ──────────────────────────
 
 export function useOrdenesProduccionQuery() {
+  const authStore = useAuthStore()
+  const queryKey = computed(() => [...queryKeys.ordenesProduccion, authStore.currentEmpresaId])
   return useQuery({
-    queryKey: queryKeys.ordenesProduccion,
-    queryFn: fetchOrdenesProduccion,
+    queryKey,
+    queryFn: () => fetchOrdenesProduccion(authStore.currentEmpresaId),
   })
 }
 
 export function useCreateOrdenMutation() {
   const queryClient = useQueryClient()
+  const authStore = useAuthStore()
   return useMutation({
-    mutationFn: createOrdenProduccion,
+    mutationFn: (values) => createOrdenProduccion({ ...values, empresa_id: authStore.currentEmpresaId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ordenes_produccion'] }),
   })
 }
@@ -359,8 +376,9 @@ export function useMovimientosMpQuery(ingredienteId) {
 
 export function useCrearMovimientoMpMutation() {
   const queryClient = useQueryClient()
+  const authStore = useAuthStore()
   return useMutation({
-    mutationFn: crearMovimientoMp,
+    mutationFn: (values) => crearMovimientoMp({ ...values, empresa_id: authStore.currentEmpresaId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['movimientos_mp'] })
       queryClient.invalidateQueries({ queryKey: ['stock_ingrediente'] })
@@ -392,8 +410,9 @@ export { calcularIngredientesNecesarios }
 
 export function useDescontarInventarioMutation() {
   const queryClient = useQueryClient()
+  const authStore = useAuthStore()
   return useMutation({
-    mutationFn: ({ ordenId, detalles }) => descontarIngredientesOrden(ordenId, detalles),
+    mutationFn: ({ ordenId, detalles }) => descontarIngredientesOrden(ordenId, detalles, authStore.currentEmpresaId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['movimientos_mp'] })
       queryClient.invalidateQueries({ queryKey: ['stock_ingrediente'] })
