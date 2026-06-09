@@ -14,6 +14,9 @@ const isLoadingRoles = ref(false)
 const empresaFiltro = ref(null) // null = todas
 const searchQuery = ref('')
 
+// ─── Confirmación de remover usuario ──────────────────
+const removeTarget = ref(null) // { usuario_id, empresa_id, nombre } | null
+
 const puedeInvitar = computed(() => authStore.tienePermiso('usuarios.invite'))
 const puedeGestionarRoles = computed(() => authStore.tienePermiso('usuarios.manage'))
 
@@ -132,10 +135,74 @@ async function toggleActivo(usuarioId, empresaId, activo) {
   }
 }
 
+// ─── Remover usuario de la empresa (DELETE) ──────────
+
+function confirmarRemover(eu) {
+  if (eu.usuario_id === authStore.user?.id) {
+    toast.error(t('users.cannotRemoveSelf'))
+    return
+  }
+  if (eu.es_dueno) {
+    toast.error(t('users.cannotRemoveOwner'))
+    return
+  }
+  removeTarget.value = {
+    usuario_id: eu.usuario_id,
+    empresa_id: eu.empresa_id,
+    nombre: eu.usuario?.nombre || '?',
+  }
+}
+
+async function ejecutarRemover() {
+  if (!removeTarget.value) return
+
+  const { usuario_id, empresa_id } = removeTarget.value
+  const appId = panaderiaAppId.value
+
+  try {
+    // 1. Eliminar roles del usuario en esa empresa + app
+    if (appId) {
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', usuario_id)
+        .eq('empresa_id', empresa_id)
+        .eq('application_id', appId)
+    }
+
+    // 2. Eliminar membresía
+    const { error } = await supabase
+      .from('empresa_usuarios')
+      .delete()
+      .eq('empresa_id', empresa_id)
+      .eq('usuario_id', usuario_id)
+    if (error) throw error
+
+    toast.success(t('users.removeSuccess'))
+    removeTarget.value = null
+    await cargarUsuarios()
+  } catch (err) {
+    console.error('[admin-users] Error removiendo usuario:', err)
+    toast.error(t('users.removeError'))
+  }
+}
+
+function cancelarRemover() {
+  removeTarget.value = null
+}
+
+// ─── Invitación ──────────────────────────────────────
+
+function buildInviteUrl(slug) {
+  // Con hash history: /#/login?invitacion={slug}
+  const origin = window.location.origin
+  const base = import.meta.env.BASE_URL
+  return `${origin}${base}#/login?invitacion=${slug}`
+}
+
 async function copiarInvitacion() {
-  // Usa la empresa actual del auth store por defecto
   if (!authStore.currentEmpresa) return
-  const link = `${window.location.origin}/signup?invitacion=${authStore.currentEmpresa.slug}`
+  const link = buildInviteUrl(authStore.currentEmpresa.slug)
   try {
     await navigator.clipboard.writeText(link)
     toast.success(t('users.linkCopied'))
@@ -171,7 +238,6 @@ watch(() => authStore.user, async () => {
 
     <!-- Filters -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
-      <!-- Search -->
       <div class="relative flex-1 min-w-[200px] max-w-sm">
         <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
         <input
@@ -182,7 +248,6 @@ watch(() => authStore.user, async () => {
         />
       </div>
 
-      <!-- Filter by empresa -->
       <select
         v-model="empresaFiltro"
         class="text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 focus:ring-2 focus:ring-primary-500"
@@ -246,15 +311,17 @@ watch(() => authStore.user, async () => {
                   >
                     {{ (eu.usuario?.nombre || '?').charAt(0).toUpperCase() }}
                   </div>
-                  <span class="font-medium text-gray-900 truncate max-w-[160px]">
-                    {{ eu.usuario?.nombre || 'Sin nombre' }}
-                  </span>
-                  <span
-                    v-if="eu.usuario_id === authStore.user?.id"
-                    class="text-xs text-gray-400 shrink-0"
-                  >
-                    ({{ t('users.you') }})
-                  </span>
+                  <div class="min-w-0">
+                    <span class="font-medium text-gray-900 truncate block max-w-[140px]">
+                      {{ eu.usuario?.nombre || 'Sin nombre' }}
+                    </span>
+                    <span
+                      v-if="eu.usuario_id === authStore.user?.id"
+                      class="text-xs text-gray-400"
+                    >
+                      ({{ t('users.you') }})
+                    </span>
+                  </div>
                 </div>
               </td>
 
@@ -317,20 +384,71 @@ watch(() => authStore.user, async () => {
 
               <!-- Actions -->
               <td class="px-4 py-3">
-                <button
-                  v-if="eu.usuario_id !== authStore.user?.id"
-                  @click="toggleActivo(eu.usuario_id, eu.empresa_id, !eu.activo)"
-                  class="text-sm text-gray-500 hover:text-red-600 transition-colors"
-                >
-                  <i :class="eu.activo ? 'pi pi-ban' : 'pi pi-check-circle'" class="mr-1"></i>
-                  {{ eu.activo ? t('users.deactivate') : t('users.activate') }}
-                </button>
-                <span v-else class="text-xs text-gray-400">—</span>
+                <div class="flex items-center gap-2">
+                  <button
+                    v-if="eu.usuario_id !== authStore.user?.id"
+                    @click="toggleActivo(eu.usuario_id, eu.empresa_id, !eu.activo)"
+                    class="text-sm text-gray-500 hover:text-amber-600 transition-colors"
+                    :title="eu.activo ? t('users.deactivate') : t('users.activate')"
+                  >
+                    <i :class="eu.activo ? 'pi pi-ban' : 'pi pi-check-circle'" class="text-lg"></i>
+                  </button>
+
+                  <!-- Remove user (solo usuarios secundarios, no a sí mismo) -->
+                  <button
+                    v-if="!eu.es_dueno && eu.usuario_id !== authStore.user?.id && puedeGestionarRoles"
+                    @click="confirmarRemover(eu)"
+                    class="text-sm text-gray-500 hover:text-red-600 transition-colors"
+                    :title="t('users.removeUser')"
+                  >
+                    <i class="pi pi-trash text-lg"></i>
+                  </button>
+
+                  <span v-if="eu.usuario_id === authStore.user?.id" class="text-xs text-gray-400">—</span>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- Confirmación de remover usuario (modal simple) -->
+    <Teleport to="body">
+      <div
+        v-if="removeTarget"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+        @click.self="cancelarRemover"
+      >
+        <div class="bg-white rounded-xl shadow-xl border border-gray-200 p-6 max-w-sm w-full mx-4">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+              <i class="pi pi-exclamation-triangle text-xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">{{ t('users.removeUser') }}</h3>
+          </div>
+
+          <p class="text-sm text-gray-600 mb-6">
+            {{ t('users.removeConfirm', { nombre: removeTarget.nombre }) }}
+          </p>
+
+          <div class="flex justify-end gap-3">
+            <button
+              @click="cancelarRemover"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              {{ t('common.cancel') }}
+            </button>
+            <button
+              @click="ejecutarRemover"
+              class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <i class="pi pi-trash mr-1"></i>
+              {{ t('users.removeUser') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

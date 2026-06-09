@@ -146,9 +146,15 @@ async function toggleActivo(usuarioId, activo) {
   }
 }
 
+function buildInviteUrl(slug) {
+  const origin = window.location.origin
+  const base = import.meta.env.BASE_URL
+  return `${origin}${base}#/login?invitacion=${slug}`
+}
+
 async function copiarInvitacion() {
   if (!authStore.currentEmpresa) return
-  const link = `${window.location.origin}/signup?invitacion=${authStore.currentEmpresa.slug}`
+  const link = buildInviteUrl(authStore.currentEmpresa.slug)
   try {
     await navigator.clipboard.writeText(link)
     toast.success(t('users.linkCopied'))

@@ -68,6 +68,12 @@
     "roleUpdated": "Role updated successfully",
     "status": "Status",
     "noUsers": "No users in this company",
+    "removeUser": "Remove user",
+    "removeConfirm": "Are you sure you want to remove {nombre} from the company?",
+    "removeSuccess": "User removed from company",
+    "removeError": "Error removing user",
+    "cannotRemoveOwner": "Cannot remove the company owner",
+    "cannotRemoveSelf": "You cannot remove yourself",
     "you": "you"
   },
   "empresa": {

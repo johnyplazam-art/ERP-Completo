@@ -68,6 +68,12 @@
     "roleUpdated": "Rol actualizado correctamente",
     "status": "Estado",
     "noUsers": "No hay usuarios en esta empresa",
+    "removeUser": "Remover usuario",
+    "removeConfirm": "¿Estás seguro de remover a {nombre} de la empresa?",
+    "removeSuccess": "Usuario removido de la empresa",
+    "removeError": "Error al remover usuario",
+    "cannotRemoveOwner": "No se puede remover al dueño de la empresa",
+    "cannotRemoveSelf": "No te podés remover a vos mismo",
     "you": "vos"
   },
   "empresa": {

@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/core/store/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 // ─── Form fields ──────────────────────────────────────
@@ -30,7 +31,6 @@ function toggleMode() {
   mode.value = mode.value === 'login' ? 'signup' : 'login'
   error.value = ''
   success.value = ''
-  // Reset invitation-only fields when going back to login
   if (mode.value === 'login') {
     invitacion.value = ''
   }
@@ -58,16 +58,13 @@ async function handleSignup() {
   success.value = ''
 
   try {
-    // Construir metadatos para el trigger handle_new_user()
     const metadata = {
       nombre: nombre.value.trim(),
     }
 
     if (isInvitation.value) {
-      // Unirse a empresa existente
       metadata.invitacion = invitacion.value.trim()
     } else {
-      // Crear empresa nueva
       metadata.empresa = empresa.value.trim() || 'Mi Empresa'
     }
 
@@ -98,6 +95,16 @@ function handleSubmit() {
     handleSignup()
   }
 }
+
+// ─── Leer invitación desde URL ───────────────────────
+// Soporta: /login?invitacion=emp-xxx
+onMounted(() => {
+  const code = route.query.invitacion
+  if (code) {
+    invitacion.value = code
+    mode.value = 'signup'
+  }
+})
 </script>
 
 <template>
@@ -191,7 +198,7 @@ function handleSubmit() {
               />
             </div>
 
-            <!-- Invitation code OR Company name -->
+            <!-- Invitation code (pre-filled from URL if present) -->
             <div>
               <label for="invitacion" class="block text-sm font-medium text-gray-700 mb-1">
                 Código de invitación
@@ -206,7 +213,10 @@ function handleSubmit() {
                 class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
               />
               <p class="mt-1 text-xs text-gray-400">
-                Si no tenés código, se creará una empresa nueva automáticamente.
+                {{ isInvitation
+                  ? 'Te vas a unir a una empresa existente.'
+                  : 'Si no tenés código, se creará una empresa nueva automáticamente.'
+                }}
               </p>
             </div>
 
