@@ -1,18 +1,19 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/core/store/auth'
 import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const usuarios = ref([])
 const isLoading = ref(false)
+const roles = ref([])
+const isLoadingRoles = ref(true)
 
-const rolesDisponibles = [
-  { value: 'admin', label: 'Admin', desc: 'Acceso completo' },
-  { value: 'produccion', label: 'Producción', desc: 'Gestiona órdenes, crea recetas' },
-  { value: 'usuario', label: 'Usuario', desc: 'Solo lectura' },
-]
+const puedeInvitar = computed(() => authStore.tienePermiso('usuarios.invite'))
+const puedeGestionarRoles = computed(() => authStore.tienePermiso('usuarios.manage'))
 
 async function cargarUsuarios() {
   if (!authStore.currentEmpresaId) return
@@ -22,36 +23,57 @@ async function cargarUsuarios() {
       .from('empresa_usuarios')
       .select('*, usuario:perfiles!inner(*)')
       .eq('empresa_id', authStore.currentEmpresaId)
-      .order('rol')
     if (error) throw error
     usuarios.value = data ?? []
   } catch (err) {
     console.error('[users] Error cargando:', err)
-    toast.error('Error al cargar usuarios')
+    toast.error(t('errors.loadUsers'))
   } finally {
     isLoading.value = false
   }
 }
 
-// Recargar cuando cambie la empresa
-watch(() => authStore.currentEmpresaId, () => {
-  if (authStore.currentEmpresaId) cargarUsuarios()
-}, { immediate: true })
+async function cargarRoles() {
+  isLoadingRoles.value = true
+  try {
+    const { data, error } = await supabase
+      .from('roles')
+      .select('id, name, slug, description')
+      .eq('application_id', (await supabase.from('applications').select('id').eq('slug', 'panaderia').single()).data?.id)
+      .order('id')
+    if (error) throw error
+    roles.value = data ?? []
+  } catch (err) {
+    console.error('[users] Error cargando roles:', err)
+  } finally {
+    isLoadingRoles.value = false
+  }
+}
 
-async function cambiarRol(usuarioId, nuevoRol) {
+// Roles que el usuario actual puede asignar (basado en su rol)
+const rolesAsignables = computed(() => {
+  if (!authStore.tienePermiso('usuarios.manage')) {
+    // No-admin solo puede asignar roles menores
+    return roles.value.filter(r => ['ayudante_panificador', 'usuario'].includes(r.slug))
+  }
+  return roles.value
+})
+
+async function cambiarRol(usuarioId, nuevoRoleId) {
   if (!authStore.currentEmpresaId) return
   try {
     const { error } = await supabase
-      .from('empresa_usuarios')
-      .update({ rol: nuevoRol })
+      .from('user_roles')
+      .update({ role_id: nuevoRoleId })
+      .eq('user_id', usuarioId)
       .eq('empresa_id', authStore.currentEmpresaId)
-      .eq('usuario_id', usuarioId)
+      .eq('application_id', (await supabase.from('applications').select('id').eq('slug', 'panaderia').single()).data?.id)
     if (error) throw error
-    toast.success('Rol actualizado')
+    toast.success(t('users.role') + ' actualizado')
     await cargarUsuarios()
   } catch (err) {
     console.error('[users] Error cambiando rol:', err)
-    toast.error('Error al cambiar rol')
+    toast.error(t('errors.updateRole'))
   }
 }
 
@@ -64,11 +86,11 @@ async function toggleActivo(usuarioId, activo) {
       .eq('empresa_id', authStore.currentEmpresaId)
       .eq('usuario_id', usuarioId)
     if (error) throw error
-    toast.success(activo ? 'Usuario activado' : 'Usuario desactivado')
+    toast.success(activo ? t('users.activate') : t('users.deactivate'))
     await cargarUsuarios()
   } catch (err) {
     console.error('[users] Error cambiando estado:', err)
-    toast.error('Error al cambiar estado')
+    toast.error(t('errors.updateStatus'))
   }
 }
 
@@ -77,36 +99,45 @@ async function copiarInvitacion() {
   const link = `${window.location.origin}/signup?invitacion=${authStore.currentEmpresa.slug}`
   try {
     await navigator.clipboard.writeText(link)
-    toast.success('Enlace de invitación copiado')
+    toast.success(t('users.linkCopied'))
   } catch {
-    toast.error('No se pudo copiar el enlace')
+    toast.error(t('errors.generic'))
   }
 }
+
+// Recargar cuando cambie la empresa
+watch(() => authStore.currentEmpresaId, () => {
+  if (authStore.currentEmpresaId) {
+    cargarUsuarios()
+    cargarRoles()
+  }
+}, { immediate: true })
 </script>
 
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Usuarios</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('users.title') }}</h2>
       <button
+        v-if="puedeInvitar"
         @click="copiarInvitacion"
         class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
       >
         <i class="pi pi-link mr-2"></i>
-        Invitar usuario
+        {{ t('users.invite') }}
       </button>
     </div>
 
     <!-- Loading -->
     <div v-if="isLoading" class="text-center py-12 text-gray-400">
       <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-      <p>Cargando usuarios...</p>
+      <p>{{ t('common.loading') }}</p>
     </div>
 
     <!-- Empty -->
     <div v-else-if="!usuarios.length" class="text-center py-12 text-gray-400">
       <i class="pi pi-users text-4xl mb-3"></i>
-      <p>No hay usuarios en esta empresa</p>
+      <p>{{ t('users.noUsers') }}</p>
     </div>
 
     <!-- Table -->
@@ -115,11 +146,11 @@ async function copiarInvitacion() {
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-gray-50 text-left text-gray-500 font-medium">
-              <th class="px-4 py-3">Usuario</th>
+              <th class="px-4 py-3">{{ t('users.title') }}</th>
               <th class="px-4 py-3">Email</th>
-              <th class="px-4 py-3">Rol</th>
-              <th class="px-4 py-3">Estado</th>
-              <th class="px-4 py-3">Acciones</th>
+              <th class="px-4 py-3">{{ t('users.role') }}</th>
+              <th class="px-4 py-3">{{ t('users.status') }}</th>
+              <th class="px-4 py-3">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -139,26 +170,29 @@ async function copiarInvitacion() {
               <td class="px-4 py-3 text-gray-500">{{ eu.usuario?.email || '—' }}</td>
               <td class="px-4 py-3">
                 <select
+                  v-if="puedeGestionarRoles && eu.usuario_id !== authStore.user?.id"
                   :value="eu.rol"
-                  :disabled="eu.usuario_id === authStore.user?.id"
-                  class="text-sm rounded border border-gray-300 px-2 py-1 text-gray-700 focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+                  class="text-sm rounded border border-gray-300 px-2 py-1 text-gray-700 focus:ring-2 focus:ring-primary-500"
                   @change="cambiarRol(eu.usuario_id, $event.target.value)"
                 >
                   <option
-                    v-for="r in rolesDisponibles"
-                    :key="r.value"
-                    :value="r.value"
+                    v-for="r in roles"
+                    :key="r.id"
+                    :value="r.id"
                   >
-                    {{ r.label }}
+                    {{ t('roles.' + r.slug) }}
                   </option>
                 </select>
+                <span v-else class="text-gray-600">
+                  {{ t('roles.' + (eu.rol || 'usuario')) }}
+                </span>
               </td>
               <td class="px-4 py-3">
                 <span
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                   :class="eu.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
                 >
-                  {{ eu.activo ? 'Activo' : 'Inactivo' }}
+                  {{ eu.activo ? t('users.active') : t('users.inactive') }}
                 </span>
               </td>
               <td class="px-4 py-3">
@@ -168,9 +202,9 @@ async function copiarInvitacion() {
                   class="text-sm text-gray-500 hover:text-red-600 transition-colors"
                 >
                   <i :class="eu.activo ? 'pi pi-ban' : 'pi pi-check-circle'" class="mr-1"></i>
-                  {{ eu.activo ? 'Desactivar' : 'Activar' }}
+                  {{ eu.activo ? t('users.deactivate') : t('users.activate') }}
                 </button>
-                <span v-else class="text-xs text-gray-400">(vos)</span>
+                <span v-else class="text-xs text-gray-400">({{ t('users.you') }})</span>
               </td>
             </tr>
           </tbody>

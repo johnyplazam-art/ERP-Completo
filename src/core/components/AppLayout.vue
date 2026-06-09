@@ -1,12 +1,32 @@
 <script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Toaster } from 'vue-sonner'
 import { useAuthStore } from '@/core/store/auth'
 import { useAppStore } from '@/core/store/app'
 import { useRouter } from 'vue-router'
+import LanguageSelector from './LanguageSelector.vue'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 const router = useRouter()
+
+const navItems = computed(() => [
+  { to: '/panaderia', icon: 'pi pi-home', label: t('nav.panaderia'), permission: null },
+  { to: '/panaderia/recetas', icon: 'pi pi-book', label: t('nav.recetas'), permission: null },
+  { to: '/panaderia/inventario', icon: 'pi pi-box', label: t('nav.inventario'), permission: null },
+  { to: '/panaderia/productos', icon: 'pi pi-tag', label: 'Productos', permission: null },
+  { to: '/panaderia/proveedores', icon: 'pi pi-truck', label: 'Proveedores', permission: null },
+  { to: '/panaderia/produccion', icon: 'pi pi-cog', label: t('nav.produccion'), permission: null },
+  { to: '/panaderia/catalogos', icon: 'pi pi-wrench', label: 'Catálogos', permission: null },
+  {
+    to: '/panaderia/usuarios',
+    icon: 'pi pi-users',
+    label: t('nav.usuarios'),
+    permission: authStore.tienePermiso('usuarios.manage') || authStore.tienePermiso('usuarios.invite'),
+  },
+].filter(item => item.permission !== false))
 
 async function handleLogout() {
   try {
@@ -20,6 +40,13 @@ async function handleLogout() {
 function getSelectValue(event) {
   return event.target.options[event.target.selectedIndex]._value
 }
+
+// Current role name for badge display
+const currentRoleName = computed(() => {
+  const rolSlug = authStore.currentRol
+  if (!rolSlug) return ''
+  return t(`roles.${rolSlug}`)
+})
 </script>
 
 <template>
@@ -56,8 +83,8 @@ function getSelectValue(event) {
               {{ emp.nombre }}
             </option>
           </select>
-          <p v-if="authStore.currentRol" class="mt-1 text-xs text-gray-400 pl-1">
-            {{ authStore.currentRol.charAt(0).toUpperCase() + authStore.currentRol.slice(1) }}
+          <p v-if="currentRoleName" class="mt-1 text-xs text-gray-400 pl-1">
+            {{ currentRoleName }}
           </p>
         </div>
       </div>
@@ -65,16 +92,7 @@ function getSelectValue(event) {
       <!-- Navigation -->
       <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
         <router-link
-          v-for="item in [
-            { to: '/panaderia', icon: 'pi pi-home', label: 'Panadería' },
-            { to: '/panaderia/recetas', icon: 'pi pi-book', label: 'Recetas' },
-            { to: '/panaderia/inventario', icon: 'pi pi-box', label: 'Inventario' },
-            { to: '/panaderia/productos', icon: 'pi pi-tag', label: 'Productos' },
-            { to: '/panaderia/proveedores', icon: 'pi pi-truck', label: 'Proveedores' },
-            { to: '/panaderia/produccion', icon: 'pi pi-cog', label: 'Producción' },
-            { to: '/panaderia/catalogos', icon: 'pi pi-wrench', label: 'Catálogos' },
-            ...(authStore.esAdmin ? [{ to: '/panaderia/usuarios', icon: 'pi pi-users', label: 'Usuarios' }] : []),
-          ]"
+          v-for="item in navItems"
           :key="item.to"
           :to="item.to"
           class="flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-primary-50 hover:text-primary-700"
@@ -106,7 +124,7 @@ function getSelectValue(event) {
           class="mt-2 w-full flex items-center px-3 py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
         >
           <i class="pi pi-sign-out text-lg"></i>
-          <span v-if="!appStore.sidebarCollapsed" class="ml-3">Cerrar sesión</span>
+          <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ t('auth.logout') }}</span>
         </button>
       </div>
     </aside>
@@ -114,10 +132,11 @@ function getSelectValue(event) {
     <!-- Main content -->
     <main class="flex-1 flex flex-col overflow-hidden">
       <!-- Top bar -->
-      <header class="h-16 bg-white border-b border-gray-200 flex items-center px-6">
+      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
         <h1 class="text-lg font-semibold text-gray-900">
           {{ $route.meta?.title || 'SIAS ERP' }}
         </h1>
+        <LanguageSelector />
       </header>
 
       <!-- Page content -->

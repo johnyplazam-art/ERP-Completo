@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "home": "Home",
+    "panaderia": "Bakery",
+    "inventario": "Inventory",
+    "recetas": "Recipes",
+    "produccion": "Production",
+    "usuarios": "Users"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "noResults": "No results",
+    "confirm": "Confirm",
+    "back": "Back",
+    "actions": "Actions"
+  },
+  "auth": {
+    "login": "Log in",
+    "logout": "Log out",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "company": "Company"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "panificador": "Baker",
+    "ayudante_panificador": "Baker Assistant",
+    "inventario": "Inventory Manager",
+    "produccion": "Production",
+    "ventas": "Sales",
+    "usuario": "User"
+  },
+  "users": {
+    "title": "Users",
+    "invite": "Invite user",
+    "linkCopied": "Invitation link copied",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "active": "Active",
+    "inactive": "Inactive",
+    "role": "Role",
+    "status": "Status",
+    "noUsers": "No users in this company",
+    "you": "you"
+  },
+  "empresa": {
+    "title": "Company",
+    "switch": "Switch company",
+    "noCompanies": "No companies"
+  },
+  "language": {
+    "es": "Español",
+    "en": "English",
+    "select": "Language"
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "loadUsers": "Error loading users",
+    "loadPermissions": "Error loading permissions",
+    "updateRole": "Error updating role",
+    "updateStatus": "Error updating status"
+  }
+}
