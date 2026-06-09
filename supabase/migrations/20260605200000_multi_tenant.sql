@@ -199,27 +199,32 @@ CREATE POLICY "empresas_select" ON public.empresas FOR SELECT TO authenticated
     WHERE usuario_id = auth.uid() AND empresa_id = empresas.id AND activo = true
   ));
 
--- 5c. Empresa usuarios — admin de la empresa puede gestionar
-CREATE POLICY "empresa_usuarios_select" ON public.empresa_usuarios FOR SELECT TO authenticated
-  USING (empresa_id IN (
-    SELECT empresa_id FROM public.empresa_usuarios
-    WHERE usuario_id = auth.uid() AND activo = true
-  ));
+-- 5c. Empresa usuarios — bridge SECURITY DEFINER para evitar recursion en RLS
+CREATE OR REPLACE FUNCTION public.es_admin_en_empresa(p_empresa_id INT)
+RETURNS BOOLEAN
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.empresa_usuarios
+    WHERE usuario_id = auth.uid()
+      AND empresa_id = p_empresa_id
+      AND rol = 'admin'
+      AND activo = true
+  );
+$$ LANGUAGE sql STABLE;
 
-CREATE POLICY "empresa_usuarios_insert" ON public.empresa_usuarios FOR INSERT TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.empresa_usuarios
-      WHERE usuario_id = auth.uid() AND empresa_id = empresa_usuarios.empresa_id
-        AND activo = true AND rol = 'admin'
-    )
+CREATE POLICY "empresa_usuarios_select" ON public.empresa_usuarios FOR SELECT TO authenticated
+  USING (
+    usuario_id = auth.uid()
+    OR
+    public.es_admin_en_empresa(empresa_id)
   );
 
+CREATE POLICY "empresa_usuarios_insert" ON public.empresa_usuarios FOR INSERT TO authenticated
+  WITH CHECK (public.es_admin_en_empresa(empresa_id));
+
 CREATE POLICY "empresa_usuarios_update" ON public.empresa_usuarios FOR UPDATE TO authenticated
-  USING (empresa_id IN (
-    SELECT empresa_id FROM public.empresa_usuarios
-    WHERE usuario_id = auth.uid() AND activo = true AND rol = 'admin'
-  ));
+  USING (public.es_admin_en_empresa(empresa_id));
 
 -- 5d. Catálogos compartidos (sin empresa_id)
 -- Lectura universal para todos los autenticados
