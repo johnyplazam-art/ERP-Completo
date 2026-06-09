@@ -47,6 +47,7 @@
     "active": "Activo",
     "inactive": "Inactivo",
     "role": "Rol",
+    "roleUpdated": "Rol actualizado correctamente",
     "status": "Estado",
     "noUsers": "No hay usuarios en esta empresa",
     "you": "vos"

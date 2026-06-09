@@ -12,19 +12,65 @@ const isLoading = ref(false)
 const roles = ref([])
 const isLoadingRoles = ref(true)
 
+// Cache del application_id de panadería (no cambia nunca)
+const panaderiaAppId = ref(null)
+
 const puedeInvitar = computed(() => authStore.tienePermiso('usuarios.invite'))
 const puedeGestionarRoles = computed(() => authStore.tienePermiso('usuarios.manage'))
 
-async function cargarUsuarios() {
-  if (!authStore.currentEmpresaId) return
-  isLoading.value = true
+async function cargarPanaderiaAppId() {
+  if (panaderiaAppId.value) return panaderiaAppId.value
   try {
     const { data, error } = await supabase
+      .from('applications')
+      .select('id')
+      .eq('slug', 'panaderia')
+      .single()
+    if (error) throw error
+    panaderiaAppId.value = data?.id
+    return panaderiaAppId.value
+  } catch (err) {
+    console.error('[users] Error cargando app_id:', err)
+    return null
+  }
+}
+
+async function cargarUsuarios() {
+  const empresaId = authStore.currentEmpresaId
+  const appId = panaderiaAppId.value
+  if (!empresaId || !appId) return
+
+  isLoading.value = true
+  try {
+    // 1. Membresías + perfiles
+    const { data: memberships, error: err1 } = await supabase
       .from('empresa_usuarios')
       .select('*, usuario:perfiles!inner(*)')
-      .eq('empresa_id', authStore.currentEmpresaId)
-    if (error) throw error
-    usuarios.value = data ?? []
+      .eq('empresa_id', empresaId)
+    if (err1) throw err1
+
+    // 2. Roles actuales desde user_roles
+    const { data: userRoles, error: err2 } = await supabase
+      .from('user_roles')
+      .select('user_id, role_id, role:roles(slug, name)')
+      .eq('empresa_id', empresaId)
+      .eq('application_id', appId)
+    if (err2) throw err2
+
+    // 3. Emails via RPC SECURITY DEFINER
+    const { data: emails, error: err3 } = await supabase
+      .rpc('get_usuarios_email', { p_empresa_id: empresaId })
+    if (err3) throw err3
+
+    // 4. Merge
+    const rolesMap = new Map(userRoles?.map(ur => [ur.user_id, ur]) ?? [])
+    const emailMap = new Map(emails?.map(e => [e.usuario_id, e.email]) ?? [])
+
+    usuarios.value = (memberships ?? []).map(eu => ({
+      ...eu,
+      email: emailMap.get(eu.usuario_id) ?? '—',
+      rol_actual: rolesMap.get(eu.usuario_id) ?? null,
+    }))
   } catch (err) {
     console.error('[users] Error cargando:', err)
     toast.error(t('errors.loadUsers'))
@@ -34,12 +80,15 @@ async function cargarUsuarios() {
 }
 
 async function cargarRoles() {
+  const appId = panaderiaAppId.value
+  if (!appId) return
+
   isLoadingRoles.value = true
   try {
     const { data, error } = await supabase
       .from('roles')
       .select('id, name, slug, description')
-      .eq('application_id', (await supabase.from('applications').select('id').eq('slug', 'panaderia').single()).data?.id)
+      .eq('application_id', appId)
       .order('id')
     if (error) throw error
     roles.value = data ?? []
@@ -60,16 +109,19 @@ const rolesAsignables = computed(() => {
 })
 
 async function cambiarRol(usuarioId, nuevoRoleId) {
-  if (!authStore.currentEmpresaId) return
+  const empresaId = authStore.currentEmpresaId
+  const appId = panaderiaAppId.value
+  if (!empresaId || !appId) return
+
   try {
     const { error } = await supabase
       .from('user_roles')
-      .update({ role_id: nuevoRoleId })
+      .update({ role_id: Number(nuevoRoleId) })
       .eq('user_id', usuarioId)
-      .eq('empresa_id', authStore.currentEmpresaId)
-      .eq('application_id', (await supabase.from('applications').select('id').eq('slug', 'panaderia').single()).data?.id)
+      .eq('empresa_id', empresaId)
+      .eq('application_id', appId)
     if (error) throw error
-    toast.success(t('users.role') + ' actualizado')
+    toast.success(t('users.roleUpdated'))
     await cargarUsuarios()
   } catch (err) {
     console.error('[users] Error cambiando rol:', err)
@@ -105,9 +157,10 @@ async function copiarInvitacion() {
   }
 }
 
-// Recargar cuando cambie la empresa
-watch(() => authStore.currentEmpresaId, () => {
+// Inicializar: cachear appId, luego cargar datos
+watch(() => authStore.currentEmpresaId, async () => {
   if (authStore.currentEmpresaId) {
+    await cargarPanaderiaAppId()
     cargarUsuarios()
     cargarRoles()
   }
@@ -167,16 +220,16 @@ watch(() => authStore.currentEmpresaId, () => {
                   <span class="font-medium text-gray-900">{{ eu.usuario?.nombre || 'Sin nombre' }}</span>
                 </div>
               </td>
-              <td class="px-4 py-3 text-gray-500">{{ eu.usuario?.email || '—' }}</td>
+              <td class="px-4 py-3 text-gray-500">{{ eu.email }}</td>
               <td class="px-4 py-3">
                 <select
                   v-if="puedeGestionarRoles && eu.usuario_id !== authStore.user?.id"
-                  :value="eu.rol"
+                  :value="eu.rol_actual?.role_id"
                   class="text-sm rounded border border-gray-300 px-2 py-1 text-gray-700 focus:ring-2 focus:ring-primary-500"
                   @change="cambiarRol(eu.usuario_id, $event.target.value)"
                 >
                   <option
-                    v-for="r in roles"
+                    v-for="r in rolesAsignables"
                     :key="r.id"
                     :value="r.id"
                   >
@@ -184,7 +237,7 @@ watch(() => authStore.currentEmpresaId, () => {
                   </option>
                 </select>
                 <span v-else class="text-gray-600">
-                  {{ t('roles.' + (eu.rol || 'usuario')) }}
+                  {{ t('roles.' + (eu.rol_actual?.role?.slug || 'usuario')) }}
                 </span>
               </td>
               <td class="px-4 py-3">
