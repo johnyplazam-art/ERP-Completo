@@ -1,0 +1,47 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  SIAS ERP — sistema ERP modular para panadería (Odoo-like).
+  Multi-tenant (empresas), multi-idioma (vue-i18n), roles/permisos granulares.
+
+  Stack:
+    Frontend:  Vue 3 (Composition API, <script setup>), Vite 6, JavaScript (ESM, no TS)
+    State:     Pinia 2 + TanStack Vue Query 5
+    UI:        PrimeVue 4 + PrimeIcons + Tailwind CSS 3
+    Forms:     Vee-Validate 4 + Zod 3
+    i18n:      vue-i18n 11
+    Backend:   Supabase (PostgreSQL 17 + RLS + Auth)
+    Migrations: SQL en supabase/migrations/
+    CI/CD:     GitHub Actions → GitHub Pages
+    Patrón:    Modular (core/ + modules/{modulo}/)
+
+  Autenticación: Supabase Auth con email/password.
+  Autorización:  RLS policies + roles (admin/produccion/ventas/usuario) + permisos
+                 granulares por acción (CRUD por entidad).
+  Multi-tenant:  Tabla empresas + empresa_usuarios. Cada registro de negocio tiene
+                 empresa_id. RLS filtra por empresa automáticamente.
+  Auditoría:     Tabla audit_logs con triggers automáticos (INSERT/UPDATE/DELETE).
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: "npm run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
