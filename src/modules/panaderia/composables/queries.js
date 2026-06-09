@@ -42,8 +42,13 @@ import {
   fetchStockIngrediente,
   calcularIngredientesNecesarios,
   descontarIngredientesOrden,
+  countIngredientes,
+  countProveedores,
+  countRecetas,
+  countProductos,
+  countOrdenesProduccion,
 } from './database'
-import { createCrudHooks } from './crud-factory'
+import { createCrudHooks, usePaginatedList } from './crud-factory'
 
 // ─── Query Keys ──────────────────────────────────────
 

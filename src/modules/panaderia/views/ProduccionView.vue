@@ -1,13 +1,26 @@
 <script setup>
 import { useOrdenesProduccionQuery, useUpdateOrdenEstadoMutation, useDescontarInventarioMutation, calcularIngredientesNecesarios } from '../composables/queries'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
+import DataState from '@/core/components/DataState.vue'
 
-const { data: ordenes, isLoading } = useOrdenesProduccionQuery()
+const { data: ordenes, isLoading, error } = useOrdenesProduccionQuery()
 const updateEstado = useUpdateOrdenEstadoMutation()
 const descontarInventario = useDescontarInventarioMutation()
 const expandedRow = ref('')
-const calculosMap = ref({}) // ordenId -> { ingredientes, loading }
+const calculosMap = ref({})
+const searchQuery = ref('')
+
+const filteredOrdenes = computed(() => {
+  if (!ordenes.value) return []
+  if (!searchQuery.value) return ordenes.value
+  const q = searchQuery.value.toLowerCase()
+  return ordenes.value.filter(o =>
+    String(o.id).includes(q) ||
+    o.estado?.toLowerCase().includes(q) ||
+    o.detalles?.some(d => d.producto?.nombre?.toLowerCase().includes(q))
+  )
+}) // ordenId -> { ingredientes, loading }
 
 const toggleRow = async (id) => {
   if (expandedRow.value === id) {
@@ -84,22 +97,27 @@ const puedeCancelar = (estado) => {
       </router-link>
     </div>
 
-    <!-- Loading -->
-    <div v-if="isLoading" class="text-center py-12 text-gray-400">
-      <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-      <p>Cargando órdenes...</p>
+    <!-- Search -->
+    <div class="mb-4">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Buscar por ID, estado o producto..."
+        class="touch-input block w-full max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+      />
     </div>
 
-    <!-- Empty -->
-    <div v-else-if="!ordenes?.length" class="text-center py-12 text-gray-400">
-      <i class="pi pi-cog text-4xl mb-3"></i>
-      <p>No hay órdenes de producción</p>
-    </div>
-
-    <!-- List -->
-    <div v-else class="space-y-4">
+    <DataState
+      :loading="isLoading"
+      :error="error"
+      :empty="!filteredOrdenes.length"
+      empty-icon="pi pi-cog"
+      :empty-text="searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay órdenes de producción'"
+      loading-text="Cargando órdenes..."
+    >
+      <div class="space-y-4">
       <div
-        v-for="orden in ordenes"
+        v-for="orden in filteredOrdenes"
         :key="orden.id"
         class="bg-white rounded-xl border border-gray-200 overflow-hidden"
       >
@@ -211,5 +229,6 @@ const puedeCancelar = (estado) => {
         </div>
       </div>
     </div>
+    </DataState>
   </div>
 </template>

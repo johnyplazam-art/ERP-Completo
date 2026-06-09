@@ -1,11 +1,14 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
+import { useConfirm } from 'primevue/useconfirm'
 import { useIngredientesQuery, useCategoriasIngredienteQuery, useUpdateIngredienteMutation } from '../composables/queries'
+import DataState from '@/core/components/DataState.vue'
 
-const { data: ingredientes, isLoading } = useIngredientesQuery({ activo: true })
+const { data: ingredientes, isLoading, error } = useIngredientesQuery({ activo: true })
 const { data: categorias } = useCategoriasIngredienteQuery()
 const updateMutation = useUpdateIngredienteMutation()
+const confirm = useConfirm()
 
 const selectedCategoria = ref(null)
 const searchQuery = ref('')
@@ -25,14 +28,22 @@ const filteredIngredientes = computed(() => {
   return list
 })
 
-async function desactivar(ing) {
-  if (!confirm(`¿Desactivar "${ing.nombre}"?\nEl ingrediente dejará de aparecer en el inventario, pero las recetas que lo usan no se verán afectadas.`)) return
-  try {
-    await updateMutation.mutateAsync({ id: ing.id, values: { activo: false } })
-    toast.success(`"${ing.nombre}" desactivado`)
-  } catch (err) {
-    toast.error(err.message || 'Error al desactivar ingrediente')
-  }
+function desactivar(ing) {
+  confirm.require({
+    message: `¿Desactivar "${ing.nombre}"? El ingrediente dejará de aparecer en el inventario, pero las recetas que lo usan no se verán afectadas.`,
+    header: 'Confirmar',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Confirmar',
+    accept: async () => {
+      try {
+        await updateMutation.mutateAsync({ id: ing.id, values: { activo: false } })
+        toast.success(`"${ing.nombre}" desactivado`)
+      } catch (err) {
+        toast.error(err.message || 'Error al desactivar ingrediente')
+      }
+    },
+  })
 }
 </script>
 
@@ -74,20 +85,15 @@ async function desactivar(ing) {
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="isLoading" class="text-center py-12 text-gray-400">
-      <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-      <p>Cargando inventario...</p>
-    </div>
-
-    <!-- Empty -->
-    <div v-else-if="!filteredIngredientes.length" class="text-center py-12 text-gray-400">
-      <i class="pi pi-box text-4xl mb-3"></i>
-      <p>Sin ingredientes registrados</p>
-    </div>
-
-    <!-- Grid -->
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <DataState
+      :loading="isLoading"
+      :error="error"
+      :empty="!filteredIngredientes.length"
+      empty-icon="pi pi-box"
+      empty-text="Sin ingredientes registrados"
+      loading-text="Cargando inventario..."
+    >
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
         v-for="ing in filteredIngredientes"
         :key="ing.id"
@@ -142,5 +148,10 @@ async function desactivar(ing) {
         </div>
       </div>
     </div>
+    </DataState>
   </div>
+
+  <Teleport to="body">
+    <ConfirmDialog />
+  </Teleport>
 </template>

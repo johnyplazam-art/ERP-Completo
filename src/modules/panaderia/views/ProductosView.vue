@@ -1,13 +1,33 @@
 <script setup>
+import { ref, computed } from 'vue'
 import { useProductosQuery, useDeleteProductoMutation } from '../composables/queries'
+import { useConfirm } from 'primevue/useconfirm'
+import DataState from '@/core/components/DataState.vue'
 
 const { data: productos, isLoading, error } = useProductosQuery()
 const { mutate: eliminarProducto } = useDeleteProductoMutation()
+const confirm = useConfirm()
+const searchQuery = ref('')
+
+const filteredProductos = computed(() => {
+  if (!productos.value) return []
+  if (!searchQuery.value) return productos.value
+  const q = searchQuery.value.toLowerCase()
+  return productos.value.filter(p =>
+    p.nombre.toLowerCase().includes(q) ||
+    p.categoria?.nombre?.toLowerCase().includes(q)
+  )
+})
 
 const confirmarDesactivar = (producto) => {
-  if (window.confirm(`¿Desactivar el producto "${producto.nombre}"?`)) {
-    eliminarProducto(producto.id)
-  }
+  confirm.require({
+    message: `¿Desactivar el producto "${producto.nombre}"?`,
+    header: 'Confirmar',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Confirmar',
+    accept: () => eliminarProducto(producto.id),
+  })
 }
 
 const formatPeso = (gr) => {
@@ -30,25 +50,25 @@ const formatPeso = (gr) => {
       </router-link>
     </div>
 
-    <!-- Loading -->
-    <div v-if="isLoading" class="text-center py-12 text-gray-400">
-      <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-      <p>Cargando productos...</p>
+    <!-- Search -->
+    <div class="mb-4">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Buscar productos..."
+        class="touch-input block w-full max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+      />
     </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded">
-      {{ error.message }}
-    </div>
-
-    <!-- Empty -->
-    <div v-else-if="!productos?.length" class="text-center py-12 text-gray-400">
-      <i class="pi pi-tag text-4xl mb-3"></i>
-      <p>No hay productos registrados</p>
-    </div>
-
-    <!-- Table -->
-    <div v-else class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <DataState
+      :loading="isLoading"
+      :error="error"
+      :empty="!filteredProductos.length"
+      empty-icon="pi pi-tag"
+      :empty-text="searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay productos registrados'"
+      loading-text="Cargando productos..."
+    >
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
@@ -63,7 +83,7 @@ const formatPeso = (gr) => {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="producto in productos" :key="producto.id" class="hover:bg-gray-50">
+            <tr v-for="producto in filteredProductos" :key="producto.id" class="hover:bg-gray-50">
               <td class="px-4 py-3 font-medium text-gray-900">{{ producto.nombre }}</td>
               <td class="px-4 py-3 text-gray-600">{{ producto.categoria?.nombre }}</td>
               <td class="px-4 py-3 text-gray-900 font-medium">
@@ -100,7 +120,12 @@ const formatPeso = (gr) => {
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
-    </div>
+    </DataState>
   </div>
+
+  <Teleport to="body">
+    <ConfirmDialog />
+  </Teleport>
 </template>

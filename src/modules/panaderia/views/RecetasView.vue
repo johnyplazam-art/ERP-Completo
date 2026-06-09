@@ -1,19 +1,38 @@
 <script setup>
 import { useRecetasQuery, useDeleteRecetaMutation } from '../composables/queries'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useConfirm } from 'primevue/useconfirm'
+import DataState from '@/core/components/DataState.vue'
 
 const { data: recetas, isLoading, error } = useRecetasQuery()
 const { mutate: eliminarReceta } = useDeleteRecetaMutation()
 const expandedRow = ref('')
+const confirm = useConfirm()
+const searchQuery = ref('')
+
+const filteredRecetas = computed(() => {
+  if (!recetas.value) return []
+  if (!searchQuery.value) return recetas.value
+  const q = searchQuery.value.toLowerCase()
+  return recetas.value.filter(r =>
+    r.nombre.toLowerCase().includes(q) ||
+    r.categoria?.nombre?.toLowerCase().includes(q)
+  )
+})
 
 const toggleRow = (id) => {
   expandedRow.value = expandedRow.value === id ? '' : id
 }
 
 const confirmarDesactivar = (receta) => {
-  if (window.confirm(`¿Desactivar la receta "${receta.nombre}"?`)) {
-    eliminarReceta(receta.id)
-  }
+  confirm.require({
+    message: `¿Desactivar la receta "${receta.nombre}"?`,
+    header: 'Confirmar',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Confirmar',
+    accept: () => eliminarReceta(receta.id),
+  })
 }
 </script>
 
@@ -30,25 +49,25 @@ const confirmarDesactivar = (receta) => {
       </router-link>
     </div>
 
-    <!-- Loading -->
-    <div v-if="isLoading" class="text-center py-12 text-gray-400">
-      <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-      <p>Cargando recetas...</p>
+    <!-- Search -->
+    <div class="mb-4">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Buscar recetas..."
+        class="touch-input block w-full max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+      />
     </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded">
-      {{ error.message }}
-    </div>
-
-    <!-- Empty -->
-    <div v-else-if="!recetas?.length" class="text-center py-12 text-gray-400">
-      <i class="pi pi-book text-4xl mb-3"></i>
-      <p>No hay recetas registradas</p>
-    </div>
-
-    <!-- Table -->
-    <div v-else class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <DataState
+      :loading="isLoading"
+      :error="error"
+      :empty="!filteredRecetas.length"
+      empty-icon="pi pi-book"
+      :empty-text="searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay recetas registradas'"
+      loading-text="Cargando recetas..."
+    >
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
@@ -62,7 +81,7 @@ const confirmarDesactivar = (receta) => {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <template v-for="receta in recetas" :key="receta.id">
+            <template v-for="receta in filteredRecetas" :key="receta.id">
               <tr
                 @click="toggleRow(receta.id)"
                 class="hover:bg-gray-50 cursor-pointer"
@@ -148,5 +167,10 @@ const confirmarDesactivar = (receta) => {
         </table>
       </div>
     </div>
+    </DataState>
   </div>
+
+  <Teleport to="body">
+    <ConfirmDialog />
+  </Teleport>
 </template>
