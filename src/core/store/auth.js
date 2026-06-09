@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/core/supabase'
+import i18n from '@/i18n'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -10,17 +11,46 @@ export const useAuthStore = defineStore('auth', () => {
   const empresas = ref([])
   const currentEmpresa = ref(null)
   const empresaUsuarios = ref([])
+  const permisos = ref([])
 
   const isAuthenticated = computed(() => !!user.value && !!session.value)
   const userEmail = computed(() => user.value?.email ?? '')
   const currentEmpresaId = computed(() => currentEmpresa.value?.id ?? null)
+
+  // Backward-compatible shims (derived from permisos)
   const currentRol = computed(() => {
     if (!currentEmpresaId.value || !empresaUsuarios.value.length) return null
-    const eu = empresaUsuarios.value.find(eu => eu.empresa_id === currentEmpresaId.value)
-    return eu?.rol ?? null
+    // For backwards compat, derive from first user_roles-like permission group
+    // Will be removed once all components use tienePermiso()
+    return null
   })
-  const esAdmin = computed(() => currentRol.value === 'admin')
-  const puedeEscribir = computed(() => ['admin', 'produccion'].includes(currentRol.value))
+  const esAdmin = computed(() => tienePermiso('usuarios.manage'))
+  const puedeEscribir = computed(() =>
+    ['ingredientes.create', 'recetas.create', 'ordenes.create', 'productos.create']
+      .some(p => tienePermiso(p))
+  )
+
+  function tienePermiso(accion) {
+    return permisos.value.includes(accion)
+  }
+
+  async function cargarPermisos(empresaId) {
+    if (!user.value || !empresaId) {
+      permisos.value = []
+      return
+    }
+    try {
+      const { data } = await supabase.rpc('get_user_permissions', {
+        p_user_id: user.value.id,
+        p_app_slug: 'panaderia',
+        p_empresa_id: empresaId,
+      })
+      permisos.value = (data ?? []).map(p => p.action_name)
+    } catch (err) {
+      console.error('[auth] Error cargando permisos:', err)
+      permisos.value = []
+    }
+  }
 
   async function cargarEmpresas() {
     if (!user.value) return
@@ -40,6 +70,11 @@ export const useAuthStore = defineStore('auth', () => {
       } else if (empresas.value.length > 0) {
         currentEmpresa.value = empresas.value[0]
       }
+
+      // Cargar permisos para la empresa seleccionada
+      if (currentEmpresa.value) {
+        await cargarPermisos(currentEmpresa.value.id)
+      }
     } catch (err) {
       console.error('[auth] Error cargando empresas:', err)
     }
@@ -54,6 +89,11 @@ export const useAuthStore = defineStore('auth', () => {
         .eq('id', user.value.id)
         .single()
       perfil.value = data
+
+      // Restaurar idioma guardado
+      if (data?.idioma) {
+        i18n.global.locale.value = data.idioma
+      }
     } catch (err) {
       console.error('[auth] Error cargando perfil:', err)
     }
@@ -63,8 +103,10 @@ export const useAuthStore = defineStore('auth', () => {
     currentEmpresa.value = empresa
     if (empresa) {
       localStorage.setItem('panaderia_empresa_id', String(empresa.id))
+      await cargarPermisos(empresa.id)
     } else {
       localStorage.removeItem('panaderia_empresa_id')
+      permisos.value = []
     }
   }
 
@@ -95,6 +137,7 @@ export const useAuthStore = defineStore('auth', () => {
         empresas.value = []
         currentEmpresa.value = null
         empresaUsuarios.value = []
+        permisos.value = []
       }
     })
   }
@@ -123,10 +166,21 @@ export const useAuthStore = defineStore('auth', () => {
         .from('empresa_usuarios')
         .select('*, usuario:perfiles(*)')
         .eq('empresa_id', currentEmpresaId.value)
-        .order('rol')
       empresaUsuarios.value = data ?? []
     } catch (err) {
       console.error('[auth] Error cargando usuarios:', err)
+    }
+  }
+
+  async function guardarIdioma(idioma) {
+    if (!user.value) return
+    try {
+      await supabase
+        .from('perfiles')
+        .update({ idioma })
+        .eq('id', user.value.id)
+    } catch (err) {
+      console.error('[auth] Error guardando idioma:', err)
     }
   }
 
@@ -138,12 +192,14 @@ export const useAuthStore = defineStore('auth', () => {
     empresas,
     currentEmpresa,
     empresaUsuarios,
+    permisos,
     isAuthenticated,
     userEmail,
     currentEmpresaId,
     currentRol,
     esAdmin,
     puedeEscribir,
+    tienePermiso,
     initialize,
     login,
     signup,
@@ -152,5 +208,7 @@ export const useAuthStore = defineStore('auth', () => {
     cargarPerfil,
     seleccionarEmpresa,
     cargarUsuariosEmpresa,
+    cargarPermisos,
+    guardarIdioma,
   }
 })

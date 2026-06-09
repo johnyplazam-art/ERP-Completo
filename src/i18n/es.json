@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "panaderia": "Panadería",
+    "inventario": "Inventario",
+    "recetas": "Recetas",
+    "produccion": "Producción",
+    "usuarios": "Usuarios"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "search": "Buscar",
+    "loading": "Cargando...",
+    "noResults": "Sin resultados",
+    "confirm": "Confirmar",
+    "back": "Volver",
+    "actions": "Acciones"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "signup": "Registrarse",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "name": "Nombre",
+    "company": "Empresa"
+  },
+  "roles": {
+    "admin": "Administrador",
+    "panificador": "Panificador",
+    "ayudante_panificador": "Ayudante de Panificador",
+    "inventario": "Inventario",
+    "produccion": "Producción",
+    "ventas": "Ventas",
+    "usuario": "Usuario"
+  },
+  "users": {
+    "title": "Usuarios",
+    "invite": "Invitar usuario",
+    "linkCopied": "Enlace de invitación copiado",
+    "activate": "Activar",
+    "deactivate": "Desactivar",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "role": "Rol",
+    "status": "Estado",
+    "noUsers": "No hay usuarios en esta empresa",
+    "you": "vos"
+  },
+  "empresa": {
+    "title": "Empresa",
+    "switch": "Cambiar empresa",
+    "noCompanies": "Sin empresas"
+  },
+  "language": {
+    "es": "Español",
+    "en": "English",
+    "select": "Idioma"
+  },
+  "errors": {
+    "generic": "Ocurrió un error",
+    "loadUsers": "Error al cargar usuarios",
+    "loadPermissions": "Error al cargar permisos",
+    "updateRole": "Error al cambiar rol",
+    "updateStatus": "Error al cambiar estado"
+  }
+}
