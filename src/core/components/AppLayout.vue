@@ -28,6 +28,7 @@ const panaderiaItems = computed(() => [
 
 const adminItems = computed(() => [
   { to: '/admin/usuarios', icon: 'pi pi-users', label: t('nav.usuarios'), permission: puedeAdmin.value },
+  { to: '/admin/apps', icon: 'pi pi-palette', label: t('nav.apps'), permission: puedeAdmin.value },
 ].filter(item => item.permission !== false))
 
 const tienePanaderia = computed(() =>

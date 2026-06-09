@@ -30,6 +30,12 @@ const routes = [
         component: () => import('@/core/components/AdminUsers.vue'),
         meta: { title: 'Usuarios' },
       },
+      {
+        path: 'admin/apps',
+        name: 'admin-apps',
+        component: () => import('@/core/components/AdminApps.vue'),
+        meta: { title: 'Aplicaciones' },
+      },
     ],
   },
 ]

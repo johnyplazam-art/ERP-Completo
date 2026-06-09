@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/core/store/auth'
 import { useI18n } from 'vue-i18n'
@@ -9,12 +9,8 @@ const authStore = useAuthStore()
 const router = useRouter()
 const apps = ref([])
 const isLoading = ref(true)
-
-const APP_ICONS = {
-  panaderia: 'pi pi-shop',
-  contabilidad: 'pi pi-calculator',
-  admin: 'pi pi-cog',
-}
+const searchQuery = ref('')
+const soloDisponibles = ref(true)
 
 async function cargarApps() {
   isLoading.value = true
@@ -28,26 +24,54 @@ async function cargarApps() {
   }
 }
 
+const appsFiltradas = computed(() => {
+  let filtered = apps.value
+
+  if (soloDisponibles.value) {
+    filtered = filtered.filter(a => a.disponible)
+  }
+
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase().trim()
+    filtered = filtered.filter(a =>
+      a.name.toLowerCase().includes(q) ||
+      (a.description || '').toLowerCase().includes(q)
+    )
+  }
+
+  return filtered
+})
+
+const puedeAdminCMS = computed(() => authStore.tienePermiso('usuarios.manage'))
+
 function abrirApp(app) {
   if (!app.disponible) return
   router.push(`/${app.slug}`)
-}
-
-function appIcon(slug) {
-  return APP_ICONS[slug] || 'pi pi-th-large'
 }
 
 onMounted(cargarApps)
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto">
-    <!-- Welcome -->
-    <div class="mb-8">
-      <h1 class="text-2xl font-bold text-gray-900">
-        {{ t('home.welcome', { nombre: authStore.perfil?.nombre || '' }) }}
-      </h1>
-      <p class="text-gray-500 mt-1">{{ t('home.subtitle') }}</p>
+  <div class="max-w-5xl mx-auto">
+    <!-- Welcome + Admin CMS button -->
+    <div class="flex items-start justify-between mb-8">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">
+          {{ t('home.welcome', { nombre: authStore.perfil?.nombre || '' }) }}
+        </h1>
+        <p class="text-gray-500 mt-1">{{ t('home.subtitle') }}</p>
+      </div>
+
+      <!-- Admin CMS -->
+      <button
+        v-if="puedeAdminCMS"
+        @click="router.push('/admin/apps')"
+        class="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-primary-600 transition-colors"
+      >
+        <i class="pi pi-palette text-lg"></i>
+        <span class="hidden sm:inline">{{ t('admin.manageApps') }}</span>
+      </button>
     </div>
 
     <!-- Loading -->
@@ -56,50 +80,89 @@ onMounted(cargarApps)
       <p>{{ t('common.loading') }}</p>
     </div>
 
-    <!-- Empty (no apps available) -->
+    <!-- Empty -->
     <div v-else-if="!apps.length" class="text-center py-20 text-gray-400">
       <i class="pi pi-th-large text-5xl mb-4"></i>
       <p>{{ t('home.noApps') }}</p>
     </div>
 
-    <!-- App grid -->
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div
-        v-for="app in apps"
-        :key="app.id"
-        @click="abrirApp(app)"
-        role="button"
-        tabindex="0"
-        @keydown.enter="abrirApp(app)"
-        class="relative group bg-white rounded-xl border-2 p-6 transition-all duration-200 cursor-pointer"
-        :class="app.disponible
-          ? 'border-gray-200 hover:border-primary-300 hover:shadow-lg hover:-translate-y-1'
-          : 'border-gray-100 opacity-50 cursor-not-allowed'"
-      >
-        <!-- App icon -->
-        <div
-          class="w-14 h-14 rounded-xl flex items-center justify-center mb-4 text-2xl"
-          :class="app.disponible
-            ? 'bg-primary-50 text-primary-600 group-hover:bg-primary-100'
-            : 'bg-gray-100 text-gray-400'"
-        >
-          <i :class="appIcon(app.slug)"></i>
+    <template v-else>
+      <!-- Search + Filter bar -->
+      <div class="flex flex-wrap items-center gap-3 mb-6">
+        <div class="relative flex-1 min-w-[200px] max-w-sm">
+          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="t('home.searchApps')"
+            class="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
         </div>
 
-        <!-- App name -->
-        <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ app.name }}</h3>
-
-        <!-- App description -->
-        <p class="text-sm text-gray-500 leading-relaxed">{{ app.description }}</p>
-
-        <!-- Badge: disponible / no disponible -->
-        <span
-          v-if="!app.disponible"
-          class="absolute top-3 right-3 text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full"
-        >
-          {{ t('home.noAccess') }}
-        </span>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            v-model="soloDisponibles"
+            type="checkbox"
+            class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span class="text-sm text-gray-500">{{ t('home.onlyAvailable') }}</span>
+        </label>
       </div>
-    </div>
+
+      <!-- App grid (Odoo-like) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div
+          v-for="app in appsFiltradas"
+          :key="app.id"
+          @click="abrirApp(app)"
+          role="button"
+          tabindex="0"
+          @keydown.enter="abrirApp(app)"
+          class="relative group bg-white rounded-2xl border-2 p-6 transition-all duration-200 cursor-pointer"
+          :class="app.disponible
+            ? 'border-gray-100 hover:border-primary-200 hover:shadow-lg hover:-translate-y-1'
+            : 'border-gray-100 opacity-40 cursor-not-allowed'"
+        >
+          <!-- App icon -->
+          <div
+            class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-3xl transition-colors"
+            :class="app.disponible
+              ? 'bg-gradient-to-br from-primary-50 to-primary-100 text-primary-600 group-hover:from-primary-100 group-hover:to-primary-200'
+              : 'bg-gray-50 text-gray-300'"
+          >
+            <i :class="app.icon || 'pi pi-th-large'"></i>
+          </div>
+
+          <!-- App name -->
+          <h3 class="text-base font-semibold text-gray-900 mb-1.5">{{ app.name }}</h3>
+
+          <!-- App description -->
+          <p class="text-sm text-gray-400 leading-relaxed line-clamp-2">{{ app.description || '—' }}</p>
+
+          <!-- Badge: disponible / no disponible -->
+          <span
+            v-if="!app.disponible"
+            class="absolute top-3 right-3 text-[11px] font-medium bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full"
+          >
+            {{ t('home.noAccess') }}
+          </span>
+
+          <!-- Enter button -->
+          <div
+            v-if="app.disponible"
+            class="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <span class="text-xs font-medium text-primary-600 bg-primary-50 px-3 py-1 rounded-full">
+              {{ t('home.enter') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result count -->
+      <p class="mt-6 text-center text-xs text-gray-400">
+        {{ appsFiltradas.length }} {{ t('admin.usersCount') }}
+      </p>
+    </template>
   </div>
 </template>

@@ -3,7 +3,10 @@
     "welcome": "¡Hola, {nombre}!",
     "subtitle": "Seleccioná una aplicación para empezar a trabajar",
     "noApps": "No tenés acceso a ninguna aplicación",
-    "noAccess": "Sin acceso"
+    "noAccess": "Sin acceso",
+    "searchApps": "Buscar aplicaciones...",
+    "onlyAvailable": "Solo disponibles",
+    "enter": "Entrar"
   },
   "nav": {
     "home": "Inicio",
@@ -13,6 +16,7 @@
     "recetas": "Recetas",
     "produccion": "Producción",
     "usuarios": "Usuarios",
+    "apps": "Aplicaciones",
     "sectionPanaderia": "Panadería",
     "sectionAdmin": "Administración"
   },
@@ -23,7 +27,15 @@
     "company": "Empresa",
     "type": "Tipo",
     "primary": "Principal",
-    "secondary": "Secundario"
+    "secondary": "Secundario",
+    "manageApps": "Gestionar Apps",
+    "appsTitle": "Aplicaciones",
+    "appsSubtitle": "Gestioná las aplicaciones del sistema (CMS)",
+    "addApp": "Nueva aplicación",
+    "editApp": "Editar aplicación",
+    "noApps": "No hay aplicaciones configuradas",
+    "orden": "Orden",
+    "active": "Activa"
   },
   "common": {
     "save": "Guardar",
@@ -91,6 +103,7 @@
     "loadUsers": "Error al cargar usuarios",
     "loadPermissions": "Error al cargar permisos",
     "updateRole": "Error al cambiar rol",
-    "updateStatus": "Error al cambiar estado"
+    "updateStatus": "Error al cambiar estado",
+    "loadApps": "Error al cargar aplicaciones"
   }
 }

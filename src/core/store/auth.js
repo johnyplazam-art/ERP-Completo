@@ -177,8 +177,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data: apps } = await supabase
         .from('applications')
-        .select('id, slug, name, description, is_active')
-        .order('id')
+        .select('id, slug, name, description, is_active, icon, orden')
+        .order('orden', { ascending: true })
+        .order('name')
 
       // Filtrar apps donde el usuario tenga al menos un rol
       const { data: roles } = await supabase

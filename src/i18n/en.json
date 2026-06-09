@@ -3,7 +3,10 @@
     "welcome": "Welcome, {nombre}!",
     "subtitle": "Select an application to start working",
     "noApps": "You don't have access to any applications",
-    "noAccess": "No access"
+    "noAccess": "No access",
+    "searchApps": "Search applications...",
+    "onlyAvailable": "Available only",
+    "enter": "Enter"
   },
   "nav": {
     "home": "Home",
@@ -13,6 +16,7 @@
     "recetas": "Recipes",
     "produccion": "Production",
     "usuarios": "Users",
+    "apps": "Applications",
     "sectionPanaderia": "Bakery",
     "sectionAdmin": "Administration"
   },
@@ -23,7 +27,15 @@
     "company": "Company",
     "type": "Type",
     "primary": "Primary",
-    "secondary": "Secondary"
+    "secondary": "Secondary",
+    "manageApps": "Manage Apps",
+    "appsTitle": "Applications",
+    "appsSubtitle": "Manage system applications (CMS)",
+    "addApp": "New application",
+    "editApp": "Edit application",
+    "noApps": "No applications configured",
+    "orden": "Order",
+    "active": "Active"
   },
   "common": {
     "save": "Save",
@@ -91,6 +103,7 @@
     "loadUsers": "Error loading users",
     "loadPermissions": "Error loading permissions",
     "updateRole": "Error updating role",
-    "updateStatus": "Error updating status"
+    "updateStatus": "Error updating status",
+    "loadApps": "Error loading applications"
   }
 }
