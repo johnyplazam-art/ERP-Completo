@@ -1,11 +1,29 @@
 {
+  "home": {
+    "welcome": "¡Hola, {nombre}!",
+    "subtitle": "Seleccioná una aplicación para empezar a trabajar",
+    "noApps": "No tenés acceso a ninguna aplicación",
+    "noAccess": "Sin acceso"
+  },
   "nav": {
     "home": "Inicio",
+    "dashboard": "Dashboard",
     "panaderia": "Panadería",
     "inventario": "Inventario",
     "recetas": "Recetas",
     "produccion": "Producción",
-    "usuarios": "Usuarios"
+    "usuarios": "Usuarios",
+    "sectionPanaderia": "Panadería",
+    "sectionAdmin": "Administración"
+  },
+  "admin": {
+    "usersTitle": "Usuarios",
+    "allCompanies": "Todas las empresas",
+    "usersCount": "usuarios",
+    "company": "Empresa",
+    "type": "Tipo",
+    "primary": "Principal",
+    "secondary": "Secundario"
   },
   "common": {
     "save": "Guardar",

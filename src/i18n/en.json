@@ -1,11 +1,29 @@
 {
+  "home": {
+    "welcome": "Welcome, {nombre}!",
+    "subtitle": "Select an application to start working",
+    "noApps": "You don't have access to any applications",
+    "noAccess": "No access"
+  },
   "nav": {
     "home": "Home",
+    "dashboard": "Dashboard",
     "panaderia": "Bakery",
     "inventario": "Inventory",
     "recetas": "Recipes",
     "produccion": "Production",
-    "usuarios": "Users"
+    "usuarios": "Users",
+    "sectionPanaderia": "Bakery",
+    "sectionAdmin": "Administration"
+  },
+  "admin": {
+    "usersTitle": "Users",
+    "allCompanies": "All companies",
+    "usersCount": "users",
+    "company": "Company",
+    "type": "Type",
+    "primary": "Primary",
+    "secondary": "Secondary"
   },
   "common": {
     "save": "Save",

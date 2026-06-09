@@ -12,12 +12,23 @@ const routes = [
   {
     path: '/',
     component: () => import('@/core/components/AppLayout.vue'),
-    redirect: '/panaderia',
     children: [
+      {
+        path: '',
+        name: 'home',
+        component: () => import('@/core/components/HomeDashboard.vue'),
+        meta: { title: 'SIAS ERP' },
+      },
       {
         path: 'panaderia',
         name: 'panaderia',
         children: panaderiaRoutes,
+      },
+      {
+        path: 'admin/usuarios',
+        name: 'admin-usuarios',
+        component: () => import('@/core/components/AdminUsers.vue'),
+        meta: { title: 'Usuarios' },
       },
     ],
   },

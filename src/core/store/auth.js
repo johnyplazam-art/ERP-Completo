@@ -172,6 +172,98 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function cargarAppsDisponibles() {
+    if (!currentEmpresaId.value || !user.value) return []
+    try {
+      const { data: apps } = await supabase
+        .from('applications')
+        .select('id, slug, name, description, is_active')
+        .order('id')
+
+      // Filtrar apps donde el usuario tenga al menos un rol
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('application_id')
+        .eq('user_id', user.value.id)
+        .eq('empresa_id', currentEmpresaId.value)
+
+      const appsConRoles = new Set(roles?.map(r => r.application_id) ?? [])
+      return (apps ?? []).map(app => ({
+        ...app,
+        disponible: appsConRoles.has(app.id),
+      }))
+    } catch (err) {
+      console.error('[auth] Error cargando apps:', err)
+      return []
+    }
+  }
+
+  async function cargarUsuariosMultiEmpresa(empresaId = null) {
+    if (!user.value) return []
+    try {
+      // Base: empresa_usuarios + perfiles
+      let query = supabase
+        .from('empresa_usuarios')
+        .select(`
+          *,
+          usuario:perfiles!inner(*),
+          empresa:empresas!inner(nombre, slug)
+        `)
+
+      if (empresaId) {
+        query = query.eq('empresa_id', empresaId)
+      }
+
+      const { data: memberships } = await query
+      if (!memberships?.length) return []
+
+      const empresaIds = [...new Set(memberships.map(m => m.empresa_id))]
+      const userIds = [...new Set(memberships.map(m => m.usuario_id))]
+
+      // Roles actuales desde user_roles
+      const appId = await getAppId('panaderia')
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('user_id, empresa_id, role_id, role:roles(slug, name)')
+        .in('user_id', userIds)
+        .in('empresa_id', empresaIds)
+        .eq('application_id', appId)
+
+      // Emails via RPC multi-empresa
+      const { data: emails } = await supabase
+        .rpc('get_usuarios_email_all', { p_empresa_ids: empresaIds })
+      const emailMap = new Map(emails?.map(e => [e.usuario_id, e.email]) ?? [])
+
+      // Index roles por (user_id, empresa_id)
+      const rolesMap = new Map()
+      for (const ur of userRoles ?? []) {
+        rolesMap.set(`${ur.user_id}:${ur.empresa_id}`, ur)
+      }
+
+      return memberships.map(m => ({
+        ...m,
+        email: emailMap.get(m.usuario_id) ?? '—',
+        rol_actual: rolesMap.get(`${m.usuario_id}:${m.empresa_id}`) ?? null,
+      }))
+    } catch (err) {
+      console.error('[auth] Error cargando usuarios multi-empresa:', err)
+      return []
+    }
+  }
+
+  // Cache simple para app IDs
+  const _appIdCache = new Map()
+  async function getAppId(slug) {
+    if (_appIdCache.has(slug)) return _appIdCache.get(slug)
+    const { data } = await supabase
+      .from('applications')
+      .select('id')
+      .eq('slug', slug)
+      .single()
+    if (data?.id) _appIdCache.set(slug, data.id)
+    return data?.id ?? null
+  }
+
   async function guardarIdioma(idioma) {
     if (!user.value) return
     try {
@@ -210,5 +302,8 @@ export const useAuthStore = defineStore('auth', () => {
     cargarUsuariosEmpresa,
     cargarPermisos,
     guardarIdioma,
+    cargarAppsDisponibles,
+    cargarUsuariosMultiEmpresa,
+    getAppId,
   }
 })

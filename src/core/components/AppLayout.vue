@@ -12,21 +12,29 @@ const authStore = useAuthStore()
 const appStore = useAppStore()
 const router = useRouter()
 
-const navItems = computed(() => [
-  { to: '/panaderia', icon: 'pi pi-home', label: t('nav.panaderia'), permission: null },
+// ─── Nav sections ─────────────────────────────────────
+
+const puedeAdmin = computed(() => authStore.tienePermiso('usuarios.manage'))
+
+const panaderiaItems = computed(() => [
+  { to: '/panaderia', icon: 'pi pi-chart-bar', label: t('nav.dashboard'), permission: null },
   { to: '/panaderia/recetas', icon: 'pi pi-book', label: t('nav.recetas'), permission: null },
   { to: '/panaderia/inventario', icon: 'pi pi-box', label: t('nav.inventario'), permission: null },
   { to: '/panaderia/productos', icon: 'pi pi-tag', label: 'Productos', permission: null },
   { to: '/panaderia/proveedores', icon: 'pi pi-truck', label: 'Proveedores', permission: null },
   { to: '/panaderia/produccion', icon: 'pi pi-cog', label: t('nav.produccion'), permission: null },
   { to: '/panaderia/catalogos', icon: 'pi pi-wrench', label: 'Catálogos', permission: null },
-  {
-    to: '/panaderia/usuarios',
-    icon: 'pi pi-users',
-    label: t('nav.usuarios'),
-    permission: authStore.tienePermiso('usuarios.manage') || authStore.tienePermiso('usuarios.invite'),
-  },
 ].filter(item => item.permission !== false))
+
+const adminItems = computed(() => [
+  { to: '/admin/usuarios', icon: 'pi pi-users', label: t('nav.usuarios'), permission: puedeAdmin.value },
+].filter(item => item.permission !== false))
+
+const tienePanaderia = computed(() =>
+  authStore.permisos.length > 0
+)
+
+// ─── Helpers ──────────────────────────────────────────
 
 async function handleLogout() {
   try {
@@ -41,12 +49,15 @@ function getSelectValue(event) {
   return event.target.options[event.target.selectedIndex]._value
 }
 
-// Current role name for badge display
 const currentRoleName = computed(() => {
   const rolSlug = authStore.currentRol
   if (!rolSlug) return ''
   return t(`roles.${rolSlug}`)
 })
+
+function isActive(path) {
+  return router.currentRoute.value.path.startsWith(path)
+}
 </script>
 
 <template>
@@ -61,8 +72,8 @@ const currentRoleName = computed(() => {
     >
       <!-- Logo + Empresa selector -->
       <div class="border-b border-gray-200">
-        <div class="h-12 flex items-center px-4">
-          <span v-if="!appStore.sidebarCollapsed" class="text-xl font-bold text-primary-600">
+        <div class="h-14 flex items-center px-4">
+          <span v-if="!appStore.sidebarCollapsed" class="text-xl font-bold text-primary-600 tracking-tight">
             SIAS ERP
           </span>
           <span v-else class="text-xl font-bold text-primary-600 mx-auto">S</span>
@@ -90,17 +101,75 @@ const currentRoleName = computed(() => {
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+      <nav class="flex-1 px-2 py-3 overflow-y-auto space-y-1">
+        <!-- Home -->
         <router-link
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-primary-50 hover:text-primary-700"
-          :class="$route.path === item.to ? 'bg-primary-50 text-primary-700' : 'text-gray-600'"
+          to="/"
+          class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-primary-50 hover:text-primary-700"
+          :class="$route.path === '/' ? 'bg-primary-50 text-primary-700' : 'text-gray-600'"
         >
-          <i :class="[item.icon, 'text-lg']"></i>
-          <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ item.label }}</span>
+          <i class="pi pi-home text-lg"></i>
+          <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ t('nav.home') }}</span>
         </router-link>
+
+        <!-- Separator -->
+        <div v-if="!appStore.sidebarCollapsed && tienePanaderia" class="pt-3 pb-1">
+          <div class="flex items-center gap-2 px-3">
+            <i class="pi pi-shop text-gray-400 text-xs"></i>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              {{ t('nav.sectionPanaderia') }}
+            </span>
+          </div>
+        </div>
+        <div
+          v-if="appStore.sidebarCollapsed && tienePanaderia"
+          class="border-t border-gray-100 my-2"
+        ></div>
+
+        <!-- Panadería items -->
+        <template v-if="tienePanaderia">
+          <router-link
+            v-for="item in panaderiaItems"
+            :key="item.to"
+            :to="item.to"
+            class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            :class="isActive(item.to) && $route.path !== '/'
+              ? 'bg-primary-50 text-primary-700'
+              : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'"
+          >
+            <i :class="[item.icon, 'text-lg']"></i>
+            <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ item.label }}</span>
+          </router-link>
+        </template>
+
+        <!-- Admin section -->
+        <template v-if="adminItems.length">
+          <div v-if="!appStore.sidebarCollapsed" class="pt-3 pb-1">
+            <div class="flex items-center gap-2 px-3">
+              <i class="pi pi-cog text-gray-400 text-xs"></i>
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                {{ t('nav.sectionAdmin') }}
+              </span>
+            </div>
+          </div>
+          <div
+            v-if="appStore.sidebarCollapsed"
+            class="border-t border-gray-100 my-2"
+          ></div>
+
+          <router-link
+            v-for="item in adminItems"
+            :key="item.to"
+            :to="item.to"
+            class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            :class="$route.path === item.to
+              ? 'bg-primary-50 text-primary-700'
+              : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'"
+          >
+            <i :class="[item.icon, 'text-lg']"></i>
+            <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ item.label }}</span>
+          </router-link>
+        </template>
       </nav>
 
       <!-- User section -->
@@ -114,7 +183,7 @@ const currentRoleName = computed(() => {
           </div>
           <button
             @click="appStore.toggleSidebar"
-            class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 shrink-0"
           >
             <i :class="appStore.sidebarCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"></i>
           </button>
