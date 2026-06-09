@@ -43,6 +43,7 @@ import {
   calcularIngredientesNecesarios,
   descontarIngredientesOrden,
 } from './database'
+import { createCrudHooks } from './crud-factory'
 
 // ─── Query Keys ──────────────────────────────────────
 
@@ -64,133 +65,62 @@ export const queryKeys = {
   stockIngrediente: (id) => ['stock_ingrediente', id],
 }
 
-// ─── Categorías ──────────────────────────────────────
+// ─── Catálogos vía Factory ───────────────────────────
+// Elimina ~80 líneas de boilerplate. Cada grupo genera
+// 4 hooks: useList, useCreate, useUpdate, useRemove.
 
-export function useCategoriasRecetaQuery() {
-  return useQuery({
-    queryKey: queryKeys.categoriasReceta,
-    queryFn: fetchCategoriasReceta,
-  })
-}
+const _categoriasReceta = createCrudHooks({
+  queryKey: queryKeys.categoriasReceta,
+  list: fetchCategoriasReceta,
+  create: createCategoriaReceta,
+  update: ({ id, values }) => updateCategoriaReceta(id, values),
+  remove: deleteCategoriaReceta,
+})
 
-export function useCreateCategoriaRecetaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: createCategoriaReceta,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categoriasReceta }),
-  })
-}
+const _categoriasIngrediente = createCrudHooks({
+  queryKey: queryKeys.categoriasIngrediente,
+  list: fetchCategoriasIngrediente,
+  create: createCategoriaIngrediente,
+  update: ({ id, values }) => updateCategoriaIngrediente(id, values),
+  remove: deleteCategoriaIngrediente,
+})
 
-export function useUpdateCategoriaRecetaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, values }) => updateCategoriaReceta(id, values),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categoriasReceta }),
-  })
-}
+const _categoriasProducto = createCrudHooks({
+  queryKey: queryKeys.categoriasProducto,
+  list: fetchCategoriasProducto,
+  create: createCategoriaProducto,
+  update: ({ id, values }) => updateCategoriaProducto(id, values),
+  remove: deleteCategoriaProducto,
+})
 
-export function useDeleteCategoriaRecetaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id) => deleteCategoriaReceta(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categoriasReceta }),
-  })
-}
+const _unidadesMedida = createCrudHooks({
+  queryKey: queryKeys.unidadesMedida,
+  list: fetchUnidadesMedida,
+  create: createUnidadMedida,
+  update: ({ id, values }) => updateUnidadMedida(id, values),
+  remove: deleteUnidadMedida,
+})
 
-export function useCategoriasIngredienteQuery() {
-  return useQuery({
-    queryKey: queryKeys.categoriasIngrediente,
-    queryFn: fetchCategoriasIngrediente,
-  })
-}
+// Re-export con nombres originales para compatibilidad
+export const useCategoriasRecetaQuery = _categoriasReceta.useList
+export const useCreateCategoriaRecetaMutation = _categoriasReceta.useCreate
+export const useUpdateCategoriaRecetaMutation = _categoriasReceta.useUpdate
+export const useDeleteCategoriaRecetaMutation = _categoriasReceta.useRemove
 
-export function useCreateCategoriaIngredienteMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: createCategoriaIngrediente,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categoriasIngrediente }),
-  })
-}
+export const useCategoriasIngredienteQuery = _categoriasIngrediente.useList
+export const useCreateCategoriaIngredienteMutation = _categoriasIngrediente.useCreate
+export const useUpdateCategoriaIngredienteMutation = _categoriasIngrediente.useUpdate
+export const useDeleteCategoriaIngredienteMutation = _categoriasIngrediente.useRemove
 
-export function useUpdateCategoriaIngredienteMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, values }) => updateCategoriaIngrediente(id, values),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categoriasIngrediente }),
-  })
-}
+export const useCategoriasProductoQuery = _categoriasProducto.useList
+export const useCreateCategoriaProductoMutation = _categoriasProducto.useCreate
+export const useUpdateCategoriaProductoMutation = _categoriasProducto.useUpdate
+export const useDeleteCategoriaProductoMutation = _categoriasProducto.useRemove
 
-export function useDeleteCategoriaIngredienteMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id) => deleteCategoriaIngrediente(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categoriasIngrediente }),
-  })
-}
-
-export function useCategoriasProductoQuery() {
-  return useQuery({
-    queryKey: queryKeys.categoriasProducto,
-    queryFn: fetchCategoriasProducto,
-  })
-}
-
-export function useCreateCategoriaProductoMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: createCategoriaProducto,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categoriasProducto }),
-  })
-}
-
-export function useUpdateCategoriaProductoMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, values }) => updateCategoriaProducto(id, values),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categoriasProducto }),
-  })
-}
-
-export function useDeleteCategoriaProductoMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id) => deleteCategoriaProducto(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categoriasProducto }),
-  })
-}
-
-// ─── Unidades ────────────────────────────────────────
-
-export function useUnidadesMedidaQuery() {
-  return useQuery({
-    queryKey: queryKeys.unidadesMedida,
-    queryFn: fetchUnidadesMedida,
-  })
-}
-
-export function useCreateUnidadMedidaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: createUnidadMedida,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.unidadesMedida }),
-  })
-}
-
-export function useUpdateUnidadMedidaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, values }) => updateUnidadMedida(id, values),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.unidadesMedida }),
-  })
-}
-
-export function useDeleteUnidadMedidaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id) => deleteUnidadMedida(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.unidadesMedida }),
-  })
-}
+export const useUnidadesMedidaQuery = _unidadesMedida.useList
+export const useCreateUnidadMedidaMutation = _unidadesMedida.useCreate
+export const useUpdateUnidadMedidaMutation = _unidadesMedida.useUpdate
+export const useDeleteUnidadMedidaMutation = _unidadesMedida.useRemove
 
 // ─── Ingredientes ────────────────────────────────────
 
@@ -279,7 +209,7 @@ export function useCreateRecetaMutation() {
   const queryClient = useQueryClient()
   const authStore = useAuthStore()
   return useMutation({
-    mutationFn: (values) => createReceta({ ...values, empresa_id: authStore.currentEmpresaId }),
+    mutationFn: (values) => createReceta({ ...values, empresa_id: authStore.currentEmpresaId, creado_por: authStore.user?.id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recetas'] }),
   })
 }
@@ -351,7 +281,7 @@ export function useCreateOrdenMutation() {
   const queryClient = useQueryClient()
   const authStore = useAuthStore()
   return useMutation({
-    mutationFn: (values) => createOrdenProduccion({ ...values, empresa_id: authStore.currentEmpresaId }),
+    mutationFn: (values) => createOrdenProduccion({ ...values, empresa_id: authStore.currentEmpresaId, usuario_responsable_id: authStore.user?.id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ordenes_produccion'] }),
   })
 }
@@ -412,7 +342,7 @@ export function useDescontarInventarioMutation() {
   const queryClient = useQueryClient()
   const authStore = useAuthStore()
   return useMutation({
-    mutationFn: ({ ordenId, detalles }) => descontarIngredientesOrden(ordenId, detalles, authStore.currentEmpresaId),
+    mutationFn: ({ ordenId, detalles }) => descontarIngredientesOrden(ordenId, detalles, authStore.currentEmpresaId, authStore.user?.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['movimientos_mp'] })
       queryClient.invalidateQueries({ queryKey: ['stock_ingrediente'] })
