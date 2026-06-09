@@ -42,6 +42,13 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
 
+  // Si todavía está cargando la sesión, no redirigir todavía.
+  // App.vue se encarga del redirect inicial después de initialize().
+  if (authStore.loading) {
+    next()
+    return
+  }
+
   if (to.meta.requiresAuth !== false && !authStore.isAuthenticated) {
     if (to.name !== 'login') {
       next({ name: 'login' })
