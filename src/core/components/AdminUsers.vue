@@ -2,20 +2,23 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/core/store/auth'
-import { supabase } from '@/core/supabase'
+import { useInvite } from '@/core/composables/useInvite'
 import { toast } from 'vue-sonner'
+import { useConfirm } from 'primevue/useconfirm'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const confirm = useConfirm()
+const { copiarInvitacion: copiarLink } = useInvite()
 const usuarios = ref([])
 const isLoading = ref(false)
 const roles = ref([])
 const isLoadingRoles = ref(false)
+const loadingAction = ref(null) // key de la fila en operación: "${usuario_id}:${empresa_id}"
 const empresaFiltro = ref(null) // null = todas
 const searchQuery = ref('')
 
 // ─── Confirmación de remover usuario ──────────────────
-const removeTarget = ref(null) // { usuario_id, empresa_id, nombre } | null
 
 const puedeInvitar = computed(() => authStore.tienePermiso('usuarios.invite'))
 const puedeGestionarRoles = computed(() => authStore.tienePermiso('usuarios.manage'))
@@ -54,7 +57,12 @@ const panaderiaAppId = ref(null)
 
 async function cargarPanaderiaAppId() {
   if (panaderiaAppId.value) return
-  panaderiaAppId.value = await authStore.getAppId('panaderia')
+  try {
+    panaderiaAppId.value = await authStore.getAppId('panaderia')
+  } catch (err) {
+    console.error('[admin-users] Error cargando appId:', err)
+    panaderiaAppId.value = null
+  }
 }
 
 async function cargarUsuarios() {
@@ -78,13 +86,7 @@ async function cargarRoles() {
 
   isLoadingRoles.value = true
   try {
-    const { data, error } = await supabase
-      .from('roles')
-      .select('id, name, slug, description')
-      .eq('application_id', appId)
-      .order('id')
-    if (error) throw error
-    roles.value = data ?? []
+    roles.value = await authStore.cargarRolesPorApp(appId)
   } catch (err) {
     console.error('[admin-users] Error cargando roles:', err)
   } finally {
@@ -103,35 +105,32 @@ async function cambiarRol(usuarioId, empresaId, nuevoRoleId) {
   const appId = panaderiaAppId.value
   if (!appId) return
 
+  const key = `${usuarioId}:${empresaId}`
+  loadingAction.value = key
   try {
-    const { error } = await supabase
-      .from('user_roles')
-      .update({ role_id: Number(nuevoRoleId) })
-      .eq('user_id', usuarioId)
-      .eq('empresa_id', empresaId)
-      .eq('application_id', appId)
-    if (error) throw error
+    await authStore.cambiarRol(usuarioId, empresaId, nuevoRoleId, appId)
     toast.success(t('users.roleUpdated'))
     await cargarUsuarios()
   } catch (err) {
     console.error('[admin-users] Error cambiando rol:', err)
     toast.error(t('errors.updateRole'))
+  } finally {
+    loadingAction.value = null
   }
 }
 
 async function toggleActivo(usuarioId, empresaId, activo) {
+  const key = `${usuarioId}:${empresaId}`
+  loadingAction.value = key
   try {
-    const { error } = await supabase
-      .from('empresa_usuarios')
-      .update({ activo })
-      .eq('empresa_id', empresaId)
-      .eq('usuario_id', usuarioId)
-    if (error) throw error
+    await authStore.toggleActivo(usuarioId, empresaId, activo)
     toast.success(activo ? t('users.activate') : t('users.deactivate'))
     await cargarUsuarios()
   } catch (err) {
     console.error('[admin-users] Error cambiando estado:', err)
     toast.error(t('errors.updateStatus'))
+  } finally {
+    loadingAction.value = null
   }
 }
 
@@ -146,69 +145,32 @@ function confirmarRemover(eu) {
     toast.error(t('users.cannotRemoveOwner'))
     return
   }
-  removeTarget.value = {
-    usuario_id: eu.usuario_id,
-    empresa_id: eu.empresa_id,
-    nombre: eu.usuario?.nombre || '?',
-  }
-}
 
-async function ejecutarRemover() {
-  if (!removeTarget.value) return
-
-  const { usuario_id, empresa_id } = removeTarget.value
-  const appId = panaderiaAppId.value
-
-  try {
-    // 1. Eliminar roles del usuario en esa empresa + app
-    if (appId) {
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', usuario_id)
-        .eq('empresa_id', empresa_id)
-        .eq('application_id', appId)
-    }
-
-    // 2. Eliminar membresía
-    const { error } = await supabase
-      .from('empresa_usuarios')
-      .delete()
-      .eq('empresa_id', empresa_id)
-      .eq('usuario_id', usuario_id)
-    if (error) throw error
-
-    toast.success(t('users.removeSuccess'))
-    removeTarget.value = null
-    await cargarUsuarios()
-  } catch (err) {
-    console.error('[admin-users] Error removiendo usuario:', err)
-    toast.error(t('users.removeError'))
-  }
-}
-
-function cancelarRemover() {
-  removeTarget.value = null
+  confirm.require({
+    message: t('users.removeConfirm', { nombre: eu.usuario?.nombre || '?' }),
+    header: t('users.removeUser'),
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('users.removeUser'),
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      try {
+        await authStore.removerUsuario(eu.usuario_id, eu.empresa_id, panaderiaAppId.value)
+        toast.success(t('users.removeSuccess'))
+        await cargarUsuarios()
+      } catch (err) {
+        console.error('[admin-users] Error removiendo usuario:', err)
+        toast.error(t('users.removeError'))
+      }
+    },
+  })
 }
 
 // ─── Invitación ──────────────────────────────────────
 
-function buildInviteUrl(slug) {
-  // Con hash history: /#/login?invitacion={slug}
-  const origin = window.location.origin
-  const base = import.meta.env.BASE_URL
-  return `${origin}${base}#/login?invitacion=${slug}`
-}
-
 async function copiarInvitacion() {
   if (!authStore.currentEmpresa) return
-  const link = buildInviteUrl(authStore.currentEmpresa.slug)
-  try {
-    await navigator.clipboard.writeText(link)
-    toast.success(t('users.linkCopied'))
-  } catch {
-    toast.error(t('errors.generic'))
-  }
+  await copiarLink(authStore.currentEmpresa.slug)
 }
 
 // Init
@@ -356,7 +318,8 @@ watch(() => authStore.user, async () => {
                 <select
                   v-if="puedeGestionarRoles && eu.usuario_id !== authStore.user?.id"
                   :value="eu.rol_actual?.role_id"
-                  class="text-sm rounded border border-gray-300 px-2 py-1 text-gray-700 focus:ring-2 focus:ring-primary-500 max-w-[140px]"
+                  class="text-sm rounded border border-gray-300 px-2 py-1 text-gray-700 focus:ring-2 focus:ring-primary-500 max-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="loadingAction === `${eu.usuario_id}:${eu.empresa_id}`"
                   @change="cambiarRol(eu.usuario_id, eu.empresa_id, $event.target.value)"
                 >
                   <option
@@ -388,7 +351,8 @@ watch(() => authStore.user, async () => {
                   <button
                     v-if="eu.usuario_id !== authStore.user?.id"
                     @click="toggleActivo(eu.usuario_id, eu.empresa_id, !eu.activo)"
-                    class="text-sm text-gray-500 hover:text-amber-600 transition-colors"
+                    class="text-sm text-gray-500 hover:text-amber-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    :disabled="loadingAction === `${eu.usuario_id}:${eu.empresa_id}`"
                     :title="eu.activo ? t('users.deactivate') : t('users.activate')"
                   >
                     <i :class="eu.activo ? 'pi pi-ban' : 'pi pi-check-circle'" class="text-lg"></i>
@@ -398,7 +362,8 @@ watch(() => authStore.user, async () => {
                   <button
                     v-if="!eu.es_dueno && eu.usuario_id !== authStore.user?.id && puedeGestionarRoles"
                     @click="confirmarRemover(eu)"
-                    class="text-sm text-gray-500 hover:text-red-600 transition-colors"
+                    class="text-sm text-gray-500 hover:text-red-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    :disabled="loadingAction === `${eu.usuario_id}:${eu.empresa_id}`"
                     :title="t('users.removeUser')"
                   >
                     <i class="pi pi-trash text-lg"></i>
@@ -413,42 +378,6 @@ watch(() => authStore.user, async () => {
       </div>
     </div>
 
-    <!-- Confirmación de remover usuario (modal simple) -->
-    <Teleport to="body">
-      <div
-        v-if="removeTarget"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-        @click.self="cancelarRemover"
-      >
-        <div class="bg-white rounded-xl shadow-xl border border-gray-200 p-6 max-w-sm w-full mx-4">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
-              <i class="pi pi-exclamation-triangle text-xl"></i>
-            </div>
-            <h3 class="text-lg font-semibold text-gray-900">{{ t('users.removeUser') }}</h3>
-          </div>
-
-          <p class="text-sm text-gray-600 mb-6">
-            {{ t('users.removeConfirm', { nombre: removeTarget.nombre }) }}
-          </p>
-
-          <div class="flex justify-end gap-3">
-            <button
-              @click="cancelarRemover"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              {{ t('common.cancel') }}
-            </button>
-            <button
-              @click="ejecutarRemover"
-              class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-            >
-              <i class="pi pi-trash mr-1"></i>
-              {{ t('users.removeUser') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <ConfirmDialog />
   </div>
 </template>

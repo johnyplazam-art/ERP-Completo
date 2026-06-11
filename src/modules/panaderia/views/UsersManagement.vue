@@ -4,9 +4,11 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/core/store/auth'
 import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
+import { useInvite } from '@/core/composables/useInvite'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const { copiarInvitacion: copiarLink } = useInvite()
 const usuarios = ref([])
 const isLoading = ref(false)
 const roles = ref([])
@@ -146,21 +148,9 @@ async function toggleActivo(usuarioId, activo) {
   }
 }
 
-function buildInviteUrl(slug) {
-  const origin = window.location.origin
-  const base = import.meta.env.BASE_URL
-  return `${origin}${base}#/login?invitacion=${slug}`
-}
-
 async function copiarInvitacion() {
   if (!authStore.currentEmpresa) return
-  const link = buildInviteUrl(authStore.currentEmpresa.slug)
-  try {
-    await navigator.clipboard.writeText(link)
-    toast.success(t('users.linkCopied'))
-  } catch {
-    toast.error(t('errors.generic'))
-  }
+  await copiarLink(authStore.currentEmpresa.slug)
 }
 
 // Inicializar: cachear appId, luego cargar datos

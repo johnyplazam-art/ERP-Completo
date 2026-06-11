@@ -13,76 +13,38 @@ function withRange(query, opts) {
   return query
 }
 
-// ─── Categorías ──────────────────────────────────────
+// ─── Categorías (factory) ────────────────────────────
 
-export async function fetchCategoriasReceta() {
-  const { data, error } = await supabase.from('categorias_receta').select('*').order('nombre')
-  if (error) throw error
-  return data
+function createCategoriaCrud(table) {
+  const fetchFn = () =>
+    supabase.from(table).select('*').order('nombre').then(r => { if (r.error) throw r.error; return r.data })
+  const createFn = (values) =>
+    supabase.from(table).insert(values).select().single().then(r => { if (r.error) throw r.error; return r.data })
+  const updateFn = (id, values) =>
+    supabase.from(table).update(values).eq('id', id).select().single().then(r => { if (r.error) throw r.error; return r.data })
+  const deleteFn = (id) =>
+    supabase.from(table).delete().eq('id', id).then(r => { if (r.error) throw r.error })
+  return { fetch: fetchFn, create: createFn, update: updateFn, delete: deleteFn }
 }
 
-export async function createCategoriaReceta(values) {
-  const { data, error } = await supabase.from('categorias_receta').insert(values).select().single()
-  if (error) throw error
-  return data
-}
+const categorias_receta = createCategoriaCrud('categorias_receta')
+const categorias_ingrediente = createCategoriaCrud('categorias_ingrediente')
+const categorias_producto = createCategoriaCrud('categorias_producto')
 
-export async function updateCategoriaReceta(id, values) {
-  const { data, error } = await supabase.from('categorias_receta').update(values).eq('id', id).select().single()
-  if (error) throw error
-  return data
-}
+export const fetchCategoriasReceta = categorias_receta.fetch
+export const createCategoriaReceta = categorias_receta.create
+export const updateCategoriaReceta = categorias_receta.update
+export const deleteCategoriaReceta = categorias_receta.delete
 
-export async function deleteCategoriaReceta(id) {
-  const { error } = await supabase.from('categorias_receta').delete().eq('id', id)
-  if (error) throw error
-}
+export const fetchCategoriasIngrediente = categorias_ingrediente.fetch
+export const createCategoriaIngrediente = categorias_ingrediente.create
+export const updateCategoriaIngrediente = categorias_ingrediente.update
+export const deleteCategoriaIngrediente = categorias_ingrediente.delete
 
-export async function fetchCategoriasIngrediente() {
-  const { data, error } = await supabase.from('categorias_ingrediente').select('*').order('nombre')
-  if (error) throw error
-  return data
-}
-
-export async function createCategoriaIngrediente(values) {
-  const { data, error } = await supabase.from('categorias_ingrediente').insert(values).select().single()
-  if (error) throw error
-  return data
-}
-
-export async function updateCategoriaIngrediente(id, values) {
-  const { data, error } = await supabase.from('categorias_ingrediente').update(values).eq('id', id).select().single()
-  if (error) throw error
-  return data
-}
-
-export async function deleteCategoriaIngrediente(id) {
-  const { error } = await supabase.from('categorias_ingrediente').delete().eq('id', id)
-  if (error) throw error
-}
-
-export async function fetchCategoriasProducto() {
-  const { data, error } = await supabase.from('categorias_producto').select('*').order('nombre')
-  if (error) throw error
-  return data
-}
-
-export async function createCategoriaProducto(values) {
-  const { data, error } = await supabase.from('categorias_producto').insert(values).select().single()
-  if (error) throw error
-  return data
-}
-
-export async function updateCategoriaProducto(id, values) {
-  const { data, error } = await supabase.from('categorias_producto').update(values).eq('id', id).select().single()
-  if (error) throw error
-  return data
-}
-
-export async function deleteCategoriaProducto(id) {
-  const { error } = await supabase.from('categorias_producto').delete().eq('id', id)
-  if (error) throw error
-}
+export const fetchCategoriasProducto = categorias_producto.fetch
+export const createCategoriaProducto = categorias_producto.create
+export const updateCategoriaProducto = categorias_producto.update
+export const deleteCategoriaProducto = categorias_producto.delete
 
 // ─── Unidades de Medida ──────────────────────────────
 

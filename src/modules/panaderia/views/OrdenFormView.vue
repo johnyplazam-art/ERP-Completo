@@ -6,6 +6,7 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 import { useProductosQuery, useRecetasQuery, useCreateOrdenMutation, useCalculoIngredientesQuery } from '../composables/queries'
+import { getSelectValue } from '@/core/composables/useSelectValue'
 
 const router = useRouter()
 
@@ -40,7 +41,7 @@ const ordenSchema = z.object({
 })
 
 // ── Form ──────────────────────────────────────────
-const { handleSubmit, values, errors, setFieldValue, validate } = useForm({
+const { handleSubmit, values, errors, setFieldValue } = useForm({
   validationSchema: toTypedSchema(ordenSchema),
   initialValues: {
     fecha_programada: new Date().toISOString().split('T')[0],
@@ -49,11 +50,6 @@ const { handleSubmit, values, errors, setFieldValue, validate } = useForm({
   },
 })
 
-// Helper: extrae el valor real de un <select> (Vue guarda el valor real en option._value)
-const getSelectValue = (event) => {
-  const option = event.target.options[event.target.selectedIndex]
-  return option ? option._value : null
-}
 
 const addDetalle = () => {
   setFieldValue('detalles', [

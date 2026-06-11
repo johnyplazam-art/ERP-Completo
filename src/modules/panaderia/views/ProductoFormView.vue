@@ -4,6 +4,7 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
 import { productoSchema } from '../validations/index'
+import { getSelectValue } from '@/core/composables/useSelectValue'
 import {
   useCategoriasProductoQuery,
   useProductosQuery,
@@ -36,11 +37,7 @@ const { handleSubmit, values, resetForm, errors, setFieldValue } = useForm({
   },
 })
 
-// Helper: extrae el valor real de un <select> (Vue guarda el valor real en option._value)
-const getSelectValue = (event) => {
-  const option = event.target.options[event.target.selectedIndex]
-  return option ? option._value : null
-}
+
 
 // Cargar datos existentes en modo edición
 if (isEdit.value) {

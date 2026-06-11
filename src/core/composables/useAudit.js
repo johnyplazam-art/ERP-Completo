@@ -25,17 +25,13 @@ export function useAudit() {
     if (!authStore.user) return
 
     try {
-      // Obtener ID de la aplicación Panadería
-      const { data: app } = await supabase
-        .from('applications')
-        .select('id')
-        .eq('slug', 'panaderia')
-        .single()
+      // getAppId tiene caché propio — solo consulta DB la primera vez
+      const appId = await authStore.getAppId('panaderia')
 
       await supabase.from('audit_logs').insert({
         user_id: authStore.user.id,
         user_email: authStore.userEmail,
-        application_id: app?.id,
+        application_id: appId,
         action,
         affected_table: table,
         entity_id: entityId,

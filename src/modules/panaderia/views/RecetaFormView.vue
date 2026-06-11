@@ -4,7 +4,8 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
 import { recetaSchema } from '../validations/index'
-import { useCategoriasRecetaQuery, useUnidadesMedidaQuery, useIngredientesQuery, useRecetasQuery, useCreateRecetaMutation } from '../composables/queries'
+import { getSelectValue } from '@/core/composables/useSelectValue'
+import { useCategoriasRecetaQuery, useUnidadesMedidaQuery, useIngredientesQuery, useRecetasQuery, useCreateRecetaMutation, useUpdateRecetaMutation } from '../composables/queries'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,8 +16,9 @@ const { data: unidades } = useUnidadesMedidaQuery()
 const { data: ingredientes } = useIngredientesQuery({ activo: true })
 const { data: recetas } = useRecetasQuery()
 const createMutation = useCreateRecetaMutation()
+const updateMutation = useUpdateRecetaMutation()
 
-const { handleSubmit, values, setFieldValue, errors, validate } = useForm({
+const { handleSubmit, values, setFieldValue, errors, resetForm } = useForm({
   validationSchema: toTypedSchema(recetaSchema),
   initialValues: {
     nombre: '',
@@ -30,11 +32,37 @@ const { handleSubmit, values, setFieldValue, errors, validate } = useForm({
   },
 })
 
-// Helper: extrae el valor real de un <select> (Vue guarda el valor real en option._value)
-const getSelectValue = (event) => {
-  const option = event.target.options[event.target.selectedIndex]
-  return option ? option._value : null
+// Cargar datos existentes si estamos en modo edición
+if (isEdit.value) {
+  const receta = computed(() =>
+    recetas.value?.find(r => r.id === Number(route.params.id))
+  )
+
+  watchEffect(() => {
+    const data = receta.value
+    if (data) {
+      resetForm({
+        values: {
+          nombre: data.nombre || '',
+          categoria_id: data.categoria_id || null,
+          instrucciones: data.instrucciones || '',
+          tiempo_preparacion_min: data.tiempo_preparacion_min || null,
+          rendimiento_cantidad: data.rendimiento_cantidad || 1,
+          rendimiento_unidad_id: data.rendimiento_unidad_id || null,
+          activa: data.activa ?? true,
+          ingredientes: (data.receta_ingredientes || []).map((ri, i) => ({
+            ingrediente_id: ri.ingrediente_id,
+            cantidad: ri.cantidad,
+            unidad_id: ri.unidad_id,
+            es_opcional: ri.es_opcional || false,
+            orden: ri.orden || i,
+          })),
+        },
+      })
+    }
+  })
 }
+
 
 const addIngrediente = () => {
   setFieldValue('ingredientes', [
@@ -59,11 +87,16 @@ const onIngredienteChange = (index, event) => {
 
 const onSubmit = handleSubmit(async (formValues) => {
   try {
-    await createMutation.mutateAsync(formValues)
-    toast.success('Receta creada exitosamente')
+    if (isEdit) {
+      await updateMutation.mutateAsync({ id: Number(route.params.id), values: formValues })
+      toast.success('Receta actualizada exitosamente')
+    } else {
+      await createMutation.mutateAsync(formValues)
+      toast.success('Receta creada exitosamente')
+    }
     router.push('/panaderia/recetas')
   } catch (err) {
-    toast.error(err.message || 'Error al crear receta')
+    toast.error(err.message || `Error al ${isEdit ? 'actualizar' : 'crear'} receta`)
   }
 })
 </script>
@@ -260,11 +293,11 @@ const onSubmit = handleSubmit(async (formValues) => {
         </router-link>
         <button
           type="submit"
-          :disabled="createMutation.isPending.value"
+          :disabled="isEdit ? updateMutation.isPending.value : createMutation.isPending.value"
           class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
         >
-          <i v-if="createMutation.isPending.value" class="pi pi-spin pi-spinner mr-2"></i>
-          {{ createMutation.isPending.value ? 'Guardando...' : 'Guardar Receta' }}
+          <i v-if="isEdit ? updateMutation.isPending.value : createMutation.isPending.value" class="pi pi-spin pi-spinner mr-2"></i>
+          {{ isEdit ? (updateMutation.isPending.value ? 'Guardando...' : 'Actualizar Receta') : (createMutation.isPending.value ? 'Guardando...' : 'Guardar Receta') }}
         </button>
       </div>
     </form>

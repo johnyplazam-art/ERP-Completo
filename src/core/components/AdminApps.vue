@@ -1,13 +1,18 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { supabase } from '@/core/supabase'
+import { useAppStore } from '@/core/store/app'
 import { toast } from 'vue-sonner'
+import { useConfirm } from 'primevue/useconfirm'
 
 const { t } = useI18n()
+const appStore = useAppStore()
+const confirm = useConfirm()
 
 const apps = ref([])
 const isLoading = ref(true)
+const isSaving = ref(false)
+const loadingApp = ref(null) // id de la app en operación (toggle/delete)
 const editando = ref(null) // id de la app que se está editando | null
 const form = ref({ name: '', slug: '', description: '', icon: 'pi pi-th-large', is_active: true, orden: 0 })
 
@@ -26,13 +31,7 @@ const ICONOS_DISPONIBLES = [
 async function cargarApps() {
   isLoading.value = true
   try {
-    const { data, error } = await supabase
-      .from('applications')
-      .select('*')
-      .order('orden', { ascending: true })
-      .order('name')
-    if (error) throw error
-    apps.value = data ?? []
+    apps.value = await appStore.cargarApps()
   } catch (err) {
     console.error('[admin-apps] Error:', err)
     toast.error(t('errors.loadApps'))
@@ -65,33 +64,29 @@ async function guardar() {
     return
   }
 
+  const slugFinal = form.value.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')
+  const exists = await appStore.slugExiste(slugFinal, editando.value === 'nueva' ? null : editando.value)
+  if (exists) {
+    toast.error(`El slug "${slugFinal}" ya está en uso`)
+    return
+  }
+
+  isSaving.value = true
   try {
+    const payload = {
+      name: form.value.name.trim(),
+      slug: slugFinal,
+      description: form.value.description.trim(),
+      icon: form.value.icon,
+      is_active: form.value.is_active,
+      orden: form.value.orden,
+    }
+
     if (editando.value === 'nueva') {
-      const { error } = await supabase
-        .from('applications')
-        .insert({
-          name: form.value.name.trim(),
-          slug: form.value.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-          description: form.value.description.trim(),
-          icon: form.value.icon,
-          is_active: form.value.is_active,
-          orden: form.value.orden,
-        })
-      if (error) throw error
+      await appStore.crearApp(payload)
       toast.success('Aplicación creada')
     } else {
-      const { error } = await supabase
-        .from('applications')
-        .update({
-          name: form.value.name.trim(),
-          slug: form.value.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-          description: form.value.description.trim(),
-          icon: form.value.icon,
-          is_active: form.value.is_active,
-          orden: form.value.orden,
-        })
-        .eq('id', editando.value)
-      if (error) throw error
+      await appStore.actualizarApp(editando.value, payload)
       toast.success('Aplicación actualizada')
     }
 
@@ -100,36 +95,46 @@ async function guardar() {
   } catch (err) {
     console.error('[admin-apps] Error guardando:', err)
     toast.error(t('errors.generic'))
+  } finally {
+    isSaving.value = false
   }
 }
 
 async function toggleActiva(app) {
+  loadingApp.value = app.id
   try {
-    const { error } = await supabase
-      .from('applications')
-      .update({ is_active: !app.is_active })
-      .eq('id', app.id)
-    if (error) throw error
+    await appStore.toggleActiva(app.id, app.is_active)
+    toast.success(app.is_active ? t('users.deactivate') : t('users.active'))
     await cargarApps()
   } catch (err) {
     console.error('[admin-apps] Error toggling:', err)
+    toast.error(t('errors.generic'))
+  } finally {
+    loadingApp.value = null
   }
 }
 
-async function eliminarApp(app) {
-  if (!confirm(`¿Eliminar "${app.name}"? Esta acción no se puede deshacer.`)) return
-  try {
-    const { error } = await supabase
-      .from('applications')
-      .delete()
-      .eq('id', app.id)
-    if (error) throw error
-    toast.success(`"${app.name}" eliminada`)
-    await cargarApps()
-  } catch (err) {
-    console.error('[admin-apps] Error eliminando:', err)
-    toast.error(t('errors.generic'))
-  }
+function eliminarApp(app) {
+  confirm.require({
+    message: `¿Eliminar "${app.name}"? Esta acción no se puede deshacer.`,
+    header: 'Eliminar aplicación',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Eliminar',
+    accept: async () => {
+      loadingApp.value = app.id
+      try {
+        await appStore.eliminarApp(app.id)
+        toast.success(`"${app.name}" eliminada`)
+        await cargarApps()
+      } catch (err) {
+        console.error('[admin-apps] Error eliminando:', err)
+        toast.error(t('errors.generic'))
+      } finally {
+        loadingApp.value = null
+      }
+    },
+  })
 }
 
 onMounted(cargarApps)
@@ -204,21 +209,24 @@ onMounted(cargarApps)
         <div class="flex items-center gap-2 shrink-0">
           <button
             @click="toggleActiva(app)"
-            class="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+            class="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            :disabled="loadingApp === app.id"
             :title="app.is_active ? t('users.deactivate') : t('users.activate')"
           >
             <i :class="app.is_active ? 'pi pi-eye-slash' : 'pi pi-eye'" class="text-lg"></i>
           </button>
           <button
             @click="editarApp(app)"
-            class="p-2 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+            class="p-2 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            :disabled="isSaving || loadingApp !== null"
             :title="t('common.edit')"
           >
             <i class="pi pi-pencil text-lg"></i>
           </button>
           <button
             @click="eliminarApp(app)"
-            class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+            class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            :disabled="loadingApp === app.id"
             :title="t('common.delete')"
           >
             <i class="pi pi-trash text-lg"></i>
@@ -229,6 +237,7 @@ onMounted(cargarApps)
 
     <!-- Edit / Create modal -->
     <Teleport to="body">
+      <ConfirmDialog />
       <div
         v-if="editando !== null"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -249,8 +258,9 @@ onMounted(cargarApps)
                 v-model="form.name"
                 type="text"
                 required
+                :disabled="isSaving"
                 placeholder="Ej: Panadería"
-                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -263,8 +273,9 @@ onMounted(cargarApps)
                 v-model="form.slug"
                 type="text"
                 required
+                :disabled="isSaving"
                 placeholder="Ej: panaderia"
-                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <p class="mt-1 text-xs text-gray-400">Identificador único para la URL: /{{ form.slug || 'slug' }}</p>
             </div>
@@ -275,8 +286,9 @@ onMounted(cargarApps)
               <textarea
                 v-model="form.description"
                 rows="2"
+                :disabled="isSaving"
                 placeholder="Breve descripción de la aplicación"
-                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 resize-none"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               ></textarea>
             </div>
 
@@ -288,8 +300,9 @@ onMounted(cargarApps)
                   v-for="icono in ICONOS_DISPONIBLES"
                   :key="icono"
                   type="button"
+                  :disabled="isSaving"
                   @click="form.icon = icono"
-                  class="w-10 h-10 rounded-lg flex items-center justify-center text-lg transition-colors"
+                  class="w-10 h-10 rounded-lg flex items-center justify-center text-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   :class="form.icon === icono
                     ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-500'
                     : 'bg-gray-50 text-gray-500 hover:bg-gray-100'"
@@ -307,7 +320,8 @@ onMounted(cargarApps)
                 <input
                   v-model.number="form.orden"
                   type="number"
-                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500"
+                  :disabled="isSaving"
+                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -317,7 +331,8 @@ onMounted(cargarApps)
                   <input
                     v-model="form.is_active"
                     type="checkbox"
-                    class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    :disabled="isSaving"
+                    class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
                   />
                   <span class="text-sm text-gray-700">{{ t('admin.active') }}</span>
                 </label>
@@ -328,16 +343,18 @@ onMounted(cargarApps)
             <div class="flex justify-end gap-3 pt-2">
               <button
                 type="button"
+                :disabled="isSaving"
                 @click="cancelar"
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {{ t('common.cancel') }}
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+                :disabled="isSaving"
+                class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <i class="pi pi-check mr-1"></i>
+                <i :class="isSaving ? 'pi pi-spin pi-spinner mr-1' : 'pi pi-check mr-1'"></i>
                 {{ t('common.save') }}
               </button>
             </div>
