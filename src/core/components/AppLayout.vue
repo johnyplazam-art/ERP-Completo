@@ -5,6 +5,7 @@ import { Toaster } from 'vue-sonner'
 import { useAuthStore } from '@/core/store/auth'
 import { useAppStore } from '@/core/store/app'
 import { useRouter } from 'vue-router'
+import { getSelectValue } from '@/core/composables/useSelectValue'
 import LanguageSelector from './LanguageSelector.vue'
 
 const { t } = useI18n()
@@ -46,10 +47,6 @@ async function handleLogout() {
   }
 }
 
-function getSelectValue(event) {
-  return event.target.options[event.target.selectedIndex]._value
-}
-
 const currentRoleName = computed(() => {
   const rolSlug = authStore.currentRol
   if (!rolSlug) return ''
@@ -59,6 +56,44 @@ const currentRoleName = computed(() => {
 function isActive(path) {
   return router.currentRoute.value.path.startsWith(path)
 }
+
+// ─── Breadcrumbs ──────────────────────────────────────
+
+const breadcrumbs = computed(() => {
+  const route = router.currentRoute.value
+  const crumbs = [{ label: 'Inicio', to: '/' }]
+
+  // Partir la ruta en segmentos y buscar metadatos
+  const pathParts = route.path.split('/').filter(Boolean)
+  let accumulated = ''
+
+  for (const part of pathParts) {
+    accumulated += `/${part}`
+
+    // Buscar la ruta que coincida (respetando params como :id)
+    const matched = route.matched.find(m => {
+      const normalized = m.path.replace(/\/:.*/, '') // quita /:id etc
+      return accumulated === normalized || accumulated.startsWith(normalized)
+    })
+
+    if (matched?.meta?.title) {
+      crumbs.push({ label: matched.meta.title, to: accumulated })
+    } else {
+      // Si no hay meta.title, mostramos el segmento formateado
+      crumbs.push({
+        label: part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' '),
+        to: accumulated,
+      })
+    }
+  }
+
+  // No linkear el último (es la página actual)
+  if (crumbs.length > 1) {
+    crumbs[crumbs.length - 1].to = undefined
+  }
+
+  return crumbs
+})
 </script>
 
 <template>
@@ -208,6 +243,23 @@ function isActive(path) {
         </h1>
         <LanguageSelector />
       </header>
+
+      <!-- Breadcrumbs -->
+      <nav v-if="breadcrumbs.length > 1" class="px-6 pt-4 pb-0 text-sm text-gray-500">
+        <ol class="flex items-center gap-1.5">
+          <li v-for="(crumb, i) in breadcrumbs" :key="i" class="flex items-center gap-1.5">
+            <i v-if="i > 0" class="pi pi-chevron-right text-xs text-gray-300"></i>
+            <router-link
+              v-if="crumb.to"
+              :to="crumb.to"
+              class="hover:text-primary-600 transition-colors"
+            >
+              {{ crumb.label }}
+            </router-link>
+            <span v-else class="text-gray-900 font-medium">{{ crumb.label }}</span>
+          </li>
+        </ol>
+      </nav>
 
       <!-- Page content -->
       <div class="flex-1 overflow-auto p-6">
