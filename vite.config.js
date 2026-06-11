@@ -32,6 +32,6 @@ export default defineConfig({
   base: '/ERP-Completo/',
   build: {
     outDir: 'dist',
-    sourcemap: false,
+    sourcemap: process.env.NODE_ENV !== 'production',
   },
 })
