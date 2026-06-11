@@ -6,6 +6,7 @@ import Aura from '@primeuix/themes/aura'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
+import ConfirmDialog from 'primevue/confirmdialog'
 import VueSonner from 'vue-sonner'
 import i18n from './i18n'
 
@@ -34,6 +35,7 @@ app.use(ConfirmationService)
 app.use(VueSonner)
 app.use(i18n)
 
+app.component('ConfirmDialog', ConfirmDialog)
 app.directive('tooltip', Tooltip)
 
 app.mount('#app')

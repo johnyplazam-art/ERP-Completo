@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import { supabase } from '@/core/supabase'
 import i18n from '@/i18n'
 
+const SESSION_KEY = 'panaderia_session'
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const session = ref(null)
@@ -12,18 +14,13 @@ export const useAuthStore = defineStore('auth', () => {
   const currentEmpresa = ref(null)
   const empresaUsuarios = ref([])
   const permisos = ref([])
+  const rolActual = ref(null)
 
   const isAuthenticated = computed(() => !!user.value && !!session.value)
   const userEmail = computed(() => user.value?.email ?? '')
   const currentEmpresaId = computed(() => currentEmpresa.value?.id ?? null)
 
-  // Backward-compatible shims (derived from permisos)
-  const currentRol = computed(() => {
-    if (!currentEmpresaId.value || !empresaUsuarios.value.length) return null
-    // For backwards compat, derive from first user_roles-like permission group
-    // Will be removed once all components use tienePermiso()
-    return null
-  })
+  const currentRol = computed(() => rolActual.value)
   const esAdmin = computed(() => tienePermiso('usuarios.manage'))
   const puedeEscribir = computed(() =>
     ['ingredientes.create', 'recetas.create', 'ordenes.create', 'productos.create']
@@ -52,6 +49,28 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function cargarRolActual() {
+    if (!user.value || !currentEmpresaId.value) {
+      rolActual.value = null
+      return
+    }
+    try {
+      const appId = await getAppId('panaderia')
+      if (!appId) return
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role:role_id(slug)')
+        .eq('user_id', user.value.id)
+        .eq('empresa_id', currentEmpresaId.value)
+        .eq('application_id', appId)
+        .maybeSingle()
+      rolActual.value = data?.role?.slug ?? null
+    } catch (err) {
+      console.error('[auth] Error cargando rol actual:', err)
+      rolActual.value = null
+    }
+  }
+
   async function cargarEmpresas() {
     if (!user.value) return
     try {
@@ -74,6 +93,7 @@ export const useAuthStore = defineStore('auth', () => {
       // Cargar permisos para la empresa seleccionada
       if (currentEmpresa.value) {
         await cargarPermisos(currentEmpresa.value.id)
+        await cargarRolActual()
       }
     } catch (err) {
       console.error('[auth] Error cargando empresas:', err)
@@ -104,59 +124,99 @@ export const useAuthStore = defineStore('auth', () => {
     if (empresa) {
       localStorage.setItem('panaderia_empresa_id', String(empresa.id))
       await cargarPermisos(empresa.id)
+      await cargarRolActual()
     } else {
       localStorage.removeItem('panaderia_empresa_id')
       permisos.value = []
+      rolActual.value = null
     }
   }
 
   async function initialize() {
     loading.value = true
     try {
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
-      session.value = currentSession
-      user.value = currentSession?.user ?? null
+      // Registrar listener ANTES de cualquier intento de sesión
+      supabase.auth.onAuthStateChange(async (event, newSession) => {
+        session.value = newSession
+        user.value = newSession?.user ?? null
 
-      if (user.value) {
-        await Promise.all([cargarPerfil(), cargarEmpresas()])
+        if (newSession && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          localStorage.setItem(SESSION_KEY, JSON.stringify(newSession))
+        } else if (event === 'SIGNED_OUT') {
+          localStorage.removeItem(SESSION_KEY)
+        }
+
+        if (user.value) {
+          await Promise.all([cargarPerfil(), cargarEmpresas()])
+        } else {
+          perfil.value = null
+          empresas.value = []
+          currentEmpresa.value = null
+          empresaUsuarios.value = []
+          permisos.value = []
+        }
+      })
+
+      // Con persistSession: false, getSession() siempre devuelve null on page load.
+      // Vamos directo al restore manual desde localStorage via setSession().
+      const saved = localStorage.getItem(SESSION_KEY)
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved)
+          if (parsed.refresh_token) {
+            const { data, error } = await Promise.race([
+              supabase.auth.setSession(parsed),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout setSession')), 5000))
+            ])
+            if (!error && data?.session) {
+              session.value = data.session
+              user.value = data.session.user
+              localStorage.setItem(SESSION_KEY, JSON.stringify(data.session))
+            } else {
+              localStorage.removeItem(SESSION_KEY)
+            }
+          }
+        } catch {
+          localStorage.removeItem(SESSION_KEY)
+        }
       }
+
     } catch (error) {
       console.error('[auth] Error initializing session:', error)
     } finally {
       loading.value = false
     }
-
-    // Listen for auth state changes
-    supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      session.value = newSession
-      user.value = newSession?.user ?? null
-      if (user.value) {
-        await Promise.all([cargarPerfil(), cargarEmpresas()])
-      } else {
-        perfil.value = null
-        empresas.value = []
-        currentEmpresa.value = null
-        empresaUsuarios.value = []
-        permisos.value = []
-      }
-    })
   }
 
   async function login(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-    return data
+    const result = await Promise.race([
+      supabase.auth.signInWithPassword({ email, password }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor')), 10000))
+    ])
+    if (result.error) throw result.error
+    localStorage.setItem(SESSION_KEY, JSON.stringify(result.data.session))
+    return result.data
   }
 
   async function signup(email, password, metadata = {}) {
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: metadata } })
-    if (error) throw error
-    return data
+    const result = await Promise.race([
+      supabase.auth.signUp({ email, password, options: { data: metadata } }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor')), 10000))
+    ])
+    if (result.error) throw result.error
+    if (result.data.session) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(result.data.session))
+    }
+    return result.data
   }
 
   async function logout() {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    localStorage.removeItem(SESSION_KEY)
+    const result = await Promise.race([
+      supabase.auth.signOut(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor')), 10000))
+    ])
+    if (result?.error) throw result.error
   }
 
   async function cargarUsuariosEmpresa() {
@@ -277,6 +337,55 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // ─── Admin users ──────────────────────────────────
+
+  async function cargarRolesPorApp(appId) {
+    if (!appId) return []
+    const { data, error } = await supabase
+      .from('roles')
+      .select('id, name, slug, description')
+      .eq('application_id', appId)
+      .order('id')
+    if (error) throw error
+    return data ?? []
+  }
+
+  async function cambiarRol(usuarioId, empresaId, roleId, appId) {
+    const { error } = await supabase
+      .from('user_roles')
+      .update({ role_id: Number(roleId) })
+      .eq('user_id', usuarioId)
+      .eq('empresa_id', empresaId)
+      .eq('application_id', appId)
+    if (error) throw error
+  }
+
+  async function toggleActivo(usuarioId, empresaId, activo) {
+    const { error } = await supabase
+      .from('empresa_usuarios')
+      .update({ activo })
+      .eq('empresa_id', empresaId)
+      .eq('usuario_id', usuarioId)
+    if (error) throw error
+  }
+
+  async function removerUsuario(usuarioId, empresaId, appId) {
+    if (appId) {
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', usuarioId)
+        .eq('empresa_id', empresaId)
+        .eq('application_id', appId)
+    }
+    const { error } = await supabase
+      .from('empresa_usuarios')
+      .delete()
+      .eq('empresa_id', empresaId)
+      .eq('usuario_id', usuarioId)
+    if (error) throw error
+  }
+
   return {
     user,
     session,
@@ -286,6 +395,7 @@ export const useAuthStore = defineStore('auth', () => {
     currentEmpresa,
     empresaUsuarios,
     permisos,
+    rolActual,
     isAuthenticated,
     userEmail,
     currentEmpresaId,
@@ -306,5 +416,9 @@ export const useAuthStore = defineStore('auth', () => {
     cargarAppsDisponibles,
     cargarUsuariosMultiEmpresa,
     getAppId,
+    cargarRolesPorApp,
+    cambiarRol,
+    toggleActivo,
+    removerUsuario,
   }
 })

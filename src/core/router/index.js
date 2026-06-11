@@ -28,13 +28,13 @@ const routes = [
         path: 'admin/usuarios',
         name: 'admin-usuarios',
         component: () => import('@/core/components/AdminUsers.vue'),
-        meta: { title: 'Usuarios' },
+        meta: { title: 'Usuarios', role: 'admin' },
       },
       {
         path: 'admin/apps',
         name: 'admin-apps',
         component: () => import('@/core/components/AdminApps.vue'),
-        meta: { title: 'Aplicaciones' },
+        meta: { title: 'Aplicaciones', role: 'admin' },
       },
     ],
   },
@@ -48,22 +48,27 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
 
-  // Si todavía está cargando la sesión, no redirigir todavía.
-  // App.vue se encarga del redirect inicial después de initialize().
   if (authStore.loading) {
     next()
     return
   }
 
-  if (to.meta.requiresAuth !== false && !authStore.isAuthenticated) {
-    if (to.name !== 'login') {
-      next({ name: 'login' })
-    } else {
-      next()
-    }
-  } else {
-    next()
+  if (authStore.isAuthenticated && to.name === 'login') {
+    next({ name: 'home' })
+    return
   }
+
+  if (to.meta.requiresAuth !== false && !authStore.isAuthenticated) {
+    next({ name: 'login', query: { redirect: to.fullPath } })
+    return
+  }
+
+  if (to.meta.role === 'admin' && !authStore.esAdmin) {
+    next({ name: 'home' })
+    return
+  }
+
+  next()
 })
 
 export default router
