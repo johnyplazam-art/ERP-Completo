@@ -111,6 +111,12 @@ export const ordenProduccionSchema = z.object({
   detalles: z.array(ordenProduccionDetalleSchema).min(1, 'Agregá al menos un producto'),
 })
 
+export const ordenProduccionCrearSchema = z.object({
+  fecha_programada: z.string().min(1, 'La fecha es requerida'),
+  nota: z.string().default(''),
+  detalles: z.array(ordenProduccionDetalleSchema).min(1, 'Agregá al menos un producto'),
+})
+
 // ─── Inventario ──────────────────────────────────────
 
 export const movimientoMpSchema = z.object({

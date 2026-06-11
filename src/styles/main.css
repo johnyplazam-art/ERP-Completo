@@ -12,6 +12,10 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
+  .p-dark body {
+    @apply text-gray-100 bg-gray-950;
+  }
+
   /* Touch-friendly minimum tap targets */
   button, a, input, select, textarea {
     @apply min-h-[44px];

@@ -98,16 +98,16 @@ const breadcrumbs = computed(() => {
 
 <template>
   <Toaster position="top-right" rich-colors />
-  <div class="flex h-screen bg-gray-50">
+  <div class="flex h-screen bg-gray-50 dark:bg-gray-950">
     <!-- Sidebar -->
     <aside
       :class="[
-        'bg-white border-r border-gray-200 flex flex-col transition-all duration-300',
+        'bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300',
         appStore.sidebarCollapsed ? 'w-16' : 'w-64',
       ]"
     >
       <!-- Logo + Empresa selector -->
-      <div class="border-b border-gray-200">
+      <div class="border-b border-gray-200 dark:border-gray-800">
         <div class="h-14 flex items-center px-4">
           <span v-if="!appStore.sidebarCollapsed" class="text-xl font-bold text-primary-600 tracking-tight">
             SIAS ERP
@@ -120,7 +120,7 @@ const breadcrumbs = computed(() => {
             @change="authStore.seleccionarEmpresa(
               authStore.empresas.find(e => e.id === getSelectValue($event))
             )"
-            class="w-full text-sm rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-gray-700 focus:ring-2 focus:ring-primary-500"
+            class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary-500"
           >
             <option
               v-for="emp in authStore.empresas"
@@ -130,7 +130,7 @@ const breadcrumbs = computed(() => {
               {{ emp.nombre }}
             </option>
           </select>
-          <p v-if="currentRoleName" class="mt-1 text-xs text-gray-400 pl-1">
+          <p v-if="currentRoleName" class="mt-1 text-xs text-gray-400 dark:text-gray-500 pl-1">
             {{ currentRoleName }}
           </p>
         </div>
@@ -141,8 +141,8 @@ const breadcrumbs = computed(() => {
         <!-- Home -->
         <router-link
           to="/"
-          class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-primary-50 hover:text-primary-700"
-          :class="$route.path === '/' ? 'bg-primary-50 text-primary-700' : 'text-gray-600'"
+          class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-700"
+          :class="$route.path === '/' ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700' : 'text-gray-600 dark:text-gray-400'"
         >
           <i class="pi pi-home text-lg"></i>
           <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ t('nav.home') }}</span>
@@ -151,15 +151,15 @@ const breadcrumbs = computed(() => {
         <!-- Separator -->
         <div v-if="!appStore.sidebarCollapsed && tienePanaderia" class="pt-3 pb-1">
           <div class="flex items-center gap-2 px-3">
-            <i class="pi pi-shop text-gray-400 text-xs"></i>
-            <span class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            <i class="pi pi-shop text-gray-400 dark:text-gray-500 text-xs"></i>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
               {{ t('nav.sectionPanaderia') }}
             </span>
           </div>
         </div>
         <div
           v-if="appStore.sidebarCollapsed && tienePanaderia"
-          class="border-t border-gray-100 my-2"
+          class="border-t border-gray-100 dark:border-gray-800 my-2"
         ></div>
 
         <!-- Panadería items -->
@@ -170,8 +170,8 @@ const breadcrumbs = computed(() => {
             :to="item.to"
             class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
             :class="isActive(item.to) && $route.path !== '/'
-              ? 'bg-primary-50 text-primary-700'
-              : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'"
+              ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-700'"
           >
             <i :class="[item.icon, 'text-lg']"></i>
             <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ item.label }}</span>
@@ -182,15 +182,15 @@ const breadcrumbs = computed(() => {
         <template v-if="adminItems.length">
           <div v-if="!appStore.sidebarCollapsed" class="pt-3 pb-1">
             <div class="flex items-center gap-2 px-3">
-              <i class="pi pi-cog text-gray-400 text-xs"></i>
-              <span class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              <i class="pi pi-cog text-gray-400 dark:text-gray-500 text-xs"></i>
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                 {{ t('nav.sectionAdmin') }}
               </span>
             </div>
           </div>
           <div
             v-if="appStore.sidebarCollapsed"
-            class="border-t border-gray-100 my-2"
+            class="border-t border-gray-100 dark:border-gray-800 my-2"
           ></div>
 
           <router-link
@@ -199,8 +199,8 @@ const breadcrumbs = computed(() => {
             :to="item.to"
             class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
             :class="$route.path === item.to
-              ? 'bg-primary-50 text-primary-700'
-              : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'"
+              ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-700'"
           >
             <i :class="[item.icon, 'text-lg']"></i>
             <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ item.label }}</span>
@@ -209,24 +209,24 @@ const breadcrumbs = computed(() => {
       </nav>
 
       <!-- User section -->
-      <div class="border-t border-gray-200 p-4">
+      <div class="border-t border-gray-200 dark:border-gray-800 p-4">
         <div class="flex items-center">
-          <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-semibold text-sm">
+          <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-semibold text-sm">
             {{ (authStore.perfil?.nombre || authStore.userEmail)?.charAt(0).toUpperCase() || 'U' }}
           </div>
           <div v-if="!appStore.sidebarCollapsed" class="ml-3 flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-900 truncate">{{ authStore.perfil?.nombre || authStore.userEmail }}</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ authStore.perfil?.nombre || authStore.userEmail }}</p>
           </div>
           <button
             @click="appStore.toggleSidebar"
-            class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 shrink-0"
+            class="p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0"
           >
             <i :class="appStore.sidebarCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"></i>
           </button>
         </div>
         <button
           @click="handleLogout"
-          class="mt-2 w-full flex items-center px-3 py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          class="mt-2 w-full flex items-center px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
         >
           <i class="pi pi-sign-out text-lg"></i>
           <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ t('auth.logout') }}</span>
@@ -237,26 +237,35 @@ const breadcrumbs = computed(() => {
     <!-- Main content -->
     <main class="flex-1 flex flex-col overflow-hidden">
       <!-- Top bar -->
-      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-        <h1 class="text-lg font-semibold text-gray-900">
+      <header class="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6">
+        <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {{ $route.meta?.title || 'SIAS ERP' }}
         </h1>
-        <LanguageSelector />
+        <div class="flex items-center gap-3">
+          <button
+            @click="appStore.setTheme(appStore.theme === 'dark' ? 'light' : 'dark')"
+            class="p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            :title="appStore.theme === 'dark' ? 'Modo claro' : 'Modo oscuro'"
+          >
+            <i :class="appStore.theme === 'dark' ? 'pi pi-sun' : 'pi pi-moon'"></i>
+          </button>
+          <LanguageSelector />
+        </div>
       </header>
 
       <!-- Breadcrumbs -->
-      <nav v-if="breadcrumbs.length > 1" class="px-6 pt-4 pb-0 text-sm text-gray-500">
+      <nav v-if="breadcrumbs.length > 1" class="px-6 pt-4 pb-0 text-sm text-gray-500 dark:text-gray-400">
         <ol class="flex items-center gap-1.5">
           <li v-for="(crumb, i) in breadcrumbs" :key="i" class="flex items-center gap-1.5">
-            <i v-if="i > 0" class="pi pi-chevron-right text-xs text-gray-300"></i>
+            <i v-if="i > 0" class="pi pi-chevron-right text-xs text-gray-300 dark:text-gray-600"></i>
             <router-link
               v-if="crumb.to"
               :to="crumb.to"
-              class="hover:text-primary-600 transition-colors"
+              class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
             >
               {{ crumb.label }}
             </router-link>
-            <span v-else class="text-gray-900 font-medium">{{ crumb.label }}</span>
+            <span v-else class="text-gray-900 dark:text-gray-100 font-medium">{{ crumb.label }}</span>
           </li>
         </ol>
       </nav>

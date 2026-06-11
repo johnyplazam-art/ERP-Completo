@@ -1,6 +1,28 @@
 import { supabase } from '@/core/supabase'
 import { useAuthStore } from '@/core/store/auth'
 
+let cachedIp = null
+let ipPromise = null
+
+async function resolvePublicIp() {
+  if (cachedIp) return cachedIp
+  if (ipPromise) return ipPromise
+  ipPromise = fetch('https://api.ipify.org?format=json')
+    .then(r => r.json())
+    .then(d => { cachedIp = d.ip; return d.ip })
+    .catch(() => '')
+    .finally(() => { ipPromise = null })
+  return ipPromise
+}
+
+function getUserAgent() {
+  try {
+    return navigator.userAgent || 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
 /**
  * useAudit — registra eventos de auditoría ISO
  *
@@ -20,12 +42,11 @@ export function useAudit() {
 
   async function log(
     action,
-    { table, entityId, oldValue, newValue, trace } = {},
+    { table, entityId, oldValue, newValue, trace, sourceIp } = {},
   ) {
     if (!authStore.user) return
 
     try {
-      // getAppId tiene caché propio — solo consulta DB la primera vez
       const appId = await authStore.getAppId('panaderia')
 
       await supabase.from('audit_logs').insert({
@@ -37,12 +58,11 @@ export function useAudit() {
         entity_id: entityId,
         old_value: oldValue,
         new_value: newValue,
-        source_ip: '',
-        user_agent: navigator.userAgent,
+        source_ip: sourceIp || await resolvePublicIp(),
+        user_agent: getUserAgent(),
         trace,
       })
     } catch (err) {
-      // No romper el flujo si la auditoría falla
       console.error('[useAudit] Error logging event:', err)
     }
   }

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, shallowRef } from 'vue'
+import { ref, computed } from 'vue'
 import {
   useCategoriasIngredienteQuery,
   useCreateCategoriaIngredienteMutation,

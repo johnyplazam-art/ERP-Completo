@@ -1,10 +1,16 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/core/store/auth'
+import { useAppStore } from '@/core/store/app'
 
 const authStore = useAuthStore()
+const appStore = useAppStore()
 const router = useRouter()
+
+watch(() => appStore.theme, (val) => {
+  document.documentElement.classList.toggle('p-dark', val === 'dark')
+}, { immediate: true })
 
 const initError = ref(null)
 

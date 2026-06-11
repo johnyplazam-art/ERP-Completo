@@ -3,7 +3,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
-import { z } from 'zod'
+import { proveedorSchema } from '../validations/index'
 import {
   useProveedoresQuery,
   useCreateProveedorMutation,
@@ -18,17 +18,8 @@ const { data: proveedores } = useProveedoresQuery()
 const { mutateAsync: crearProveedor } = useCreateProveedorMutation()
 const { mutateAsync: actualizarProveedor } = useUpdateProveedorMutation()
 
-// Schema inline — proveedorSchema no tiene todos los campos que necesitamos
-const proveedorFormSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es requerido').max(200),
-  contacto: z.string().max(100).default(''),
-  telefono: z.string().max(50).default(''),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
-  direccion: z.string().max(300).default(''),
-})
-
 const { handleSubmit, values, resetForm, errors, setFieldValue } = useForm({
-  validationSchema: toTypedSchema(proveedorFormSchema),
+  validationSchema: toTypedSchema(proveedorSchema),
   initialValues: {
     nombre: '',
     contacto: '',

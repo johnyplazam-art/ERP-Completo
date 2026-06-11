@@ -4,9 +4,9 @@ import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { z } from 'zod'
 import { useProductosQuery, useRecetasQuery, useCreateOrdenMutation, useCalculoIngredientesQuery } from '../composables/queries'
 import { getSelectValue } from '@/core/composables/useSelectValue'
+import { ordenProduccionCrearSchema } from '../validations/index'
 
 const router = useRouter()
 
@@ -20,29 +20,9 @@ const detallesValidos = computed(() =>
 )
 const { data: ingredientesCalculados, isFetching: calculandoIng } = useCalculoIngredientesQuery(detallesValidos)
 
-// ── Schema ──────────────────────────────────────────
-const detalleSchema = z.object({
-  producto_id: z
-    .number({ required_error: 'Seleccioná un producto', invalid_type_error: 'Seleccioná un producto' })
-    .positive('Seleccioná un producto'),
-  receta_id: z
-    .number({ required_error: 'Seleccioná una receta', invalid_type_error: 'Seleccioná una receta' })
-    .positive('Seleccioná una receta'),
-  cantidad_programada: z
-    .number({ required_error: 'La cantidad es requerida' })
-    .min(1, 'La cantidad debe ser mayor a 0'),
-  lote: z.string().default(''),
-})
-
-const ordenSchema = z.object({
-  fecha_programada: z.string().min(1, 'La fecha es requerida'),
-  nota: z.string().default(''),
-  detalles: z.array(detalleSchema).min(1, 'Agregá al menos un producto válido'),
-})
-
 // ── Form ──────────────────────────────────────────
 const { handleSubmit, values, errors, setFieldValue } = useForm({
-  validationSchema: toTypedSchema(ordenSchema),
+  validationSchema: toTypedSchema(ordenProduccionCrearSchema),
   initialValues: {
     fecha_programada: new Date().toISOString().split('T')[0],
     nota: '',
