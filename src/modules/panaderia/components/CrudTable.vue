@@ -223,18 +223,34 @@ defineExpose({ openCreate })
         </div>
 
         <form @submit.prevent="save" class="space-y-4">
-          <div v-for="field in fields" :key="field.key">
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              {{ field.label }} <span v-if="field.required" class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="formData[field.key]"
-              :type="field.type"
-              :required="field.required"
-              :placeholder="field.placeholder"
-              class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
+            <div v-for="field in fields" :key="field.key">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                {{ field.label }} <span v-if="field.required" class="text-red-500">*</span>
+              </label>
+              <select
+                v-if="field.type === 'select'"
+                v-model="formData[field.key]"
+                :required="field.required"
+                class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="" disabled>{{ field.placeholder || 'Seleccionar...' }}</option>
+                <option
+                  v-for="opt in field.options"
+                  :key="opt.value"
+                  :value="opt.value"
+                >
+                  {{ opt.label }}
+                </option>
+              </select>
+              <input
+                v-else
+                v-model="formData[field.key]"
+                :type="field.type"
+                :required="field.required"
+                :placeholder="field.placeholder"
+                class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
 
           <div class="flex justify-end gap-3 pt-2">
             <button

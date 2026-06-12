@@ -24,6 +24,8 @@ const panaderiaItems = computed(() => [
   { to: '/panaderia/productos', icon: 'pi pi-tag', label: 'Productos', permission: null },
   { to: '/panaderia/proveedores', icon: 'pi pi-truck', label: 'Proveedores', permission: null },
   { to: '/panaderia/produccion', icon: 'pi pi-cog', label: t('nav.produccion'), permission: null },
+  { to: '/panaderia/movimientos', icon: 'pi pi-arrow-right-arrow-left', label: 'Movimientos', permission: null },
+  { to: '/panaderia/mermas', icon: 'pi pi-exclamation-triangle', label: 'Mermas', permission: null },
   { to: '/panaderia/catalogos', icon: 'pi pi-wrench', label: 'Catálogos', permission: null },
 ].filter(item => item.permission !== false))
 

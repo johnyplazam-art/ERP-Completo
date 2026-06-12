@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   useCategoriasIngredienteQuery,
   useCreateCategoriaIngredienteMutation,
@@ -17,6 +18,10 @@ import {
   useCreateUnidadMedidaMutation,
   useUpdateUnidadMedidaMutation,
   useDeleteUnidadMedidaMutation,
+  useConversionesUnidadesQuery,
+  useCreateConversionUnidadMutation,
+  useUpdateConversionUnidadMutation,
+  useDeleteConversionUnidadMutation,
 } from '../composables/queries'
 import CrudTable from '../components/CrudTable.vue'
 
@@ -27,6 +32,7 @@ const tabs = [
   { key: 'categorias-receta', label: 'Cat. Recetas', icon: 'pi pi-book' },
   { key: 'categorias-producto', label: 'Cat. Productos', icon: 'pi pi-box' },
   { key: 'unidades-medida', label: 'Unidades', icon: 'pi pi-sliders-v' },
+  { key: 'conversiones', label: 'Conversiones', icon: 'pi pi-arrow-right-arrow-left' },
 ]
 
 const activeTab = ref('categorias-ingrediente')
@@ -39,7 +45,13 @@ const queries = {
   'categorias-receta': useCategoriasRecetaQuery(),
   'categorias-producto': useCategoriasProductoQuery(),
   'unidades-medida': useUnidadesMedidaQuery(),
+  'conversiones': useConversionesUnidadesQuery(),
 }
+
+const unidades = useUnidadesMedidaQuery()
+const opcionesUnidades = computed(() =>
+  (unidades.data?.value ?? []).map(u => ({ value: u.id, label: `${u.nombre} (${u.simbolo})` }))
+)
 
 const activeQuery = computed(() => queries[activeTab.value])
 
@@ -65,6 +77,11 @@ const mutations = {
     create: useCreateUnidadMedidaMutation(),
     update: useUpdateUnidadMedidaMutation(),
     delete: useDeleteUnidadMedidaMutation(),
+  },
+  'conversiones': {
+    create: useCreateConversionUnidadMutation(),
+    update: useUpdateConversionUnidadMutation(),
+    delete: useDeleteConversionUnidadMutation(),
   },
 }
 
@@ -109,9 +126,30 @@ const tabConfigs = {
     ],
     tableName: 'unidades_medida',
   },
+  'conversiones': {
+    headers: ['Unidad Origen', 'Unidad Destino', 'Factor'],
+    fieldRender: (item) => [
+      item.origen ? `${item.origen.nombre} (${item.origen.simbolo})` : `#${item.unidad_origen_id}`,
+      item.destino ? `${item.destino.nombre} (${item.destino.simbolo})` : `#${item.unidad_destino_id}`,
+      item.factor_multiplicacion,
+    ],
+    fields: [
+      { key: 'unidad_origen_id', label: 'Unidad Origen', type: 'select', required: true, placeholder: 'Seleccionar unidad', options: [] },
+      { key: 'unidad_destino_id', label: 'Unidad Destino', type: 'select', required: true, placeholder: 'Seleccionar unidad', options: [] },
+      { key: 'factor_multiplicacion', label: 'Factor', type: 'number', required: true, placeholder: 'Ej: 1000' },
+    ],
+    tableName: 'conversiones_unidades',
+  },
 }
 
-const activeConfig = computed(() => tabConfigs[activeTab.value])
+const activeConfig = computed(() => {
+  const cfg = tabConfigs[activeTab.value]
+  if (activeTab.value === 'conversiones' && cfg) {
+    cfg.fields[0].options = opcionesUnidades.value
+    cfg.fields[1].options = opcionesUnidades.value
+  }
+  return cfg
+})
 
 // ─── Handlers ─────────────────────────────────────────
 

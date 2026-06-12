@@ -90,6 +90,22 @@ export default [
     meta: { title: 'Usuarios' },
   },
 
+  // Movimientos
+  {
+    path: 'movimientos',
+    name: 'panaderia-movimientos',
+    component: () => import('./views/MovimientosView.vue'),
+    meta: { title: 'Movimientos' },
+  },
+
+  // Mermas
+  {
+    path: 'mermas',
+    name: 'panaderia-mermas',
+    component: () => import('./views/MermasView.vue'),
+    meta: { title: 'Mermas' },
+  },
+
   // Catálogos
   {
     path: 'catalogos',

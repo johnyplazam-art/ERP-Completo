@@ -16,6 +16,15 @@ import {
   deleteCategoriaProducto,
   updateUnidadMedida,
   deleteUnidadMedida,
+  fetchConversionesUnidades,
+  createConversionUnidad,
+  updateConversionUnidad,
+  deleteConversionUnidad,
+  fetchMermas,
+  createMerma,
+  updateMerma,
+  deleteMerma,
+  countMermas,
   fetchIngredientes,
   createIngrediente,
   updateIngrediente,
@@ -24,6 +33,10 @@ import {
   createProveedor,
   updateProveedor,
   deleteProveedor,
+  fetchIngredientesProveedor,
+  createIngredienteProveedor,
+  updateIngredienteProveedor,
+  deleteIngredienteProveedor,
   fetchUnidadesMedida,
   createUnidadMedida,
   fetchRecetas,
@@ -39,6 +52,8 @@ import {
   updateOrdenEstado,
   fetchMovimientosMp,
   crearMovimientoMp,
+  fetchMovimientosPt,
+  crearMovimientoPt,
   fetchStockIngrediente,
   calcularIngredientesNecesarios,
   descontarIngredientesOrden,
@@ -57,6 +72,7 @@ export const queryKeys = {
   categoriasIngrediente: ['categorias_ingrediente'],
   categoriasProducto: ['categorias_producto'],
   unidadesMedida: ['unidades_medida'],
+  conversionesUnidades: ['conversiones_unidades'],
   ingredientes: (filters) => ['ingredientes', filters],
   ingrediente: (id) => ['ingredientes', id],
   proveedores: ['proveedores'],
@@ -68,6 +84,8 @@ export const queryKeys = {
   ordenProduccion: (id) => ['ordenes_produccion', id],
   movimientosMp: (ingredienteId) => ['movimientos_mp', ingredienteId],
   stockIngrediente: (id) => ['stock_ingrediente', id],
+  mermas: ['mermas'],
+  movimientosPt: (productoId) => ['movimientos_pt', productoId],
 }
 
 // ─── Catálogos vía Factory ───────────────────────────
@@ -106,6 +124,14 @@ const _unidadesMedida = createCrudHooks({
   remove: deleteUnidadMedida,
 })
 
+const _conversionesUnidades = createCrudHooks({
+  queryKey: queryKeys.conversionesUnidades,
+  list: fetchConversionesUnidades,
+  create: createConversionUnidad,
+  update: ({ id, values }) => updateConversionUnidad(id, values),
+  remove: deleteConversionUnidad,
+})
+
 // Re-export con nombres originales para compatibilidad
 export const useCategoriasRecetaQuery = _categoriasReceta.useList
 export const useCreateCategoriaRecetaMutation = _categoriasReceta.useCreate
@@ -126,6 +152,11 @@ export const useUnidadesMedidaQuery = _unidadesMedida.useList
 export const useCreateUnidadMedidaMutation = _unidadesMedida.useCreate
 export const useUpdateUnidadMedidaMutation = _unidadesMedida.useUpdate
 export const useDeleteUnidadMedidaMutation = _unidadesMedida.useRemove
+
+export const useConversionesUnidadesQuery = _conversionesUnidades.useList
+export const useCreateConversionUnidadMutation = _conversionesUnidades.useCreate
+export const useUpdateConversionUnidadMutation = _conversionesUnidades.useUpdate
+export const useDeleteConversionUnidadMutation = _conversionesUnidades.useRemove
 
 // ─── Ingredientes ────────────────────────────────────
 
@@ -326,6 +357,63 @@ export function useStockIngredienteQuery(id) {
     queryKey: queryKeys.stockIngrediente(id),
     queryFn: () => fetchStockIngrediente(id),
     enabled: !!id,
+  })
+}
+
+// ─── Mermas ──────────────────────────────────────────
+
+export function useMermasQuery() {
+  const authStore = useAuthStore()
+  const queryKey = computed(() => [...queryKeys.mermas, authStore.currentEmpresaId])
+  return useQuery({
+    queryKey,
+    queryFn: () => fetchMermas(authStore.currentEmpresaId),
+  })
+}
+
+export function useCreateMermaMutation() {
+  const queryClient = useQueryClient()
+  const authStore = useAuthStore()
+  return useMutation({
+    mutationFn: (values) => createMerma({ ...values, empresa_id: authStore.currentEmpresaId, registrado_por: authStore.user?.id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.mermas }),
+  })
+}
+
+export function useUpdateMermaMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, values }) => updateMerma(id, values),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.mermas }),
+  })
+}
+
+export function useDeleteMermaMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => deleteMerma(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.mermas }),
+  })
+}
+
+// ─── Movimientos PT ─────────────────────────────────
+
+export function useMovimientosPtQuery(productoId) {
+  return useQuery({
+    queryKey: queryKeys.movimientosPt(productoId),
+    queryFn: () => fetchMovimientosPt(productoId),
+    enabled: !!productoId,
+  })
+}
+
+export function useCrearMovimientoPtMutation() {
+  const queryClient = useQueryClient()
+  const authStore = useAuthStore()
+  return useMutation({
+    mutationFn: (values) => crearMovimientoPt({ ...values, empresa_id: authStore.currentEmpresaId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['movimientos_pt'] })
+    },
   })
 }
 

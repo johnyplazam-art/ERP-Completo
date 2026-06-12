@@ -71,6 +71,46 @@ export async function deleteUnidadMedida(id) {
   if (error) throw error
 }
 
+// ─── Conversiones de Unidades ────────────────────────
+
+export async function fetchConversionesUnidades() {
+  const { data, error } = await supabase
+    .from('conversiones_unidades')
+    .select(`
+      *,
+      origen:unidad_origen_id(nombre, simbolo),
+      destino:unidad_destino_id(nombre, simbolo)
+    `)
+    .order('unidad_origen_id')
+  if (error) throw error
+  return data
+}
+
+export async function createConversionUnidad(values) {
+  const { data, error } = await supabase.from('conversiones_unidades').insert({
+    unidad_origen_id: Number(values.unidad_origen_id),
+    unidad_destino_id: Number(values.unidad_destino_id),
+    factor_multiplicacion: Number(values.factor_multiplicacion),
+  }).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateConversionUnidad(id, values) {
+  const { data, error } = await supabase.from('conversiones_unidades').update({
+    unidad_origen_id: Number(values.unidad_origen_id),
+    unidad_destino_id: Number(values.unidad_destino_id),
+    factor_multiplicacion: Number(values.factor_multiplicacion),
+  }).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteConversionUnidad(id) {
+  const { error } = await supabase.from('conversiones_unidades').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ─── Ingredientes ────────────────────────────────────
 
 export async function fetchIngredientes(params = {}) {
@@ -177,6 +217,48 @@ export async function deleteProveedor(id) {
   const { data, error } = await supabase.from('proveedores').update({ activo: false }).eq('id', id).select().single()
   if (error) throw error
   return data
+}
+
+// ─── Ingrediente-Proveedor (precios) ─────────────────
+
+export async function fetchIngredientesProveedor(proveedorId) {
+  const { data, error } = await supabase
+    .from('ingrediente_proveedor')
+    .select(`
+      *,
+      ingrediente:ingredientes(nombre, activo)
+    `)
+    .eq('proveedor_id', proveedorId)
+    .order('ingrediente_id')
+  if (error) throw error
+  return data
+}
+
+export async function createIngredienteProveedor(values) {
+  const { data, error } = await supabase.from('ingrediente_proveedor').insert({
+    ingrediente_id: Number(values.ingrediente_id),
+    proveedor_id: Number(values.proveedor_id),
+    precio_actual: Number(values.precio_actual),
+    plazo_entrega_dias: values.plazo_entrega_dias ? Number(values.plazo_entrega_dias) : null,
+    es_preferido: values.es_preferido ?? false,
+  }).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateIngredienteProveedor(id, values) {
+  const { data, error } = await supabase.from('ingrediente_proveedor').update({
+    precio_actual: Number(values.precio_actual),
+    plazo_entrega_dias: values.plazo_entrega_dias ? Number(values.plazo_entrega_dias) : null,
+    es_preferido: values.es_preferido ?? false,
+  }).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteIngredienteProveedor(id) {
+  const { error } = await supabase.from('ingrediente_proveedor').delete().eq('id', id)
+  if (error) throw error
 }
 
 // ─── Recetas ─────────────────────────────────────────
@@ -421,6 +503,37 @@ export async function crearMovimientoMp(values) {
   return data
 }
 
+// ─── Movimientos PT ──────────────────────────────────
+
+export async function fetchMovimientosPt(productoId) {
+  let query = supabase
+    .from('movimientos_inventario_pt')
+    .select(`
+      *,
+      producto:producto_id(nombre)
+    `)
+    .order('fecha', { ascending: false })
+    .limit(50)
+
+  if (productoId) {
+    query = query.eq('producto_id', productoId)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
+
+export async function crearMovimientoPt(values) {
+  const { data, error } = await supabase
+    .from('movimientos_inventario_pt')
+    .insert(values)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 export async function fetchStockIngrediente(id) {
   const { data, error } = await supabase.rpc('stock_ingrediente', { p_ingrediente_id: id })
   if (error) throw error
@@ -550,4 +663,70 @@ export async function descontarIngredientesOrden(ordenId, detalles, empresaId, u
 
   const { error } = await supabase.from('movimientos_inventario_mp').insert(movimientos)
   if (error) throw error
+}
+
+// ─── Mermas ────────────────────────────────────────────
+
+export async function fetchMermas(empresaId) {
+  let query = supabase
+    .from('mermas')
+    .select(`
+      *,
+      ingrediente:ingrediente_id(nombre),
+      producto:producto_id(nombre),
+      unidad:unidad_id(nombre, simbolo),
+      registrado_por:registrado_por(nombre)
+    `)
+    .order('fecha_registro', { ascending: false })
+
+  if (empresaId) {
+    query = query.eq('empresa_id', empresaId)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
+
+export async function createMerma(values) {
+  const { data, error } = await supabase.from('mermas').insert({
+    origen: values.origen,
+    ingrediente_id: values.ingrediente_id || null,
+    producto_id: values.producto_id || null,
+    cantidad: Number(values.cantidad),
+    unidad_id: values.unidad_id || null,
+    tipo: values.tipo,
+    causa: values.causa || '',
+    empresa_id: values.empresa_id,
+    registrado_por: values.registrado_por,
+  }).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateMerma(id, values) {
+  const { data, error } = await supabase.from('mermas').update({
+    origen: values.origen,
+    ingrediente_id: values.ingrediente_id || null,
+    producto_id: values.producto_id || null,
+    cantidad: Number(values.cantidad),
+    unidad_id: values.unidad_id || null,
+    tipo: values.tipo,
+    causa: values.causa || '',
+  }).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteMerma(id) {
+  const { error } = await supabase.from('mermas').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function countMermas(empresaId) {
+  let query = supabase.from('mermas').select('id', { count: 'exact', head: true })
+  if (empresaId) query = query.eq('empresa_id', empresaId)
+  const { count, error } = await query
+  if (error) throw error
+  return count ?? 0
 }

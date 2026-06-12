@@ -172,6 +172,9 @@ export const useAuthStore = defineStore('auth', () => {
               session.value = data.session
               user.value = data.session.user
               localStorage.setItem(SESSION_KEY, JSON.stringify(data.session))
+              // Esperar a que se carguen perfil y empresas ANTES de soltar loading,
+              // para evitar que el UI renderice sin currentEmpresa ni permisos.
+              await Promise.all([cargarPerfil(), cargarEmpresas()])
             } else {
               localStorage.removeItem(SESSION_KEY)
             }

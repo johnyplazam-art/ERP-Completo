@@ -2,13 +2,27 @@
 import { useProveedoresQuery, useDeleteProveedorMutation } from '../composables/queries'
 import { ref, computed } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
+import { supabase } from '@/core/supabase'
+import { toast } from 'vue-sonner'
 import DataState from '@/core/components/DataState.vue'
+import {
+  createIngredienteProveedor,
+  updateIngredienteProveedor,
+  deleteIngredienteProveedor,
+} from '../composables/database'
 
-const { data: proveedores, isLoading, error } = useProveedoresQuery()
+const { data: proveedores, isLoading, error, refetch } = useProveedoresQuery()
 const { mutate: eliminarProveedor } = useDeleteProveedorMutation()
 const expandedRow = ref('')
 const confirm = useConfirm()
 const searchQuery = ref('')
+
+const showModal = ref(false)
+const editingProvId = ref(null)
+const editingItem = ref(null)
+const formData = ref({})
+const submitPending = ref(false)
+const ingredientesDisponibles = ref([])
 
 const filteredProveedores = computed(() => {
   if (!proveedores.value) return []
@@ -20,7 +34,7 @@ const filteredProveedores = computed(() => {
   )
 })
 
-const toggleRow = (id) => {
+function toggleRow(id) {
   expandedRow.value = expandedRow.value === id ? '' : id
 }
 
@@ -32,6 +46,73 @@ const confirmarDesactivar = (prov) => {
     rejectLabel: 'Cancelar',
     acceptLabel: 'Confirmar',
     accept: () => eliminarProveedor(prov.id),
+  })
+}
+
+async function abrirAgregarIngrediente(proveedorId) {
+  editingProvId.value = proveedorId
+  editingItem.value = null
+  formData.value = { ingrediente_id: '', precio_actual: '', plazo_entrega_dias: '', es_preferido: false }
+
+  const existingIds = new Set(
+    proveedores.value?.find(p => p.id === proveedorId)?.ingredientes?.map(i => i.ingrediente_id) ?? []
+  )
+  const { data: todos } = await supabase.from('ingredientes').select('id, nombre').eq('activo', true)
+  ingredientesDisponibles.value = (todos ?? []).filter(i => !existingIds.has(i.id))
+
+  showModal.value = true
+}
+
+function abrirEditarIngrediente(item) {
+  editingProvId.value = item.proveedor_id
+  editingItem.value = item
+  formData.value = {
+    precio_actual: item.precio_actual,
+    plazo_entrega_dias: item.plazo_entrega_dias ?? '',
+    es_preferido: item.es_preferido ?? false,
+  }
+  ingredientesDisponibles.value = []
+  showModal.value = true
+}
+
+async function guardarIngrediente() {
+  submitPending.value = true
+  try {
+    if (editingItem.value) {
+      await updateIngredienteProveedor(editingItem.value.id, formData.value)
+      toast.success('Precio actualizado')
+    } else {
+      await createIngredienteProveedor({
+        ...formData.value,
+        proveedor_id: editingProvId.value,
+      })
+      toast.success('Ingrediente agregado al proveedor')
+    }
+    showModal.value = false
+    refetch()
+  } catch (err) {
+    toast.error(err.message || 'Error al guardar')
+  } finally {
+    submitPending.value = false
+  }
+}
+
+function confirmarEliminarIngrediente(item, provNombre) {
+  confirm.require({
+    message: `¿Quitar "${item.ingrediente?.nombre}" de ${provNombre}?`,
+    header: 'Confirmar',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Quitar',
+    accept: async () => {
+      try {
+        await deleteIngredienteProveedor(item.id)
+        toast.success('Ingrediente quitado del proveedor')
+        refetch()
+      } catch (err) {
+        toast.error(err.message || 'Error al eliminar')
+      }
+    },
   })
 }
 </script>
@@ -49,7 +130,6 @@ const confirmarDesactivar = (prov) => {
       </router-link>
     </div>
 
-    <!-- Search -->
     <div class="mb-4">
       <input
         v-model="searchQuery"
@@ -124,32 +204,52 @@ const confirmarDesactivar = (prov) => {
                   </div>
                 </td>
               </tr>
-              <!-- Expanded detail row -->
               <tr v-if="expandedRow === prov.id" :key="`${prov.id}-detail`">
                 <td colspan="6" class="px-4 py-0 bg-gray-50">
                   <div class="py-3 animate-fadeIn">
+                    <div class="flex items-center justify-between mb-2 px-2">
+                      <span class="text-sm font-semibold text-gray-700">Ingredientes y precios</span>
+                      <button
+                        @click.stop="abrirAgregarIngrediente(prov.id)"
+                        class="text-xs text-primary-600 hover:text-primary-800 font-medium"
+                      >
+                        <i class="pi pi-plus mr-1"></i>Agregar
+                      </button>
+                    </div>
                     <div v-if="!prov.ingredientes?.length" class="text-sm text-gray-400 text-center py-2">
                       Sin ingredientes asociados
                     </div>
-                    <div v-else class="max-w-lg">
+                    <div v-else class="max-w-lg space-y-1">
                       <div
                         v-for="item in prov.ingredientes"
                         :key="item.id"
-                        class="flex items-center justify-between py-1.5 text-sm"
+                        class="flex items-center justify-between py-1.5 px-2 text-sm rounded hover:bg-white transition-colors"
                       >
-                        <span class="text-gray-700 font-medium">
+                        <span class="text-gray-700 font-medium min-w-0 flex-1">
                           {{ item.ingrediente?.nombre }}
                         </span>
-                        <span class="text-gray-500">
-                          ${{ Number(item.precio_actual).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
+                        <div class="flex items-center gap-3 shrink-0">
+                          <span class="text-gray-500 tabular-nums">
+                            ${{ Number(item.precio_actual).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
+                          </span>
                           <span
                             v-if="item.es_preferido"
-                            class="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded"
+                            class="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded font-medium"
                           >Preferido</span>
-                          <span v-if="item.plazo_entrega_dias" class="ml-2 text-xs text-gray-400">
+                          <span v-if="item.plazo_entrega_dias" class="text-xs text-gray-400">
                             {{ item.plazo_entrega_dias }} días
                           </span>
-                        </span>
+                          <div class="flex gap-2">
+                            <button
+                              @click.stop="abrirEditarIngrediente(item)"
+                              class="text-primary-600 hover:text-primary-800 text-xs font-medium"
+                            >Editar</button>
+                            <button
+                              @click.stop="confirmarEliminarIngrediente(item, prov.nombre)"
+                              class="text-red-500 hover:text-red-700 text-xs font-medium"
+                            >Quitar</button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -161,6 +261,88 @@ const confirmarDesactivar = (prov) => {
       </div>
     </div>
     </DataState>
+
+    <!-- Modal -->
+    <div
+      v-if="showModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      @click.self="showModal = false"
+    >
+      <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">
+            {{ editingItem ? 'Editar precio' : 'Agregar ingrediente' }}
+          </h3>
+          <button @click="showModal = false" class="text-gray-400 hover:text-gray-600">
+            <i class="pi pi-times text-xl"></i>
+          </button>
+        </div>
+
+        <form @submit.prevent="guardarIngrediente" class="space-y-4">
+          <div v-if="!editingItem">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ingrediente <span class="text-red-500">*</span></label>
+            <select
+              v-model="formData.ingrediente_id"
+              required
+              class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="" disabled>Seleccionar ingrediente...</option>
+              <option v-for="i in ingredientesDisponibles" :key="i.id" :value="i.id">{{ i.nombre }}</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Precio actual <span class="text-red-500">*</span></label>
+            <input
+              v-model.number="formData.precio_actual"
+              type="number"
+              step="0.01"
+              required
+              placeholder="0.00"
+              class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Plazo de entrega (días)</label>
+            <input
+              v-model.number="formData.plazo_entrega_dias"
+              type="number"
+              min="0"
+              placeholder="0"
+              class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              v-model="formData.es_preferido"
+              type="checkbox"
+              class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            Proveedor preferido para este ingrediente
+          </label>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              @click="showModal = false"
+              class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              :disabled="submitPending"
+              class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            >
+              <i v-if="submitPending" class="pi pi-spin pi-spinner mr-2"></i>
+              {{ submitPending ? 'Guardando...' : 'Guardar' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <Teleport to="body">
