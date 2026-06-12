@@ -1,18 +1,20 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useAuthStore } from '@/core/store/auth'
 import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
 import DataState from '@/core/components/DataState.vue'
-import { useQuery, useQueryClient } from '@tanstack/vue-query'
-import { useMutation } from '@tanstack/vue-query'
 import {
-  fetchMovimientosMp,
+  useMovimientosMpPaginated,
+  useMovimientosPtPaginated,
+} from '../composables/queries'
+import {
   crearMovimientoMp,
 } from '../composables/database'
+import PaginatorBar from '../components/PaginatorBar.vue'
 
 const authStore = useAuthStore()
-const queryClient = useQueryClient()
 const empresaId = computed(() => authStore.currentEmpresaId)
 
 const activeTab = ref('mp')
@@ -40,27 +42,23 @@ loadAuxData()
 
 // ─── Queries ──────────────────────────────────────────
 
-const mpQueryKey = computed(() => ['movimientos_mp_mini', filterIngredienteId.value, filterTipo.value])
-const ptQueryKey = computed(() => ['movimientos_pt_mini', filterProductoId.value, filterTipo.value])
+const {
+  data: movimientosMp,
+  isLoading: mpLoading,
+  error: mpError,
+  page: mpPage,
+  total: mpTotal,
+  setPage: setMpPage,
+} = useMovimientosMpPaginated(filterIngredienteId.value ?? undefined)
 
-const { data: movimientosMp, isLoading: mpLoading, error: mpError } = useQuery({
-  queryKey: mpQueryKey,
-  queryFn: () => fetchMovimientosMp(filterIngredienteId.value ?? undefined),
-})
-
-const { data: movimientosPt, isLoading: ptLoading, error: ptError } = useQuery({
-  queryKey: ptQueryKey,
-  queryFn: () => {
-    let query = supabase
-      .from('movimientos_inventario_pt')
-      .select(`*, producto:producto_id(nombre)`)
-      .order('fecha', { ascending: false })
-      .limit(50)
-    if (filterProductoId.value) query = query.eq('producto_id', filterProductoId.value)
-    if (filterTipo.value) query = query.eq('tipo', filterTipo.value)
-    return query.then(r => { if (r.error) throw r.error; return r.data })
-  },
-})
+const {
+  data: movimientosPt,
+  isLoading: ptLoading,
+  error: ptError,
+  page: ptPage,
+  total: ptTotal,
+  setPage: setPtPage,
+} = useMovimientosPtPaginated(filterProductoId.value ?? undefined)
 
 const filteredMp = computed(() => {
   if (!movimientosMp.value) return []
@@ -131,8 +129,8 @@ async function guardarMovimiento() {
     }
     toast.success('Movimiento registrado')
     showModal.value = false
-    queryClient.invalidateQueries({ queryKey: ['movimientos_mp_mini'] })
-    queryClient.invalidateQueries({ queryKey: ['movimientos_pt_mini'] })
+    queryClient.invalidateQueries({ queryKey: ['movimientos_mp'] })
+    queryClient.invalidateQueries({ queryKey: ['movimientos_pt'] })
   } catch (err) {
     toast.error(err.message || 'Error al guardar')
   } finally {
@@ -250,6 +248,13 @@ const formatCantidad = (val, unit) => {
             </tbody>
           </table>
         </div>
+      <PaginatorBar
+        v-if="mpTotal > 0"
+        :page="mpPage"
+        :page-size="25"
+        :total="mpTotal"
+        @update:page="setMpPage"
+      />
       </div>
     </DataState>
 
@@ -296,6 +301,13 @@ const formatCantidad = (val, unit) => {
           </tbody>
         </table>
       </div>
+      <PaginatorBar
+        v-if="ptTotal > 0"
+        :page="ptPage"
+        :page-size="25"
+        :total="ptTotal"
+        @update:page="setPtPage"
+      />
     </div>
 
     <!-- New Movement Modal -->

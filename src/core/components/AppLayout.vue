@@ -80,12 +80,9 @@ const breadcrumbs = computed(() => {
 
     if (matched?.meta?.title) {
       crumbs.push({ label: matched.meta.title, to: accumulated })
-    } else {
-      // Si no hay meta.title, mostramos el segmento formateado
-      crumbs.push({
-        label: part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' '),
-        to: accumulated,
-      })
+    } else if (matched) {
+      // Segmento intermedio sin meta.title: lo mostramos sin link
+      crumbs.push({ label: part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' ') })
     }
   }
 

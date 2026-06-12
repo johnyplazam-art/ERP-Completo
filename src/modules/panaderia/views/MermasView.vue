@@ -5,11 +5,12 @@ import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
 import { useConfirm } from 'primevue/useconfirm'
 import {
-  useMermasQuery,
+  useMermasPaginated,
   useCreateMermaMutation,
   useUpdateMermaMutation,
   useDeleteMermaMutation,
 } from '../composables/queries'
+import PaginatorBar from '../components/PaginatorBar.vue'
 import DataState from '@/core/components/DataState.vue'
 
 const confirm = useConfirm()
@@ -17,7 +18,7 @@ const authStore = useAuthStore()
 const puedeCrear = computed(() => authStore.tienePermiso('mermas.create'))
 const puedeEliminar = computed(() => authStore.tienePermiso('mermas.delete'))
 
-const { data: mermas, isLoading, error } = useMermasQuery()
+const { data: mermas, isLoading, error, page, pageSize, total, setPage } = useMermasPaginated()
 const createMutation = useCreateMermaMutation()
 const updateMutation = useUpdateMermaMutation()
 const deleteMutation = useDeleteMermaMutation()
@@ -219,6 +220,13 @@ const tipoLabel = {
           </table>
         </div>
       </div>
+      <PaginatorBar
+        v-if="total > 0"
+        :page="page"
+        :page-size="pageSize"
+        :total="total"
+        @update:page="setPage"
+      />
     </DataState>
 
     <!-- Modal -->

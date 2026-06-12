@@ -137,6 +137,13 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       // Registrar listener ANTES de cualquier intento de sesión
       supabase.auth.onAuthStateChange(async (event, newSession) => {
+        // Ignorar INITIAL_SESSION: este evento se dispara asíncrono (microtask)
+        // después de onAuthStateChange, trayendo null con persistSession: false.
+        // Si setSession() ya restauró la sesión antes de que este microtask
+        // se ejecute, pisaría todo el estado auth. Solo reaccionamos a eventos
+        // reales de cambio de sesión.
+        if (event === 'INITIAL_SESSION') return
+
         session.value = newSession
         user.value = newSession?.user ?? null
 

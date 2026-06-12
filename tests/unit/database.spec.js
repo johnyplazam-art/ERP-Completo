@@ -203,7 +203,7 @@ describe('movimientos_inventario_pt', () => {
     mod = await import('@/modules/panaderia/composables/database')
   })
 
-  it('fetchMovimientosPt — selects with join ordered by fecha desc, limit 50', async () => {
+  it('fetchMovimientosPt — selects with join ordered by fecha desc', async () => {
     const chain = makeChain({ data: [{ id: 1, cantidad: 10 }], error: null })
     supabase.from.mockReturnValue(chain)
 
@@ -212,7 +212,6 @@ describe('movimientos_inventario_pt', () => {
     expect(supabase.from).toHaveBeenCalledWith('movimientos_inventario_pt')
     expect(chain.select).toHaveBeenCalledWith(expect.stringContaining('producto:producto_id(nombre)'))
     expect(chain.order).toHaveBeenCalledWith('fecha', { ascending: false })
-    expect(chain.limit).toHaveBeenCalledWith(50)
     expect(result).toHaveLength(1)
   })
 
@@ -225,6 +224,15 @@ describe('movimientos_inventario_pt', () => {
     expect(chain.eq).toHaveBeenCalledWith('producto_id', 7)
   })
 
+  it('fetchMovimientosPt — applies range when opts.from/to provided', async () => {
+    const chain = makeChain({ data: [], error: null })
+    supabase.from.mockReturnValue(chain)
+
+    await mod.fetchMovimientosPt(undefined, { from: 0, to: 24 })
+
+    expect(chain.range).toHaveBeenCalledWith(0, 24)
+  })
+
   it('crearMovimientoPt — inserts values', async () => {
     const chain = makeChain({ data: { id: 1, cantidad: 20 }, error: null })
     supabase.from.mockReturnValue(chain)
@@ -233,6 +241,27 @@ describe('movimientos_inventario_pt', () => {
 
     expect(supabase.from).toHaveBeenCalledWith('movimientos_inventario_pt')
     expect(chain.insert).toHaveBeenCalledWith({ producto_id: 1, tipo: 'ingreso', cantidad: 20 })
+  })
+
+  it('countMovimientosPt — returns total count', async () => {
+    const chain = makeChain({ count: 42, error: null })
+    supabase.from.mockReturnValue(chain)
+
+    const count = await mod.countMovimientosPt()
+
+    expect(supabase.from).toHaveBeenCalledWith('movimientos_inventario_pt')
+    expect(chain.select).toHaveBeenCalledWith('*', { count: 'exact', head: true })
+    expect(count).toBe(42)
+  })
+
+  it('countMovimientosPt — filters by producto_id', async () => {
+    const chain = makeChain({ count: 5, error: null })
+    supabase.from.mockReturnValue(chain)
+
+    const count = await mod.countMovimientosPt(3)
+
+    expect(chain.eq).toHaveBeenCalledWith('producto_id', 3)
+    expect(count).toBe(5)
   })
 })
 

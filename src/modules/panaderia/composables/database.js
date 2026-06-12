@@ -473,7 +473,7 @@ export async function updateOrdenEstado(id, estado) {
 
 // ─── Movimientos / Stock ─────────────────────────────
 
-export async function fetchMovimientosMp(ingredienteId) {
+export async function fetchMovimientosMp(ingredienteId, opts = {}) {
   let query = supabase
     .from('movimientos_inventario_mp')
     .select(`
@@ -482,15 +482,26 @@ export async function fetchMovimientosMp(ingredienteId) {
       unidad:unidades_medida(nombre, simbolo)
     `)
     .order('fecha', { ascending: false })
-    .limit(50)
 
   if (ingredienteId) {
     query = query.eq('ingrediente_id', ingredienteId)
   }
 
+  query = withRange(query, opts)
+
   const { data, error } = await query
   if (error) throw error
   return data
+}
+
+export async function countMovimientosMp(ingredienteId) {
+  let query = supabase
+    .from('movimientos_inventario_mp')
+    .select('*', { count: 'exact', head: true })
+  if (ingredienteId) query = query.eq('ingrediente_id', ingredienteId)
+  const { count, error } = await query
+  if (error) throw error
+  return count ?? 0
 }
 
 export async function crearMovimientoMp(values) {
@@ -505,7 +516,7 @@ export async function crearMovimientoMp(values) {
 
 // ─── Movimientos PT ──────────────────────────────────
 
-export async function fetchMovimientosPt(productoId) {
+export async function fetchMovimientosPt(productoId, opts = {}) {
   let query = supabase
     .from('movimientos_inventario_pt')
     .select(`
@@ -513,15 +524,26 @@ export async function fetchMovimientosPt(productoId) {
       producto:producto_id(nombre)
     `)
     .order('fecha', { ascending: false })
-    .limit(50)
 
   if (productoId) {
     query = query.eq('producto_id', productoId)
   }
 
+  query = withRange(query, opts)
+
   const { data, error } = await query
   if (error) throw error
   return data
+}
+
+export async function countMovimientosPt(productoId) {
+  let query = supabase
+    .from('movimientos_inventario_pt')
+    .select('*', { count: 'exact', head: true })
+  if (productoId) query = query.eq('producto_id', productoId)
+  const { count, error } = await query
+  if (error) throw error
+  return count ?? 0
 }
 
 export async function crearMovimientoPt(values) {
@@ -667,7 +689,7 @@ export async function descontarIngredientesOrden(ordenId, detalles, empresaId, u
 
 // ─── Mermas ────────────────────────────────────────────
 
-export async function fetchMermas(empresaId) {
+export async function fetchMermas(empresaId, opts = {}) {
   let query = supabase
     .from('mermas')
     .select(`
@@ -682,6 +704,8 @@ export async function fetchMermas(empresaId) {
   if (empresaId) {
     query = query.eq('empresa_id', empresaId)
   }
+
+  query = withRange(query, opts)
 
   const { data, error } = await query
   if (error) throw error

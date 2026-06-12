@@ -93,8 +93,9 @@ async function guardar() {
     editando.value = null
     await cargarApps()
   } catch (err) {
+    const msg = err?.message || err?.error_description || t('errors.generic')
     console.error('[admin-apps] Error guardando:', err)
-    toast.error(t('errors.generic'))
+    toast.error(msg)
   } finally {
     isSaving.value = false
   }

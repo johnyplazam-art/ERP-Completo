@@ -1,5 +1,5 @@
-import { computed } from 'vue'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { computed, ref } from 'vue'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/vue-query'
 import { useAuthStore } from '@/core/store/auth'
 import {
   fetchCategoriasReceta,
@@ -62,6 +62,8 @@ import {
   countRecetas,
   countProductos,
   countOrdenesProduccion,
+  countMovimientosMp,
+  countMovimientosPt,
 } from './database'
 import { createCrudHooks, usePaginatedList } from './crud-factory'
 
@@ -441,4 +443,123 @@ export function useDescontarInventarioMutation() {
       queryClient.invalidateQueries({ queryKey: ['stock_ingrediente'] })
     },
   })
+}
+
+// ─── Paginated Hooks ────────────────────────────────
+
+export function useIngredientesPaginated(filters = {}) {
+  const authStore = useAuthStore()
+  return usePaginatedList({
+    queryKey: ['ingredientes', 'paginated'],
+    list: (params) => fetchIngredientes({ ...filters, ...params }),
+    count: (params) => countIngredientes({ ...filters, ...params }),
+    scoped: false,
+    pageSize: 25,
+  })
+}
+
+export function useRecetasPaginated() {
+  const authStore = useAuthStore()
+  return usePaginatedList({
+    queryKey: queryKeys.recetas,
+    scoped: true,
+    list: (params) => fetchRecetas(params.empresa_id, params),
+    count: (params) => countRecetas(params),
+    pageSize: 25,
+  })
+}
+
+export function useProductosPaginated() {
+  const authStore = useAuthStore()
+  return usePaginatedList({
+    queryKey: queryKeys.productos,
+    scoped: true,
+    list: (params) => fetchProductos(params.empresa_id, params),
+    count: (params) => countProductos(params),
+    pageSize: 25,
+  })
+}
+
+export function useProveedoresPaginated() {
+  const authStore = useAuthStore()
+  return usePaginatedList({
+    queryKey: queryKeys.proveedores,
+    scoped: true,
+    list: (params) => fetchProveedores(params.empresa_id, params),
+    count: (params) => countProveedores(params),
+    pageSize: 25,
+  })
+}
+
+export function useMermasPaginated() {
+  const authStore = useAuthStore()
+  return usePaginatedList({
+    queryKey: queryKeys.mermas,
+    scoped: true,
+    list: (params) => fetchMermas(params.empresa_id, params),
+    count: (params) => countMermas(params.empresa_id),
+    pageSize: 25,
+  })
+}
+
+export function useMovimientosMpPaginated(ingredienteId) {
+  const key = computed(() => [...queryKeys.movimientosMp(ingredienteId), 'paginated'])
+  const page = ref(1)
+  const pageSize = 25
+  const from = computed(() => (page.value - 1) * pageSize)
+  const to = computed(() => from.value + pageSize - 1)
+
+  const queryKey = computed(() => [...key.value, { page: page.value }])
+
+  const { data, isLoading, error } = useQuery({
+    queryKey,
+    queryFn: () => fetchMovimientosMp(ingredienteId ?? undefined, { from: from.value, to: to.value }),
+    placeholderData: keepPreviousData,
+    enabled: !!ingredienteId,
+  })
+
+  const { data: total } = useQuery({
+    queryKey: [...key.value, 'count'],
+    queryFn: () => countMovimientosMp(ingredienteId ?? undefined),
+    placeholderData: keepPreviousData,
+  })
+
+  const totalPages = computed(() => Math.max(1, Math.ceil((total ?? 0) / pageSize)))
+
+  function setPage(p) { page.value = Math.max(1, Math.min(p, totalPages.value)) }
+  function nextPage() { setPage(page.value + 1) }
+  function prevPage() { setPage(page.value - 1) }
+
+  return { data, total, page, pageSize, totalPages, setPage, nextPage, prevPage, isLoading, error }
+}
+
+export function useMovimientosPtPaginated(productoId) {
+  const key = computed(() => [...queryKeys.movimientosPt(productoId), 'paginated'])
+  const page = ref(1)
+  const pageSize = 25
+  const from = computed(() => (page.value - 1) * pageSize)
+  const to = computed(() => from.value + pageSize - 1)
+
+  const queryKey = computed(() => [...key.value, { page: page.value }])
+
+  const { data, isLoading, error } = useQuery({
+    queryKey,
+    queryFn: () => fetchMovimientosPt(productoId ?? undefined, { from: from.value, to: to.value }),
+    placeholderData: keepPreviousData,
+    enabled: !!productoId,
+  })
+
+  const { data: total } = useQuery({
+    queryKey: [...key.value, 'count'],
+    queryFn: () => countMovimientosPt(productoId ?? undefined),
+    placeholderData: keepPreviousData,
+  })
+
+  const totalPages = computed(() => Math.max(1, Math.ceil((total ?? 0) / pageSize)))
+
+  function setPage(p) { page.value = Math.max(1, Math.min(p, totalPages.value)) }
+  function nextPage() { setPage(page.value + 1) }
+  function prevPage() { setPage(page.value - 1) }
+
+  return { data, total, page, pageSize, totalPages, setPage, nextPage, prevPage, isLoading, error }
 }

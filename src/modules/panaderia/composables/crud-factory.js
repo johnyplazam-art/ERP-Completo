@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/vue-query'
 import { useAuthStore } from '@/core/store/auth'
 
 /**
@@ -129,12 +129,14 @@ export function usePaginatedList(config) {
   const { data, isLoading, error } = useQuery({
     queryKey: key,
     queryFn: () => list(params.value),
+    placeholderData: keepPreviousData,
     ...queryOpts,
   })
 
   const { data: total } = useQuery({
     queryKey: [...(Array.isArray(queryKey) ? queryKey : [queryKey]), 'count', ...(scoped ? [authStore?.currentEmpresaId] : [])],
     queryFn: () => count(scoped ? { empresa_id: authStore?.currentEmpresaId } : {}),
+    placeholderData: keepPreviousData,
     ...queryOpts,
   })
 
