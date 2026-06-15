@@ -5,7 +5,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
 import { recetaSchema } from '../validations/index'
 import { getSelectValue } from '@/core/composables/useSelectValue'
-import { useCategoriasRecetaQuery, useUnidadesMedidaQuery, useIngredientesQuery, useRecetasQuery, useCreateRecetaMutation, useUpdateRecetaMutation } from '../composables/queries'
+import { useCategoriasRecetaQuery, useUnidadesMedidaQuery, useIngredientesQuery, useRecetasQuery, useCreateRecetaMutation, useUpdateRecetaMutation, useRecalcularCostoMutation } from '../composables/queries'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,6 +17,11 @@ const { data: ingredientes } = useIngredientesQuery({ activo: true })
 const { data: recetas } = useRecetasQuery()
 const createMutation = useCreateRecetaMutation()
 const updateMutation = useUpdateRecetaMutation()
+const recalcularCosto = useRecalcularCostoMutation()
+
+const recetaActual = computed(() =>
+  recetas.value?.find(r => r.id === Number(route.params.id))
+)
 
 const { handleSubmit, values, setFieldValue, errors, resetForm } = useForm({
   validationSchema: toTypedSchema(recetaSchema),
@@ -281,6 +286,27 @@ const onSubmit = handleSubmit(async (formValues) => {
         <div v-if="!values.ingredientes.length" class="text-center py-6 text-gray-400 text-sm">
           No hay ingredientes. Agregá al menos uno.
         </div>
+      </div>
+
+      <!-- Costo Estimado -->
+      <div v-if="isEdit" class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <h3 class="text-lg font-semibold text-gray-900">Costo Estimado</h3>
+        <div class="flex items-center gap-4">
+          <div class="text-2xl font-bold text-gray-900 tabular-nums">
+            $ {{ Number(recetaActual?.costo_estimado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+          </div>
+          <button
+            type="button"
+            @click="recalcularCosto.mutateAsync(Number(route.params.id))"
+            :disabled="recalcularCosto.isPending.value"
+            class="inline-flex items-center px-3 py-2 text-sm text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 disabled:opacity-50"
+          >
+            <i v-if="recalcularCosto.isPending.value" class="pi pi-spin pi-spinner mr-1"></i>
+            <i v-else class="pi pi-refresh mr-1"></i>
+            Recalcular costo
+          </button>
+        </div>
+        <p class="text-xs text-gray-400">Calculado desde precios de proveedores (ingrediente_proveedor.precio_actual)</p>
       </div>
 
       <!-- Submit -->

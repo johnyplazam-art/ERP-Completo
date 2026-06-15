@@ -1,12 +1,19 @@
 <script setup>
 import { useOrdenesProduccionQuery, useUpdateOrdenEstadoMutation, useDescontarInventarioMutation, calcularIngredientesNecesarios } from '../composables/queries'
+import { crearMovimientoPt } from '../composables/database'
 import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import DataState from '@/core/components/DataState.vue'
+import { useQueryClient } from '@tanstack/vue-query'
+import { useAuthStore } from '@/core/store/auth'
+
+const queryClient = useQueryClient()
+const authStore = useAuthStore()
 
 const { data: ordenes, isLoading, error } = useOrdenesProduccionQuery()
 const updateEstado = useUpdateOrdenEstadoMutation()
 const descontarInventario = useDescontarInventarioMutation()
+const empresaId = computed(() => authStore.currentEmpresaId)
 const expandedRow = ref('')
 const calculosMap = ref({})
 const searchQuery = ref('')
@@ -68,6 +75,28 @@ const cambiarEstado = async (id, nuevoEstado) => {
       }
     }
     await updateEstado.mutateAsync({ id, estado: nuevoEstado })
+
+    // Auto-valorizar PT al completar
+    if (nuevoEstado === 'completada') {
+      const orden = ordenes.value?.find(o => o.id === id)
+      if (orden?.detalles?.length) {
+        for (const d of orden.detalles) {
+          const precio = Number(d.costo_unitario_estimado || 0)
+          if (precio > 0 && d.producto_id) {
+            await crearMovimientoPt({
+              producto_id: d.producto_id,
+              tipo: 'ingreso',
+              cantidad: Number(d.cantidad_programada),
+              precio_unitario: precio,
+              nota: `Auto: orden #${id}`,
+              empresa_id: empresaId.value,
+              creado_por: authStore.user?.id,
+            })
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ['movimientos_pt'] })
+      }
+    }
   } catch (err) {
     toast.error(err.message || 'Error al cambiar estado')
   }
@@ -181,6 +210,10 @@ const puedeCancelar = (estado) => {
             <div v-if="orden.fecha_fin">
               <span class="text-gray-500">Fin:</span>
               <p class="font-medium">{{ new Date(orden.fecha_fin).toLocaleString() }}</p>
+            </div>
+            <div v-if="orden.costo_total_estimado > 0">
+              <span class="text-gray-500">Costo est.:</span>
+              <p class="font-medium tabular-nums">$ {{ Number(orden.costo_total_estimado).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
             </div>
           </div>
 

@@ -12,6 +12,7 @@ import {
   useCreateProductoMutation,
   useUpdateProductoMutation,
 } from '../composables/queries'
+import { calcularCostoProducto } from '../composables/database'
 
 const router = useRouter()
 const route = useRoute()
@@ -63,6 +64,21 @@ if (isEdit.value) {
     }
   })
 }
+
+const recetaSeleccionada = computed(() =>
+  recetas.value?.find(r => r.id === values.receta_id)
+)
+
+const precioCostoCalculado = computed(() => {
+  if (!values.receta_id || !values.peso_unitario_gr) return 0
+  return calcularCostoProducto(recetaSeleccionada.value, { peso_unitario_gr: values.peso_unitario_gr })
+})
+
+watch([precioCostoCalculado, () => values.precio_venta], ([costo, venta]) => {
+  if (costo > 0 && (!venta || venta === 0)) {
+    setFieldValue('precio_venta', Number((costo * 1.3).toFixed(2)))
+  }
+})
 
 const onSubmit = handleSubmit(async (formValues) => {
   try {
@@ -169,7 +185,7 @@ const onSubmit = handleSubmit(async (formValues) => {
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h3 class="text-lg font-semibold text-gray-900">Precio y Peso</h3>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Precio de venta *</label>
             <div class="relative">
@@ -184,6 +200,20 @@ const onSubmit = handleSubmit(async (formValues) => {
               />
             </div>
             <p v-if="errors.precio_venta" class="mt-1 text-sm text-red-600">{{ errors.precio_venta }}</p>
+          </div>
+
+          <div v-if="values.receta_id && values.peso_unitario_gr">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Precio de costo</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <input
+                :value="precioCostoCalculado"
+                type="number"
+                disabled
+                class="touch-input block w-full rounded-lg border border-gray-200 bg-gray-50 text-gray-500 pl-8 focus:ring-0 cursor-not-allowed"
+              />
+            </div>
+            <p class="mt-1 text-xs text-gray-400">Calculado desde costo de receta</p>
           </div>
 
           <div>

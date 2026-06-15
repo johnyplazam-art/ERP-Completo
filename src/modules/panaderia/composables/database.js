@@ -434,6 +434,16 @@ export async function countOrdenesProduccion(params = {}) {
   return count ?? 0
 }
 
+export async function fetchPrecioCostoProducto(productoId) {
+  const { data, error } = await supabase
+    .from('productos')
+    .select('precio_costo')
+    .eq('id', productoId)
+    .single()
+  if (error) throw error
+  return data?.precio_costo ?? 0
+}
+
 export async function createOrdenProduccion(values) {
   const { detalles, ...orden } = values
   const empresaId = orden.empresa_id
@@ -445,11 +455,34 @@ export async function createOrdenProduccion(values) {
     .single()
   if (errOrden) throw errOrden
 
+  let costoTotal = 0
+
   if (detalles?.length) {
+    const detalleRows = await Promise.all(detalles.map(async (d) => {
+      const precioCosto = await fetchPrecioCostoProducto(d.producto_id)
+      const costoLinea = precioCosto * (d.cantidad_programada || 0)
+      costoTotal += costoLinea
+      return {
+        ...d,
+        orden_id: ordenCreada.id,
+        empresa_id: empresaId,
+        costo_unitario_estimado: precioCosto,
+        costo_total_estimado: costoLinea,
+      }
+    }))
+
     const { error: errDet } = await supabase
       .from('orden_produccion_detalle')
-      .insert(detalles.map(d => ({ ...d, orden_id: ordenCreada.id, empresa_id: empresaId })))
+      .insert(detalleRows)
     if (errDet) throw errDet
+  }
+
+  if (costoTotal > 0) {
+    const { error: errCosto } = await supabase
+      .from('ordenes_produccion')
+      .update({ costo_total_estimado: costoTotal })
+      .eq('id', ordenCreada.id)
+    if (errCosto) throw errCosto
   }
 
   return ordenCreada
@@ -514,6 +547,26 @@ export async function crearMovimientoMp(values) {
   return data
 }
 
+export async function fetchPrecioIngrediente(ingredienteId) {
+  const { data, error } = await supabase
+    .from('ingrediente_proveedor')
+    .select('precio_actual')
+    .eq('ingrediente_id', ingredienteId)
+    .eq('es_preferido', true)
+    .order('precio_actual', { ascending: true })
+    .limit(1)
+  if (error) throw error
+  if (data?.length) return data[0].precio_actual
+  const { data: fallback } = await supabase
+    .from('ingrediente_proveedor')
+    .select('precio_actual')
+    .eq('ingrediente_id', ingredienteId)
+    .order('precio_actual', { ascending: true })
+    .limit(1)
+  if (fallback?.length) return fallback[0].precio_actual
+  return 0
+}
+
 // ─── Movimientos PT ──────────────────────────────────
 
 export async function fetchMovimientosPt(productoId, opts = {}) {
@@ -549,17 +602,59 @@ export async function countMovimientosPt(productoId) {
 export async function crearMovimientoPt(values) {
   const { data, error } = await supabase
     .from('movimientos_inventario_pt')
-    .insert(values)
+    .insert({
+      producto_id: values.producto_id,
+      tipo: values.tipo || 'ingreso',
+      cantidad: Number(values.cantidad),
+      precio_unitario: values.precio_unitario != null ? Number(values.precio_unitario) : 0,
+      nota: values.nota || '',
+      empresa_id: values.empresa_id,
+      creado_por: values.creado_por,
+    })
     .select()
     .single()
   if (error) throw error
   return data
 }
 
+export async function fetchStockValorizadoTotal(empresaId) {
+  const { data, error } = await supabase
+    .from('movimientos_inventario_mp')
+    .select('precio_unitario, cantidad, tipo, ingrediente:ingredientes!inner(empresa_id)')
+    .eq('ingrediente.empresa_id', empresaId)
+  if (error) throw error
+  const totalValor = data.reduce((sum, m) => {
+    if (m.tipo === 'ingreso') return sum + (Number(m.cantidad) * Number(m.precio_unitario || 0))
+    return sum
+  }, 0)
+  return totalValor
+}
+
+export async function fetchStockValorizado(tipo, itemId) {
+  const { data, error } = await supabase.rpc('stock_valorizado', { p_tipo: tipo, p_item_id: itemId })
+  if (error) throw error
+  return data?.[0] ?? { cantidad_total: 0, valor_total: 0, precio_promedio: 0 }
+}
+
 export async function fetchStockIngrediente(id) {
   const { data, error } = await supabase.rpc('stock_ingrediente', { p_ingrediente_id: id })
   if (error) throw error
   return data
+}
+
+// ─── Cálculo de Costos ────────────────────────────────────
+
+export async function calcularCostoRecetaRPC(recetaId) {
+  const { data, error } = await supabase.rpc('calcular_costo_receta', { p_receta_id: recetaId })
+  if (error) throw error
+  return data
+}
+
+export async function calcularCostoProducto(receta, producto) {
+  if (!receta || !producto) return 0
+  if (!receta.costo_estimado || !producto.peso_unitario_gr || !receta.rendimiento_cantidad) return 0
+  const factor = producto.peso_unitario_gr / receta.rendimiento_cantidad
+  return receta.costo_estimado * factor
 }
 
 // ─── Cálculo de Materia Prima ──────────────────────────

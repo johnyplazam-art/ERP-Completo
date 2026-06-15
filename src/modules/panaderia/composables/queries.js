@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, unref } from 'vue'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/vue-query'
 import { useAuthStore } from '@/core/store/auth'
 import {
@@ -55,7 +55,10 @@ import {
   fetchMovimientosPt,
   crearMovimientoPt,
   fetchStockIngrediente,
+  fetchStockValorizado,
+  fetchStockValorizadoTotal,
   calcularIngredientesNecesarios,
+  calcularCostoRecetaRPC,
   descontarIngredientesOrden,
   countIngredientes,
   countProveedores,
@@ -362,6 +365,23 @@ export function useStockIngredienteQuery(id) {
   })
 }
 
+export function useStockValorizadoTotalQuery(empresaId) {
+  const id = computed(() => unref(empresaId))
+  return useQuery({
+    queryKey: ['stock_valorizado_total', id],
+    queryFn: () => fetchStockValorizadoTotal(id.value),
+    enabled: () => !!id.value,
+  })
+}
+
+export function useStockValorizadoQuery(tipo, itemId) {
+  return useQuery({
+    queryKey: ['stock_valorizado', tipo, itemId],
+    queryFn: () => fetchStockValorizado(tipo, itemId),
+    enabled: !!tipo && !!itemId,
+  })
+}
+
 // ─── Mermas ──────────────────────────────────────────
 
 export function useMermasQuery() {
@@ -422,16 +442,32 @@ export function useCrearMovimientoPtMutation() {
 // ─── Cálculo de Materia Prima ────────────────────────
 
 export function useCalculoIngredientesQuery(detalles) {
+  const enabled = computed(() =>
+    detalles.value?.length > 0 &&
+    detalles.value.some(d => d.producto_id && d.receta_id && d.cantidad_programada > 0)
+  )
   return useQuery({
     queryKey: ['calculo_ingredientes', detalles],
     queryFn: () => calcularIngredientesNecesarios(detalles),
-    enabled: !!detalles?.length && detalles.some(d => d.producto_id && d.receta_id && d.cantidad_programada > 0),
+    enabled,
     staleTime: 30_000,
   })
 }
 
 // Re-export para que las vistas puedan importarlo desde queries
 export { calcularIngredientesNecesarios }
+
+// ─── Cálculo de Costos ────────────────────────────────────
+
+export function useRecalcularCostoMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (recetaId) => calcularCostoRecetaRPC(recetaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recetas'] })
+    },
+  })
+}
 
 export function useDescontarInventarioMutation() {
   const queryClient = useQueryClient()

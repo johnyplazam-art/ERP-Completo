@@ -11,6 +11,9 @@ import {
 } from '../composables/queries'
 import {
   crearMovimientoMp,
+  crearMovimientoPt,
+  fetchPrecioIngrediente,
+  fetchPrecioCostoProducto,
 } from '../composables/database'
 import PaginatorBar from '../components/PaginatorBar.vue'
 
@@ -82,18 +85,32 @@ const newForm = ref({
   nota: '',
   ingrediente_id: null,
   producto_id: null,
+  precio_unitario: 0,
 })
 
-function abrirNuevo() {
+async function abrirNuevo() {
   newForm.value = {
     tipo: 'ingreso',
     cantidad: '',
     nota: '',
     ingrediente_id: null,
     producto_id: null,
+    precio_unitario: 0,
     unidad_id: null,
   }
   showModal.value = true
+}
+
+async function onIngredienteSelected() {
+  if (!newForm.value.ingrediente_id) return
+  const precio = await fetchPrecioIngrediente(newForm.value.ingrediente_id)
+  newForm.value.precio_unitario = precio
+}
+
+async function onProductoSelected() {
+  if (!newForm.value.producto_id) return
+  const precioCosto = await fetchPrecioCostoProducto(newForm.value.producto_id)
+  newForm.value.precio_unitario = precioCosto
 }
 
 async function guardarMovimiento() {
@@ -112,20 +129,21 @@ async function guardarMovimiento() {
       await crearMovimientoMp({
         ...newForm.value,
         cantidad: Number(newForm.value.cantidad),
+        precio_unitario: Number(newForm.value.precio_unitario || 0),
         unidad_id: unidadId,
         empresa_id: empresaId.value,
         creado_por: authStore.user?.id,
       })
     } else {
-      const { data } = await supabase.from('movimientos_inventario_pt').insert({
+      await crearMovimientoPt({
         producto_id: Number(newForm.value.producto_id),
         tipo: newForm.value.tipo,
         cantidad: Number(newForm.value.cantidad),
+        precio_unitario: Number(newForm.value.precio_unitario || 0),
         nota: newForm.value.nota || '',
         empresa_id: empresaId.value,
         creado_por: authStore.user?.id,
-      }).select().single()
-      if (!data) throw new Error('Error al crear movimiento')
+      })
     }
     toast.success('Movimiento registrado')
     showModal.value = false
@@ -227,6 +245,8 @@ const formatCantidad = (val, unit) => {
                 <th class="px-4 py-3">Tipo</th>
                 <th class="px-4 py-3">Cantidad</th>
                 <th class="px-4 py-3">Unidad</th>
+                <th class="px-4 py-3 text-right">Precio</th>
+                <th class="px-4 py-3 text-right">Valor</th>
                 <th class="px-4 py-3">Nota</th>
               </tr>
             </thead>
@@ -243,6 +263,12 @@ const formatCantidad = (val, unit) => {
                   {{ formatCantidad(m.cantidad, '') }}
                 </td>
                 <td class="px-4 py-3 text-gray-500">{{ m.unidad?.simbolo || '-' }}</td>
+                <td class="px-4 py-3 text-right tabular-nums text-gray-600">
+                  {{ m.precio_unitario ? `$${Number(m.precio_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : '-' }}
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums font-medium text-gray-800">
+                  {{ m.precio_unitario ? `$${(Math.abs(Number(m.cantidad)) * Number(m.precio_unitario)).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : '-' }}
+                </td>
                 <td class="px-4 py-3 text-gray-500 max-w-[200px] truncate">{{ m.nota || '-' }}</td>
               </tr>
             </tbody>
@@ -281,6 +307,8 @@ const formatCantidad = (val, unit) => {
               <th class="px-4 py-3">Producto</th>
               <th class="px-4 py-3">Tipo</th>
               <th class="px-4 py-3">Cantidad</th>
+              <th class="px-4 py-3 text-right">Precio</th>
+              <th class="px-4 py-3 text-right">Valor</th>
               <th class="px-4 py-3">Nota</th>
             </tr>
           </thead>
@@ -295,6 +323,12 @@ const formatCantidad = (val, unit) => {
               </td>
               <td class="px-4 py-3 tabular-nums font-mono text-sm" :class="Number(m.cantidad) >= 0 ? 'text-green-600' : 'text-red-600'">
                 {{ formatCantidad(m.cantidad, '') }}
+              </td>
+              <td class="px-4 py-3 text-right tabular-nums text-gray-600">
+                {{ m.precio_unitario ? `$${Number(m.precio_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : '-' }}
+              </td>
+              <td class="px-4 py-3 text-right tabular-nums font-medium text-gray-800">
+                {{ m.precio_unitario ? `$${(Math.abs(Number(m.cantidad)) * Number(m.precio_unitario)).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : '-' }}
               </td>
               <td class="px-4 py-3 text-gray-500 max-w-[200px] truncate">{{ m.nota || '-' }}</td>
             </tr>
@@ -343,6 +377,7 @@ const formatCantidad = (val, unit) => {
             <label class="block text-sm font-medium text-gray-700 mb-1">Ingrediente <span class="text-red-500">*</span></label>
             <select
               v-model="newForm.ingrediente_id"
+              @change="onIngredienteSelected"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
@@ -355,6 +390,7 @@ const formatCantidad = (val, unit) => {
             <label class="block text-sm font-medium text-gray-700 mb-1">Producto <span class="text-red-500">*</span></label>
             <select
               v-model="newForm.producto_id"
+              @change="onProductoSelected"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
@@ -373,6 +409,21 @@ const formatCantidad = (val, unit) => {
               placeholder="0.00"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Precio unitario</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <input
+                v-model.number="newForm.precio_unitario"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 pl-8 focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
           </div>
 
           <div>

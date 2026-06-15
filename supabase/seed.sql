@@ -744,6 +744,51 @@ JOIN ingredientes i ON i.nombre = cat.ing_nombre AND i.empresa_id = 1
 JOIN unidades_medida u ON u.nombre = cat.unidad_nombre
 ON CONFLICT (receta_id, ingrediente_id) DO NOTHING;
 -- ============================================================
+-- 10. PROVEEDORES Y PRECIOS
+-- ============================================================
+INSERT INTO public.proveedores (nombre, contacto, telefono, activo, empresa_id)
+SELECT v.nombre, v.contacto, v.telefono, true, 1
+FROM (VALUES
+  ('Distribuidora del Plata SRL', 'Carlos Gómez', '011-4567-8901'),
+  ('Harinas del Sur SA',          'María Fernández', '011-4123-4567'),
+  ('Lácteos La Serenísima',      'Pedro Martínez', '011-4789-0123'),
+  ('Distribuidora de Carnes ABC', 'Lucía Rodríguez', '011-4890-1234'),
+  ('Especias y Condimentos Ltd',  'José López', '011-4901-2345')
+) AS v (nombre, contacto, telefono)
+WHERE NOT EXISTS (SELECT 1 FROM public.proveedores WHERE nombre = v.nombre AND empresa_id = 1);
+
+-- Ingrediente-Proveedor: precios realistas (por unidad base del ingrediente)
+INSERT INTO public.ingrediente_proveedor (ingrediente_id, proveedor_id, precio_actual, plazo_entrega_dias, es_preferido, empresa_id)
+SELECT i.id, p.id, v.precio, v.plazo, v.preferido, 1
+FROM (VALUES
+  ('Harina 000',           'Harinas del Sur SA',          1.20,   3,  true),
+  ('Harina Integral',      'Harinas del Sur SA',          1.80,   5,  true),
+  ('Harina 0000',          'Harinas del Sur SA',          1.50,   3,  false),
+  ('Manteca',              'Lácteos La Serenísima',        8.50,   2,  true),
+  ('Grasa Vacuna',         'Distribuidora del Plata SRL',  6.00,   7,  true),
+  ('Aceite de Girasol',    'Distribuidora del Plata SRL',  2.80,   5,  true),
+  ('Azúcar',               'Distribuidora del Plata SRL',  1.10,   3,  true),
+  ('Leche Entera',         'Lácteos La Serenísima',        1.50,   2,  true),
+  ('Crema de Leche',       'Lácteos La Serenísima',        4.50,   2,  false),
+  ('Huevos',               'Distribuidora del Plata SRL',  3.20,   2,  true),
+  ('Levadura Fresca',      'Distribuidora del Plata SRL',  2.00,   3,  true),
+  ('Sal Fina',             'Especias y Condimentos Ltd',   0.80,  10,  true),
+  ('Cacao Amargo',         'Distribuidora del Plata SRL',  5.00,   7,  true),
+  ('Chocolate Cobertura',  'Distribuidora del Plata SRL',  12.00,  7,  true),
+  ('Pechuga de Pollo',     'Distribuidora de Carnes ABC',  15.00,  2,  true),
+  ('Carne Picada de Res',  'Distribuidora de Carnes ABC',  12.00,  2,  true),
+  ('Queso Parmesano',      'Lácteos La Serenísima',        18.00,  5,  true),
+  ('Aceite de Oliva',      'Distribuidora del Plata SRL',  9.00,   7,  true),
+  ('Arroz',                'Distribuidora del Plata SRL',  1.50,   5,  true),
+  ('Hongos',               'Distribuidora del Plata SRL',  8.00,   3,  true)
+) AS v (ing_nombre, prov_nombre, precio, plazo, preferido)
+JOIN public.ingredientes i ON i.nombre = v.ing_nombre AND i.empresa_id = 1
+JOIN public.proveedores p ON p.nombre = v.prov_nombre AND p.empresa_id = 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.ingrediente_proveedor ip
+  WHERE ip.ingrediente_id = i.id AND ip.proveedor_id = p.id
+);
+-- ============================================================
 SELECT '✅ Seed completado' AS resultado,
        (SELECT COUNT(*) FROM public.unidades_medida) AS unidades,
        (SELECT COUNT(*) FROM public.conversiones_unidades) AS conversiones,
@@ -754,4 +799,6 @@ SELECT '✅ Seed completado' AS resultado,
        (SELECT COUNT(*) FROM public.recetas WHERE empresa_id = 1) AS recetas,
        (SELECT COUNT(*) FROM public.receta_ingredientes WHERE empresa_id = 1) AS relaciones,
        (SELECT COUNT(*) FROM public.recetas r JOIN public.categorias_receta c ON c.id = r.categoria_id
-        WHERE c.nombre IN ('Ensaladas','Carnes y aves','Salsas y aderezos','Postres y dulces','Entradas y aperitivos','Pastas y arroces')) AS recetas_gastronomicas;
+        WHERE c.nombre IN ('Ensaladas','Carnes y aves','Salsas y aderezos','Postres y dulces','Entradas y aperitivos','Pastas y arroces')) AS recetas_gastronomicas,
+       (SELECT COUNT(*) FROM public.proveedores WHERE empresa_id = 1) AS proveedores,
+       (SELECT COUNT(*) FROM public.ingrediente_proveedor WHERE empresa_id = 1) AS precios_ingredientes;

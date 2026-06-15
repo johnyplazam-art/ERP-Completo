@@ -2,13 +2,19 @@
 import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import { useConfirm } from 'primevue/useconfirm'
-import { useIngredientesQuery, useCategoriasIngredienteQuery, useUpdateIngredienteMutation } from '../composables/queries'
+import { useIngredientesQuery, useCategoriasIngredienteQuery, useUpdateIngredienteMutation, useStockValorizadoTotalQuery } from '../composables/queries'
 import DataState from '@/core/components/DataState.vue'
+import { useAuthStore } from '@/core/store/auth'
+
+const authStore = useAuthStore()
+const empresaId = computed(() => authStore.currentEmpresaId)
 
 const { data: ingredientes, isLoading, error } = useIngredientesQuery({ activo: true })
 const { data: categorias } = useCategoriasIngredienteQuery()
 const updateMutation = useUpdateIngredienteMutation()
 const confirm = useConfirm()
+
+const { data: totalValor, isLoading: loadingValor } = useStockValorizadoTotalQuery(empresaId)
 
 const selectedCategoria = ref(null)
 const searchQuery = ref('')
@@ -58,6 +64,17 @@ function desactivar(ing) {
         <i class="pi pi-plus mr-2"></i>
         Nuevo Ingrediente
       </router-link>
+    </div>
+
+    <div class="bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl p-4 mb-6 text-white flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-dollar text-xl"></i>
+        <span class="font-medium">Valor total del stock MP</span>
+      </div>
+      <span class="text-2xl font-bold tabular-nums">
+        <template v-if="loadingValor">—</template>
+        <template v-else>${{ (totalValor ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</template>
+      </span>
     </div>
 
     <!-- Filters -->

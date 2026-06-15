@@ -10,6 +10,16 @@ import { ordenProduccionCrearSchema } from '../validations/index'
 
 const router = useRouter()
 
+// ── Form (MUST be before any computed that references it) ──
+const { handleSubmit, values, errors, setFieldValue } = useForm({
+  validationSchema: toTypedSchema(ordenProduccionCrearSchema),
+  initialValues: {
+    fecha_programada: new Date().toISOString().split('T')[0],
+    nota: '',
+    detalles: [{ producto_id: null, receta_id: null, cantidad_programada: 1, lote: '' }],
+  },
+})
+
 const { data: productos } = useProductosQuery()
 const { data: recetas } = useRecetasQuery()
 const createMutation = useCreateOrdenMutation()
@@ -19,16 +29,6 @@ const detallesValidos = computed(() =>
   values.detalles?.filter(d => d.producto_id && d.receta_id && d.cantidad_programada > 0) || []
 )
 const { data: ingredientesCalculados, isFetching: calculandoIng } = useCalculoIngredientesQuery(detallesValidos)
-
-// ── Form ──────────────────────────────────────────
-const { handleSubmit, values, errors, setFieldValue } = useForm({
-  validationSchema: toTypedSchema(ordenProduccionCrearSchema),
-  initialValues: {
-    fecha_programada: new Date().toISOString().split('T')[0],
-    nota: '',
-    detalles: [{ producto_id: null, receta_id: null, cantidad_programada: 1, lote: '' }],
-  },
-})
 
 
 const addDetalle = () => {
@@ -42,6 +42,22 @@ const removeDetalle = (index) => {
   const next = values.detalles.filter((_, i) => i !== index)
   setFieldValue('detalles', next)
 }
+
+const preciosProducto = computed(() => {
+  return new Map(productos.value?.map(p => [p.id, p.precio_costo ?? 0]) ?? [])
+})
+
+const costosDetalles = computed(() => {
+  return values.detalles?.map(d => {
+    const precio = preciosProducto.value.get(d.producto_id) ?? 0
+    const total = precio * (d.cantidad_programada || 0)
+    return { costoUnitario: precio, costoTotal: total }
+  }) ?? []
+})
+
+const costoTotalOrden = computed(() =>
+  costosDetalles.value.reduce((sum, c) => sum + c.costoTotal, 0)
+)
 
 const recetasDeProducto = (productoId) => {
   if (!recetas.value || !productoId) return []
@@ -168,6 +184,13 @@ const onSubmit = handleSubmit(async (formValues) => {
             </p>
           </div>
 
+          <div class="w-28 text-sm text-gray-500 self-center text-right tabular-nums">
+            <template v-if="costosDetalles[index]?.costoTotal">
+              $ {{ costosDetalles[index].costoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+            </template>
+            <span v-else class="text-gray-300">—</span>
+          </div>
+
           <button
             type="button"
             @click="removeDetalle(index)"
@@ -176,6 +199,13 @@ const onSubmit = handleSubmit(async (formValues) => {
           >
             <i class="pi pi-trash"></i>
           </button>
+        </div>
+
+        <!-- Total estimado -->
+        <div v-if="costoTotalOrden > 0" class="flex justify-end px-3 pt-2 border-t border-gray-200">
+          <div class="text-sm font-semibold text-gray-900 tabular-nums">
+            Total estimado: $ {{ costoTotalOrden.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+          </div>
         </div>
       </div>
 
