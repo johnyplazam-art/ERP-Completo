@@ -75,6 +75,7 @@ const confirmarDesactivar = (receta) => {
               <th class="px-4 py-3">Nombre</th>
               <th class="px-4 py-3">Categoría</th>
               <th class="px-4 py-3">Rendimiento</th>
+              <th class="px-4 py-3">Costo est.</th>
               <th class="px-4 py-3">Tiempo</th>
               <th class="px-4 py-3">Estado</th>
               <th class="px-4 py-3">Acciones</th>
@@ -103,6 +104,12 @@ const confirmarDesactivar = (receta) => {
                 <td class="px-4 py-3 text-gray-600">{{ receta.categoria?.nombre }}</td>
                 <td class="px-4 py-3 text-gray-600">
                   {{ receta.rendimiento_cantidad }} {{ receta.unidad?.simbolo }}
+                </td>
+                <td class="px-4 py-3 text-gray-600 font-medium whitespace-nowrap">
+                  <template v-if="receta.costo_estimado != null">
+                    ${{ receta.costo_estimado.toFixed(2) }}
+                  </template>
+                  <span v-else class="text-gray-400">-</span>
                 </td>
                 <td class="px-4 py-3 text-gray-600">
                   {{ receta.tiempo_preparacion_min ? `${receta.tiempo_preparacion_min} min` : '-' }}
@@ -136,7 +143,7 @@ const confirmarDesactivar = (receta) => {
               </tr>
               <!-- Expanded detail row -->
               <tr v-if="expandedRow === receta.id" :key="`${receta.id}-detail`">
-                <td colspan="6" class="px-4 py-0 bg-gray-50">
+                <td colspan="7" class="px-4 py-0 bg-gray-50">
                   <div class="py-3 animate-fadeIn">
                     <div v-if="!receta.ingredientes?.length" class="text-sm text-gray-400 text-center py-2">
                       Sin ingredientes

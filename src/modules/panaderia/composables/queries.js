@@ -26,6 +26,7 @@ import {
   deleteMerma,
   countMermas,
   fetchIngredientes,
+  fetchIngrediente,
   createIngrediente,
   updateIngrediente,
   deleteIngrediente,
@@ -34,6 +35,7 @@ import {
   updateProveedor,
   deleteProveedor,
   fetchIngredientesProveedor,
+  fetchProveedoresByIngrediente,
   createIngredienteProveedor,
   updateIngredienteProveedor,
   deleteIngredienteProveedor,
@@ -174,6 +176,14 @@ export function useIngredientesQuery(filters = {}) {
   })
 }
 
+export function useIngredienteQuery(id) {
+  return useQuery({
+    queryKey: ['ingrediente', id],
+    queryFn: () => fetchIngrediente(id),
+    enabled: !!id,
+  })
+}
+
 export function useCreateIngredienteMutation() {
   const queryClient = useQueryClient()
   const authStore = useAuthStore()
@@ -188,6 +198,14 @@ export function useUpdateIngredienteMutation() {
   return useMutation({
     mutationFn: ({ id, values }) => updateIngrediente(id, values),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ingredientes'] }),
+  })
+}
+
+export function useProveedoresByIngredienteQuery(ingredienteId) {
+  return useQuery({
+    queryKey: ['proveedores_ingrediente', ingredienteId],
+    queryFn: () => fetchProveedoresByIngrediente(ingredienteId),
+    enabled: !!ingredienteId,
   })
 }
 
@@ -464,7 +482,10 @@ export function useRecalcularCostoMutation() {
   return useMutation({
     mutationFn: (recetaId) => calcularCostoRecetaRPC(recetaId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recetas'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.recetas })
+    },
+    onError: (err) => {
+      console.error('Error al recalcular costo:', err)
     },
   })
 }

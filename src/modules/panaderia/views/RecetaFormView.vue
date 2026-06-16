@@ -14,10 +14,19 @@ const isEdit = computed(() => !!route.params.id)
 const { data: categorias } = useCategoriasRecetaQuery()
 const { data: unidades } = useUnidadesMedidaQuery()
 const { data: ingredientes } = useIngredientesQuery({ activo: true })
-const { data: recetas } = useRecetasQuery()
+const { data: recetas, refetch: refetchRecetas } = useRecetasQuery()
 const createMutation = useCreateRecetaMutation()
 const updateMutation = useUpdateRecetaMutation()
 const recalcularCosto = useRecalcularCostoMutation()
+
+async function handleRecalcular() {
+  try {
+    await recalcularCosto.mutateAsync(Number(route.params.id))
+    toast.success('Costo recalculado exitosamente')
+  } catch (err) {
+    toast.error(err.message || 'Error al recalcular costo')
+  }
+}
 
 const recetaActual = computed(() =>
   recetas.value?.find(r => r.id === Number(route.params.id))
@@ -38,14 +47,16 @@ const { handleSubmit, values, setFieldValue, errors, resetForm } = useForm({
 })
 
 // Cargar datos existentes si estamos en modo edición
+const loadedForm = ref(false)
+
 if (isEdit.value) {
   const receta = computed(() =>
     recetas.value?.find(r => r.id === Number(route.params.id))
   )
 
-  watchEffect(() => {
-    const data = receta.value
-    if (data) {
+  watch(receta, (data) => {
+    if (data && !loadedForm.value) {
+      loadedForm.value = true
       resetForm({
         values: {
           nombre: data.nombre || '',
@@ -55,7 +66,7 @@ if (isEdit.value) {
           rendimiento_cantidad: data.rendimiento_cantidad || 1,
           rendimiento_unidad_id: data.rendimiento_unidad_id || null,
           activa: data.activa ?? true,
-          ingredientes: (data.receta_ingredientes || []).map((ri, i) => ({
+          ingredientes: (data.ingredientes || []).map((ri, i) => ({
             ingrediente_id: ri.ingrediente_id,
             cantidad: ri.cantidad,
             unidad_id: ri.unidad_id,
@@ -65,7 +76,7 @@ if (isEdit.value) {
         },
       })
     }
-  })
+  }, { immediate: true })
 }
 
 
@@ -297,7 +308,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
           <button
             type="button"
-            @click="recalcularCosto.mutateAsync(Number(route.params.id))"
+            @click="handleRecalcular"
             :disabled="recalcularCosto.isPending.value"
             class="inline-flex items-center px-3 py-2 text-sm text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 disabled:opacity-50"
           >

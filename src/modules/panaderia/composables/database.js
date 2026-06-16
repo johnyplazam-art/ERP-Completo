@@ -154,6 +154,20 @@ export async function countIngredientes(params = {}) {
   return count ?? 0
 }
 
+export async function fetchIngrediente(id) {
+  const { data, error } = await supabase
+    .from('ingredientes')
+    .select(`
+      *,
+      categoria:categorias_ingrediente(nombre),
+      unidad:unidades_medida(nombre, simbolo)
+    `)
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return data
+}
+
 export async function createIngrediente(values) {
   const { data, error } = await supabase.from('ingredientes').insert(values).select().single()
   if (error) throw error
@@ -230,6 +244,19 @@ export async function fetchIngredientesProveedor(proveedorId) {
     `)
     .eq('proveedor_id', proveedorId)
     .order('ingrediente_id')
+  if (error) throw error
+  return data
+}
+
+export async function fetchProveedoresByIngrediente(ingredienteId) {
+  const { data, error } = await supabase
+    .from('ingrediente_proveedor')
+    .select(`
+      *,
+      proveedor:proveedores(nombre, activo)
+    `)
+    .eq('ingrediente_id', ingredienteId)
+    .order('precio_actual', { ascending: true })
   if (error) throw error
   return data
 }
@@ -341,9 +368,31 @@ export async function createReceta(values) {
 }
 
 export async function updateReceta(id, values) {
-  const { data, error } = await supabase.from('recetas').update(values).eq('id', id).select().single()
-  if (error) throw error
-  return data
+  const { ingredientes, ...receta } = values
+  const empresaId = values.empresa_id
+
+  const { error: errReceta } = await supabase
+    .from('recetas')
+    .update(receta)
+    .eq('id', id)
+  if (errReceta) throw errReceta
+
+  if (ingredientes) {
+    const { error: errDel } = await supabase
+      .from('receta_ingredientes')
+      .delete()
+      .eq('receta_id', id)
+    if (errDel) throw errDel
+
+    if (ingredientes.length) {
+      const { error: errIns } = await supabase
+        .from('receta_ingredientes')
+        .insert(ingredientes.map(i => ({ ...i, receta_id: id, empresa_id: empresaId })))
+      if (errIns) throw errIns
+    }
+  }
+
+  return fetchRecetaById(id)
 }
 
 export async function deleteReceta(id) {
@@ -623,11 +672,24 @@ export async function fetchStockValorizadoTotal(empresaId) {
     .select('precio_unitario, cantidad, tipo, ingrediente:ingredientes!inner(empresa_id)')
     .eq('ingrediente.empresa_id', empresaId)
   if (error) throw error
-  const totalValor = data.reduce((sum, m) => {
-    if (m.tipo === 'ingreso') return sum + (Number(m.cantidad) * Number(m.precio_unitario || 0))
-    return sum
-  }, 0)
-  return totalValor
+
+  let ingCant = 0
+  let ingValor = 0
+  let neto = 0
+
+  for (const m of data) {
+    const cant = Number(m.cantidad)
+    if (m.tipo === 'ingreso') {
+      ingCant += cant
+      ingValor += cant * Number(m.precio_unitario || 0)
+      neto += cant
+    } else if (['egreso', 'ajuste', 'merma'].includes(m.tipo)) {
+      neto -= cant
+    }
+  }
+
+  if (ingCant <= 0 || neto <= 0) return 0
+  return (ingValor / ingCant) * neto
 }
 
 export async function fetchStockValorizado(tipo, itemId) {
