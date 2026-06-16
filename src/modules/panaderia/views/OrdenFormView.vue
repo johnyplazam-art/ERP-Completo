@@ -1,18 +1,31 @@
 <script setup>
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, watchEffect } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { useProductosQuery, useRecetasQuery, useCreateOrdenMutation, useCalculoIngredientesQuery } from '../composables/queries'
+import { useProductosQuery, useRecetasQuery, useCreateOrdenMutation, useOrdenProduccionQuery, useUpdateOrdenMutation, useCalculoIngredientesQuery } from '../composables/queries'
 import { getSelectValue } from '@/core/composables/useSelectValue'
-import { ordenProduccionCrearSchema } from '../validations/index'
+import { ordenProduccionCrearSchema, ordenProduccionSchema } from '../validations/index'
 
 const router = useRouter()
+const route = useRoute()
 
-// ── Form (MUST be before any computed that references it) ──
-const { handleSubmit, values, errors, setFieldValue } = useForm({
-  validationSchema: toTypedSchema(ordenProduccionCrearSchema),
+const isEdit = computed(() => !!route.params.id)
+const ordenId = computed(() => isEdit.value ? Number(route.params.id) : null)
+
+const { data: orden, isLoading: loadingOrden } = useOrdenProduccionQuery(ordenId)
+const { data: productos } = useProductosQuery()
+const { data: recetas } = useRecetasQuery()
+const createMutation = useCreateOrdenMutation()
+const updateMutation = useUpdateOrdenMutation()
+
+const schema = computed(() =>
+  isEdit.value ? toTypedSchema(ordenProduccionSchema) : toTypedSchema(ordenProduccionCrearSchema)
+)
+
+const { handleSubmit, values, errors, setFieldValue, resetForm } = useForm({
+  validationSchema: schema,
   initialValues: {
     fecha_programada: new Date().toISOString().split('T')[0],
     nota: '',
@@ -20,11 +33,26 @@ const { handleSubmit, values, errors, setFieldValue } = useForm({
   },
 })
 
-const { data: productos } = useProductosQuery()
-const { data: recetas } = useRecetasQuery()
-const createMutation = useCreateOrdenMutation()
+watchEffect(() => {
+  if (!isEdit.value) return
+  const data = orden.value
+  if (!data) return
 
-// Cálculo automático de ingredientes
+  resetForm({
+    values: {
+      fecha_programada: data.fecha_programada || new Date().toISOString().split('T')[0],
+      estado: data.estado || 'pendiente',
+      nota: data.nota || '',
+      detalles: (data.detalles || []).map(d => ({
+        producto_id: d.producto_id,
+        receta_id: d.receta_id,
+        cantidad_programada: d.cantidad_programada,
+        lote: d.lote || '',
+      })),
+    },
+  })
+})
+
 const detallesValidos = computed(() =>
   values.detalles?.filter(d => d.producto_id && d.receta_id && d.cantidad_programada > 0) || []
 )
@@ -68,13 +96,22 @@ const recetasDeProducto = (productoId) => {
   return recetas.value?.filter(r => r.activa) ?? []
 }
 
+const isPending = computed(() =>
+  isEdit.value ? updateMutation.isPending.value : createMutation.isPending.value
+)
+
 const onSubmit = handleSubmit(async (formValues) => {
   try {
-    await createMutation.mutateAsync(formValues)
-    toast.success('Orden creada exitosamente')
+    if (isEdit.value) {
+      await updateMutation.mutateAsync({ id: ordenId.value, values: formValues })
+      toast.success('Orden actualizada exitosamente')
+    } else {
+      await createMutation.mutateAsync(formValues)
+      toast.success('Orden creada exitosamente')
+    }
     router.push('/panaderia/produccion')
   } catch (err) {
-    toast.error(err.message || 'Error al crear orden')
+    toast.error(err.message || 'Error al guardar orden')
   }
 })
 </script>
@@ -85,10 +122,21 @@ const onSubmit = handleSubmit(async (formValues) => {
       <router-link to="/panaderia/produccion" class="text-gray-400 hover:text-gray-600 mr-3">
         <i class="pi pi-arrow-left text-xl"></i>
       </router-link>
-      <h2 class="text-2xl font-bold text-gray-900">Nueva Orden de Producción</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Editar' : 'Nueva' }} Orden de Producción</h2>
     </div>
 
-    <form @submit="onSubmit" class="max-w-3xl space-y-6">
+    <div v-if="isEdit && loadingOrden" class="max-w-3xl">
+      <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <div class="animate-pulse space-y-4">
+          <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+          <div class="h-10 bg-gray-200 rounded"></div>
+          <div class="h-10 bg-gray-200 rounded"></div>
+          <div class="h-10 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    </div>
+
+    <form v-else @submit="onSubmit" class="max-w-3xl space-y-6">
       <!-- Info -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h3 class="text-lg font-semibold text-gray-900">Información</h3>
@@ -102,6 +150,20 @@ const onSubmit = handleSubmit(async (formValues) => {
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
           />
           <p v-if="errors.fecha_programada" class="mt-1 text-sm text-red-600">{{ errors.fecha_programada }}</p>
+        </div>
+
+        <div v-if="isEdit">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+          <select
+            :value="values.estado"
+            @change="setFieldValue('estado', $event.target.value)"
+            class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="pendiente">Pendiente</option>
+            <option value="en_proceso">En Proceso</option>
+            <option value="completada">Completada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
         </div>
 
         <div>
@@ -188,7 +250,7 @@ const onSubmit = handleSubmit(async (formValues) => {
             <template v-if="costosDetalles[index]?.costoTotal">
               $ {{ costosDetalles[index].costoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
             </template>
-            <span v-else class="text-gray-300">—</span>
+            <span v-else class="text-gray-300">&mdash;</span>
           </div>
 
           <button
@@ -249,11 +311,11 @@ const onSubmit = handleSubmit(async (formValues) => {
         </router-link>
         <button
           type="submit"
-          :disabled="createMutation.isPending.value"
+          :disabled="isPending"
           class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
         >
-          <i v-if="createMutation.isPending.value" class="pi pi-spin pi-spinner mr-2"></i>
-          {{ createMutation.isPending.value ? 'Creando...' : 'Crear Orden' }}
+          <i v-if="isPending" class="pi pi-spin pi-spinner mr-2"></i>
+          {{ isPending ? 'Guardando...' : (isEdit ? 'Guardar Cambios' : 'Crear Orden') }}
         </button>
       </div>
     </form>

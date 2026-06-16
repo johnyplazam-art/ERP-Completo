@@ -451,6 +451,77 @@ export async function deleteProducto(id) {
 
 // ─── Órdenes de Producción ───────────────────────────
 
+export async function fetchOrdenProduccion(id) {
+  const { data, error } = await supabase
+    .from('ordenes_produccion')
+    .select(`
+      *,
+      responsable:perfiles(nombre),
+      detalles:orden_produccion_detalle(
+        *,
+        producto:productos(nombre),
+        receta:recetas(nombre)
+      )
+    `)
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateOrdenProduccion(id, values) {
+  const { detalles, ...orden } = values
+
+  const { error: errOrden } = await supabase
+    .from('ordenes_produccion')
+    .update(orden)
+    .eq('id', id)
+  if (errOrden) throw errOrden
+
+  if (detalles) {
+    const { error: errDel } = await supabase
+      .from('orden_produccion_detalle')
+      .delete()
+      .eq('orden_id', id)
+    if (errDel) throw errDel
+
+    if (detalles.length) {
+      let costoTotal = 0
+      const detalleRows = await Promise.all(detalles.map(async (d) => {
+        const precioCosto = await fetchPrecioCostoProducto(d.producto_id)
+        const costoLinea = precioCosto * (d.cantidad_programada || 0)
+        costoTotal += costoLinea
+        return {
+          orden_id: id,
+          producto_id: d.producto_id,
+          receta_id: d.receta_id,
+          cantidad_programada: Number(d.cantidad_programada),
+          cantidad_producida: Number(d.cantidad_producida || 0),
+          lote: d.lote || '',
+          empresa_id: orden.empresa_id,
+          costo_unitario_estimado: precioCosto,
+          costo_total_estimado: costoLinea,
+        }
+      }))
+
+      const { error: errIns } = await supabase
+        .from('orden_produccion_detalle')
+        .insert(detalleRows)
+      if (errIns) throw errIns
+
+      if (costoTotal > 0) {
+        const { error: errCosto } = await supabase
+          .from('ordenes_produccion')
+          .update({ costo_total_estimado: costoTotal })
+          .eq('id', id)
+        if (errCosto) throw errCosto
+      }
+    }
+  }
+
+  return fetchOrdenProduccion(id)
+}
+
 export async function fetchOrdenesProduccion(empresaId, opts = {}) {
   let query = supabase
     .from('ordenes_produccion')
@@ -646,6 +717,50 @@ export async function countMovimientosPt(productoId) {
   const { count, error } = await query
   if (error) throw error
   return count ?? 0
+}
+
+export async function fetchProductosConStock(empresaId) {
+  const productos = await fetchProductos(empresaId)
+
+  const { data: movimientos, error } = await supabase
+    .from('movimientos_inventario_pt')
+    .select('producto_id, cantidad, tipo, precio_unitario')
+  if (error) throw error
+
+  const stockMap = {}
+  const valorMap = {}
+
+  for (const m of movimientos) {
+    const pid = m.producto_id
+    if (!stockMap[pid]) {
+      stockMap[pid] = { cantidad: 0, valorIngresos: 0, cantIngresos: 0 }
+    }
+    const cant = Number(m.cantidad)
+    if (m.tipo === 'ingreso') {
+      stockMap[pid].cantidad += cant
+      stockMap[pid].valorIngresos += cant * Number(m.precio_unitario || 0)
+      stockMap[pid].cantIngresos += cant
+    } else {
+      stockMap[pid].cantidad -= Math.abs(cant)
+    }
+  }
+
+  return productos.map(p => {
+    const s = stockMap[p.id] || { cantidad: 0, valorIngresos: 0, cantIngresos: 0 }
+    const precioProm = s.cantIngresos > 0 ? s.valorIngresos / s.cantIngresos : 0
+    return {
+      ...p,
+      stock_actual: s.cantidad,
+      valor_total: s.cantidad * precioProm,
+      precio_promedio: precioProm,
+    }
+  })
+}
+
+export async function fetchStockProducto(id) {
+  const { data, error } = await supabase.rpc('stock_producto', { p_producto_id: id })
+  if (error) throw error
+  return data
 }
 
 export async function crearMovimientoPt(values) {

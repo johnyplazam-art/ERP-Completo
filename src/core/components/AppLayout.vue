@@ -21,6 +21,7 @@ const panaderiaItems = computed(() => [
   { to: '/panaderia', icon: 'pi pi-chart-bar', label: t('nav.dashboard'), permission: null },
   { to: '/panaderia/recetas', icon: 'pi pi-book', label: t('nav.recetas'), permission: null },
   { to: '/panaderia/inventario', icon: 'pi pi-box', label: t('nav.inventario'), permission: null },
+  { to: '/panaderia/stock-productos', icon: 'pi pi-box', label: 'Stock PT', permission: null },
   { to: '/panaderia/productos', icon: 'pi pi-tag', label: 'Productos', permission: null },
   { to: '/panaderia/proveedores', icon: 'pi pi-truck', label: 'Proveedores', permission: null },
   { to: '/panaderia/produccion', icon: 'pi pi-cog', label: t('nav.produccion'), permission: null },

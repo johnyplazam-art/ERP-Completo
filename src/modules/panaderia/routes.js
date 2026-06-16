@@ -27,7 +27,13 @@ export default [
     path: 'inventario',
     name: 'panaderia-inventario',
     component: () => import('./views/InventarioView.vue'),
-    meta: { title: 'Inventario' },
+    meta: { title: 'Inventario MP' },
+  },
+  {
+    path: 'stock-productos',
+    name: 'panaderia-stock-productos',
+    component: () => import('./views/StockPtView.vue'),
+    meta: { title: 'Stock PT' },
   },
   {
     path: 'produccion',
@@ -40,6 +46,12 @@ export default [
     name: 'panaderia-produccion-nueva',
     component: () => import('./views/OrdenFormView.vue'),
     meta: { title: 'Nueva Orden' },
+  },
+  {
+    path: 'produccion/:id(\\d+)/editar',
+    name: 'panaderia-produccion-editar',
+    component: () => import('./views/OrdenFormView.vue'),
+    meta: { title: 'Editar Orden' },
   },
 
   // Productos

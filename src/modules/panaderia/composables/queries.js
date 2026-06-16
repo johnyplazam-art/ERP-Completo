@@ -50,13 +50,17 @@ import {
   updateProducto,
   deleteProducto,
   fetchOrdenesProduccion,
+  fetchOrdenProduccion,
   createOrdenProduccion,
+  updateOrdenProduccion,
   updateOrdenEstado,
   fetchMovimientosMp,
   crearMovimientoMp,
   fetchMovimientosPt,
   crearMovimientoPt,
   fetchStockIngrediente,
+  fetchStockProducto,
+  fetchProductosConStock,
   fetchStockValorizado,
   fetchStockValorizadoTotal,
   calcularIngredientesNecesarios,
@@ -350,6 +354,40 @@ export function useUpdateOrdenEstadoMutation() {
   return useMutation({
     mutationFn: ({ id, estado }) => updateOrdenEstado(id, estado),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ordenes_produccion'] }),
+  })
+}
+
+export function useOrdenProduccionQuery(id) {
+  return useQuery({
+    queryKey: queryKeys.ordenProduccion(id),
+    queryFn: () => fetchOrdenProduccion(id),
+    enabled: !!id,
+  })
+}
+
+export function useUpdateOrdenMutation() {
+  const queryClient = useQueryClient()
+  const authStore = useAuthStore()
+  return useMutation({
+    mutationFn: ({ id, values }) => updateOrdenProduccion(id, { ...values, empresa_id: authStore.currentEmpresaId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ordenes_produccion'] }),
+  })
+}
+
+export function useProductosConStockQuery(empresaId) {
+  const id = computed(() => unref(empresaId))
+  return useQuery({
+    queryKey: ['productos_con_stock', id],
+    queryFn: () => fetchProductosConStock(id.value),
+    enabled: () => !!id.value,
+  })
+}
+
+export function useStockProductoQuery(id) {
+  return useQuery({
+    queryKey: ['stock_producto', id],
+    queryFn: () => fetchStockProducto(id),
+    enabled: !!id,
   })
 }
 

@@ -175,6 +175,14 @@ const puedeCancelar = (estado) => {
             </span>
           </div>
           <div class="flex gap-2" @click.stop>
+            <router-link
+              v-if="orden.estado === 'pendiente'"
+              :to="`/panaderia/produccion/${orden.id}/editar`"
+              class="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 inline-flex items-center gap-1"
+            >
+              <i class="pi pi-pencil text-xs"></i>
+              Editar
+            </router-link>
             <button
               v-if="puedeAvanzar(orden.estado)"
               @click="cambiarEstado(orden.id, orden.estado === 'pendiente' ? 'en_proceso' : 'completada')"
