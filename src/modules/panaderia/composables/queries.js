@@ -61,6 +61,7 @@ import {
   fetchStockIngrediente,
   fetchStockProducto,
   fetchProductosConStock,
+  fetchAuditLogs,
   fetchStockValorizado,
   fetchStockValorizadoTotal,
   calcularIngredientesNecesarios,
@@ -389,6 +390,42 @@ export function useStockProductoQuery(id) {
     queryFn: () => fetchStockProducto(id),
     enabled: !!id,
   })
+}
+
+export function useAuditLogsPaginated(filters = {}) {
+  const authStore = useAuthStore()
+  const page = ref(1)
+  const pageSize = 50
+  const from = computed(() => (page.value - 1) * pageSize)
+  const to = computed(() => from.value + pageSize - 1)
+
+  const queryKey = computed(() => ['audit_logs', filters, { page: page.value }])
+
+  const { data, isLoading, error } = useQuery({
+    queryKey,
+    queryFn: () => fetchAuditLogs(undefined, {
+      ...filters,
+      from: from.value,
+      to: to.value,
+    }),
+    placeholderData: keepPreviousData,
+  })
+
+  const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / pageSize)))
+
+  function setPage(p) { page.value = Math.max(1, Math.min(p, totalPages.value)) }
+  function nextPage() { setPage(page.value + 1) }
+  function prevPage() { setPage(page.value - 1) }
+
+  return {
+    data: computed(() => data.value?.data ?? []),
+    total: computed(() => data.value?.total ?? 0),
+    page,
+    pageSize,
+    totalPages,
+    setPage, nextPage, prevPage,
+    isLoading, error,
+  }
 }
 
 // ─── Movimientos / Stock ────────────────────────────

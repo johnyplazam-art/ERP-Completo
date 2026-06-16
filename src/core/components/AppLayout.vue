@@ -28,6 +28,7 @@ const panaderiaItems = computed(() => [
   { to: '/panaderia/movimientos', icon: 'pi pi-arrow-right-arrow-left', label: 'Movimientos', permission: null },
   { to: '/panaderia/mermas', icon: 'pi pi-exclamation-triangle', label: 'Mermas', permission: null },
   { to: '/panaderia/catalogos', icon: 'pi pi-wrench', label: 'Catálogos', permission: null },
+  { to: '/panaderia/auditoria', icon: 'pi pi-history', label: 'Auditoría', permission: null },
 ].filter(item => item.permission !== false))
 
 const adminItems = computed(() => [

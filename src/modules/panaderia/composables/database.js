@@ -819,6 +819,32 @@ export async function fetchStockIngrediente(id) {
   return data
 }
 
+// ─── Auditoría ─────────────────────────────────────────
+
+export async function fetchAuditLogs(opts = {}) {
+  let query = supabase
+    .from('audit_logs')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false })
+
+  if (opts.action) query = query.eq('action', opts.action)
+  if (opts.table) query = query.ilike('affected_table', opts.table)
+  if (opts.userId) query = query.eq('user_id', opts.userId)
+
+  if (opts.from) {
+    query = query.gte('created_at', opts.from)
+  }
+  if (opts.to) {
+    query = query.lte('created_at', opts.to)
+  }
+
+  query = withRange(query, opts)
+
+  const { data, error, count } = await query
+  if (error) throw error
+  return { data, total: count ?? 0 }
+}
+
 // ─── Cálculo de Costos ────────────────────────────────────
 
 export async function calcularCostoRecetaRPC(recetaId) {

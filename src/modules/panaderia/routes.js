@@ -118,6 +118,14 @@ export default [
     meta: { title: 'Mermas' },
   },
 
+  // Auditoría
+  {
+    path: 'auditoria',
+    name: 'panaderia-auditoria',
+    component: () => import('./views/AuditView.vue'),
+    meta: { title: 'Auditoría' },
+  },
+
   // Catálogos
   {
     path: 'catalogos',
