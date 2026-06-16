@@ -240,7 +240,15 @@ describe('movimientos_inventario_pt', () => {
     await mod.crearMovimientoPt({ producto_id: 1, tipo: 'ingreso', cantidad: 20 })
 
     expect(supabase.from).toHaveBeenCalledWith('movimientos_inventario_pt')
-    expect(chain.insert).toHaveBeenCalledWith({ producto_id: 1, tipo: 'ingreso', cantidad: 20 })
+    expect(chain.insert).toHaveBeenCalledWith({
+      producto_id: 1,
+      tipo: 'ingreso',
+      cantidad: 20,
+      precio_unitario: 0,
+      nota: '',
+      empresa_id: undefined,
+      creado_por: undefined,
+    })
   })
 
   it('countMovimientosPt — returns total count', async () => {
