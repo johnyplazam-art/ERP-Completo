@@ -20,6 +20,12 @@ const routes = [
         meta: { title: 'SIAS ERP' },
       },
       {
+        path: 'perfil',
+        name: 'perfil',
+        component: () => import('@/core/components/PerfilView.vue'),
+        meta: { title: 'Mi Perfil' },
+      },
+      {
         path: 'panaderia',
         name: 'panaderia',
         children: panaderiaRoutes,
@@ -35,6 +41,18 @@ const routes = [
         name: 'admin-apps',
         component: () => import('@/core/components/AdminApps.vue'),
         meta: { title: 'Aplicaciones', role: 'admin' },
+      },
+      {
+        path: 'admin/planes',
+        name: 'admin-planes',
+        component: () => import('@/core/components/AdminPlanes.vue'),
+        meta: { title: 'Planes', role: 'admin' },
+      },
+      {
+        path: 'admin/suscripciones',
+        name: 'admin-suscripciones',
+        component: () => import('@/core/components/AdminSuscripciones.vue'),
+        meta: { title: 'Suscripciones', role: 'admin' },
       },
     ],
   },

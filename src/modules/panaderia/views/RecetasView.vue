@@ -1,24 +1,40 @@
 <script setup>
-import { useRecetasQuery, useDeleteRecetaMutation } from '../composables/queries'
+import { useRecetasQuery, useDeleteRecetaMutation, useUpdateRecetaMutation } from '../composables/queries'
 import { ref, computed } from 'vue'
+import { toast } from 'vue-sonner'
 import { useConfirm } from 'primevue/useconfirm'
 import DataState from '@/core/components/DataState.vue'
 
 const { data: recetas, isLoading, error } = useRecetasQuery()
 const { mutate: eliminarReceta } = useDeleteRecetaMutation()
+const updateMutation = useUpdateRecetaMutation()
 const expandedRow = ref('')
 const confirm = useConfirm()
 const searchQuery = ref('')
+const mostrarInactivos = ref(false)
 
 const filteredRecetas = computed(() => {
   if (!recetas.value) return []
-  if (!searchQuery.value) return recetas.value
-  const q = searchQuery.value.toLowerCase()
-  return recetas.value.filter(r =>
-    r.nombre.toLowerCase().includes(q) ||
-    r.categoria?.nombre?.toLowerCase().includes(q)
-  )
+  let list = recetas.value
+
+  if (!mostrarInactivos.value) {
+    list = list.filter(r => r.activa)
+  }
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(r =>
+      r.nombre.toLowerCase().includes(q) ||
+      r.categoria?.nombre?.toLowerCase().includes(q)
+    )
+  }
+
+  return list
 })
+
+function toggleInactivos() {
+  mostrarInactivos.value = !mostrarInactivos.value
+}
 
 const toggleRow = (id) => {
   expandedRow.value = expandedRow.value === id ? '' : id
@@ -32,6 +48,24 @@ const confirmarDesactivar = (receta) => {
     rejectLabel: 'Cancelar',
     acceptLabel: 'Confirmar',
     accept: () => eliminarReceta(receta.id),
+  })
+}
+
+function reactivar(receta) {
+  confirm.require({
+    message: `¿Reactivar la receta "${receta.nombre}"?`,
+    header: 'Confirmar',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Confirmar',
+    accept: async () => {
+      try {
+        await updateMutation.mutateAsync({ id: receta.id, values: { activa: true } })
+        toast.success(`"${receta.nombre}" reactivada`)
+      } catch (err) {
+        toast.error(err.message || 'Error al reactivar receta')
+      }
+    },
   })
 }
 </script>
@@ -50,13 +84,25 @@ const confirmarDesactivar = (receta) => {
     </div>
 
     <!-- Search -->
-    <div class="mb-4">
+    <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <input
         v-model="searchQuery"
         type="text"
         placeholder="Buscar recetas..."
-        class="touch-input block w-full max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+        class="touch-input block w-full sm:max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
       />
+      <div class="flex items-center">
+        <button
+          @click="toggleInactivos"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
+          :class="mostrarInactivos
+            ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+            : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+        >
+          <i class="pi pi-eye-slash text-xs"></i>
+          Inactivos
+        </button>
+      </div>
     </div>
 
     <DataState
@@ -64,7 +110,7 @@ const confirmarDesactivar = (receta) => {
       :error="error"
       :empty="!filteredRecetas.length"
       empty-icon="pi pi-book"
-      :empty-text="searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay recetas registradas'"
+      :empty-text="mostrarInactivos ? 'Sin recetas inactivas' : (searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay recetas registradas')"
       loading-text="Cargando recetas..."
     >
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -137,7 +183,13 @@ const confirmarDesactivar = (receta) => {
                     >
                       Desactivar
                     </button>
-                    <span v-else class="text-gray-400 text-sm">Desactivada</span>
+                    <button
+                      v-else
+                      @click="reactivar(receta)"
+                      class="text-green-600 hover:text-green-800 text-sm font-medium"
+                    >
+                      Reactivar
+                    </button>
                   </div>
                 </td>
               </tr>

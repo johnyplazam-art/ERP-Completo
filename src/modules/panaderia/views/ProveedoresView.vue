@@ -1,5 +1,5 @@
 <script setup>
-import { useProveedoresQuery, useDeleteProveedorMutation } from '../composables/queries'
+import { useProveedoresQuery, useDeleteProveedorMutation, useUpdateProveedorMutation } from '../composables/queries'
 import { ref, computed } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import { supabase } from '@/core/supabase'
@@ -13,9 +13,11 @@ import {
 
 const { data: proveedores, isLoading, error, refetch } = useProveedoresQuery()
 const { mutate: eliminarProveedor } = useDeleteProveedorMutation()
+const updateMutation = useUpdateProveedorMutation()
 const expandedRow = ref('')
 const confirm = useConfirm()
 const searchQuery = ref('')
+const mostrarInactivos = ref(false)
 
 const showModal = ref(false)
 const editingProvId = ref(null)
@@ -26,13 +28,26 @@ const ingredientesDisponibles = ref([])
 
 const filteredProveedores = computed(() => {
   if (!proveedores.value) return []
-  if (!searchQuery.value) return proveedores.value
-  const q = searchQuery.value.toLowerCase()
-  return proveedores.value.filter(p =>
-    p.nombre.toLowerCase().includes(q) ||
-    p.contacto?.toLowerCase().includes(q)
-  )
+  let list = proveedores.value
+
+  if (!mostrarInactivos.value) {
+    list = list.filter(p => p.activo)
+  }
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(p =>
+      p.nombre.toLowerCase().includes(q) ||
+      p.contacto?.toLowerCase().includes(q)
+    )
+  }
+
+  return list
 })
+
+function toggleInactivos() {
+  mostrarInactivos.value = !mostrarInactivos.value
+}
 
 function toggleRow(id) {
   expandedRow.value = expandedRow.value === id ? '' : id
@@ -46,6 +61,24 @@ const confirmarDesactivar = (prov) => {
     rejectLabel: 'Cancelar',
     acceptLabel: 'Confirmar',
     accept: () => eliminarProveedor(prov.id),
+  })
+}
+
+function reactivar(prov) {
+  confirm.require({
+    message: `¿Reactivar el proveedor "${prov.nombre}"?`,
+    header: 'Confirmar',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Confirmar',
+    accept: async () => {
+      try {
+        await updateMutation.mutateAsync({ id: prov.id, values: { activo: true } })
+        toast.success(`"${prov.nombre}" reactivado`)
+      } catch (err) {
+        toast.error(err.message || 'Error al reactivar proveedor')
+      }
+    },
   })
 }
 
@@ -130,13 +163,25 @@ function confirmarEliminarIngrediente(item, provNombre) {
       </router-link>
     </div>
 
-    <div class="mb-4">
+    <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <input
         v-model="searchQuery"
         type="text"
         placeholder="Buscar proveedores..."
-        class="touch-input block w-full max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+        class="touch-input block w-full sm:max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
       />
+      <div class="flex items-center">
+        <button
+          @click="toggleInactivos"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
+          :class="mostrarInactivos
+            ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+            : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+        >
+          <i class="pi pi-eye-slash text-xs"></i>
+          Inactivos
+        </button>
+      </div>
     </div>
 
     <DataState
@@ -144,7 +189,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
       :error="error"
       :empty="!filteredProveedores.length"
       empty-icon="pi pi-truck"
-      :empty-text="searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay proveedores registrados'"
+      :empty-text="mostrarInactivos ? 'Sin proveedores inactivos' : (searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay proveedores registrados')"
       loading-text="Cargando proveedores..."
     >
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -200,7 +245,13 @@ function confirmarEliminarIngrediente(item, provNombre) {
                     >
                       Desactivar
                     </button>
-                    <span v-else class="text-gray-400 text-sm">Desactivado</span>
+                    <button
+                      v-else
+                      @click="reactivar(prov)"
+                      class="text-green-600 hover:text-green-800 text-sm font-medium"
+                    >
+                      Reactivar
+                    </button>
                   </div>
                 </td>
               </tr>

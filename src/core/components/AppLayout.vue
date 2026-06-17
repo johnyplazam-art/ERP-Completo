@@ -34,6 +34,8 @@ const panaderiaItems = computed(() => [
 const adminItems = computed(() => [
   { to: '/admin/usuarios', icon: 'pi pi-users', label: t('nav.usuarios'), permission: puedeAdmin.value },
   { to: '/admin/apps', icon: 'pi pi-palette', label: t('nav.apps'), permission: puedeAdmin.value },
+  { to: '/admin/planes', icon: 'pi pi-credit-card', label: 'Planes', permission: puedeAdmin.value },
+  { to: '/admin/suscripciones', icon: 'pi pi-sync', label: 'Suscripciones', permission: puedeAdmin.value },
 ].filter(item => item.permission !== false))
 
 const tienePanaderia = computed(() =>
@@ -211,23 +213,27 @@ const breadcrumbs = computed(() => {
 
       <!-- User section -->
       <div class="border-t border-gray-200 dark:border-gray-800 p-4">
-        <div class="flex items-center">
-          <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-semibold text-sm">
-            {{ (authStore.perfil?.nombre || authStore.userEmail)?.charAt(0).toUpperCase() || 'U' }}
+        <router-link
+          to="/perfil"
+          class="flex items-center rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 -mx-1 px-1 py-1"
+        >
+          <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-semibold text-sm shrink-0 overflow-hidden">
+            <img
+              v-if="authStore.perfil?.avatar_url"
+              :src="authStore.perfil.avatar_url"
+              alt=""
+              class="w-full h-full object-cover rounded-full"
+              @error="(e) => e.target.style.display = 'none'"
+            />
+            <span v-else>{{ (authStore.perfil?.nombre || authStore.userEmail)?.charAt(0).toUpperCase() || 'U' }}</span>
           </div>
           <div v-if="!appStore.sidebarCollapsed" class="ml-3 flex-1 min-w-0">
             <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ authStore.perfil?.nombre || authStore.userEmail }}</p>
           </div>
-          <button
-            @click="appStore.toggleSidebar"
-            class="p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0"
-          >
-            <i :class="appStore.sidebarCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"></i>
-          </button>
-        </div>
+        </router-link>
         <button
           @click="handleLogout"
-          class="mt-2 w-full flex items-center px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+          class="mt-1 w-full flex items-center px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
         >
           <i class="pi pi-sign-out text-lg"></i>
           <span v-if="!appStore.sidebarCollapsed" class="ml-3">{{ t('auth.logout') }}</span>

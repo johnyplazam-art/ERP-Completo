@@ -9,7 +9,7 @@ import { useAuthStore } from '@/core/store/auth'
 const authStore = useAuthStore()
 const empresaId = computed(() => authStore.currentEmpresaId)
 
-const { data: ingredientes, isLoading, error } = useIngredientesQuery({ activo: true })
+const { data: ingredientes, isLoading, error } = useIngredientesQuery({})
 const { data: categorias } = useCategoriasIngredienteQuery()
 const updateMutation = useUpdateIngredienteMutation()
 const confirm = useConfirm()
@@ -18,9 +18,14 @@ const { data: totalValor, isLoading: loadingValor } = useStockValorizadoTotalQue
 
 const selectedCategoria = ref(null)
 const searchQuery = ref('')
+const mostrarInactivos = ref(false)
 
 const filteredIngredientes = computed(() => {
   let list = ingredientes.value ?? []
+
+  if (!mostrarInactivos.value) {
+    list = list.filter(i => i.activo)
+  }
 
   if (selectedCategoria.value) {
     list = list.filter(i => i.categoria_id === selectedCategoria.value)
@@ -33,6 +38,10 @@ const filteredIngredientes = computed(() => {
 
   return list
 })
+
+function toggleInactivos() {
+  mostrarInactivos.value = !mostrarInactivos.value
+}
 
 function desactivar(ing) {
   confirm.require({
@@ -47,6 +56,24 @@ function desactivar(ing) {
         toast.success(`"${ing.nombre}" desactivado`)
       } catch (err) {
         toast.error(err.message || 'Error al desactivar ingrediente')
+      }
+    },
+  })
+}
+
+function reactivar(ing) {
+  confirm.require({
+    message: `¿Reactivar "${ing.nombre}"? El ingrediente volverá a aparecer en el inventario.`,
+    header: 'Confirmar',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Confirmar',
+    accept: async () => {
+      try {
+        await updateMutation.mutateAsync({ id: ing.id, values: { activo: true } })
+        toast.success(`"${ing.nombre}" reactivado`)
+      } catch (err) {
+        toast.error(err.message || 'Error al reactivar ingrediente')
       }
     },
   })
@@ -88,7 +115,7 @@ function desactivar(ing) {
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
           />
         </div>
-        <div class="sm:w-64">
+        <div class="sm:w-48">
           <select
             v-model="selectedCategoria"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
@@ -99,6 +126,18 @@ function desactivar(ing) {
             </option>
           </select>
         </div>
+        <div class="flex items-center">
+          <button
+            @click="toggleInactivos"
+            class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
+            :class="mostrarInactivos
+              ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+              : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+          >
+            <i class="pi pi-eye-slash text-xs"></i>
+            Inactivos
+          </button>
+        </div>
       </div>
     </div>
 
@@ -107,7 +146,7 @@ function desactivar(ing) {
       :error="error"
       :empty="!filteredIngredientes.length"
       empty-icon="pi pi-box"
-      empty-text="Sin ingredientes registrados"
+      :empty-text="mostrarInactivos ? 'Sin ingredientes inactivos' : 'Sin ingredientes registrados'"
       loading-text="Cargando inventario..."
     >
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -157,10 +196,18 @@ function desactivar(ing) {
             Editar
           </router-link>
           <button
+            v-if="ing.activo"
             @click="desactivar(ing)"
             class="text-sm text-red-500 hover:text-red-700 font-medium"
           >
             Desactivar
+          </button>
+          <button
+            v-else
+            @click="reactivar(ing)"
+            class="text-sm text-green-600 hover:text-green-800 font-medium"
+          >
+            Reactivar
           </button>
         </div>
       </div>

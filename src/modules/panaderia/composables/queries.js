@@ -74,6 +74,7 @@ import {
   countOrdenesProduccion,
   countMovimientosMp,
   countMovimientosPt,
+  generarProductosFaltantes,
 } from './database'
 import { createCrudHooks, usePaginatedList } from './crud-factory'
 
@@ -327,6 +328,18 @@ export function useDeleteProductoMutation() {
   return useMutation({
     mutationFn: (id) => deleteProducto(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['productos'] }),
+  })
+}
+
+export function useGenerarProductosFaltantesMutation() {
+  const queryClient = useQueryClient()
+  const authStore = useAuthStore()
+  return useMutation({
+    mutationFn: () => generarProductosFaltantes(authStore.currentEmpresaId),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['productos'] })
+      return result
+    },
   })
 }
 

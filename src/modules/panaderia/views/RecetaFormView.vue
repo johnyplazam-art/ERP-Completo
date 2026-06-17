@@ -103,7 +103,7 @@ const onIngredienteChange = (index, event) => {
 
 const onSubmit = handleSubmit(async (formValues) => {
   try {
-    if (isEdit) {
+    if (isEdit.value) {
       await updateMutation.mutateAsync({ id: Number(route.params.id), values: formValues })
       toast.success('Receta actualizada exitosamente')
     } else {

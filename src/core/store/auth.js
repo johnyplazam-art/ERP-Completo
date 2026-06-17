@@ -134,14 +134,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function initialize() {
     loading.value = true
+    let _initializing = true
+
     try {
-      // Registrar listener ANTES de cualquier intento de sesión
       supabase.auth.onAuthStateChange(async (event, newSession) => {
-        // Ignorar INITIAL_SESSION: este evento se dispara asíncrono (microtask)
-        // después de onAuthStateChange, trayendo null con persistSession: false.
-        // Si setSession() ya restauró la sesión antes de que este microtask
-        // se ejecute, pisaría todo el estado auth. Solo reaccionamos a eventos
-        // reales de cambio de sesión.
         if (event === 'INITIAL_SESSION') return
 
         session.value = newSession
@@ -152,6 +148,10 @@ export const useAuthStore = defineStore('auth', () => {
         } else if (event === 'SIGNED_OUT') {
           localStorage.removeItem(SESSION_KEY)
         }
+
+        // Durante initialize() el loading de datos lo hace el código
+        // posterior a setSession(), para evitar cargas duplicadas.
+        if (_initializing) return
 
         if (user.value) {
           await Promise.all([cargarPerfil(), cargarEmpresas()])
@@ -164,8 +164,6 @@ export const useAuthStore = defineStore('auth', () => {
         }
       })
 
-      // Con persistSession: false, getSession() siempre devuelve null on page load.
-      // Vamos directo al restore manual desde localStorage via setSession().
       const saved = localStorage.getItem(SESSION_KEY)
       if (saved) {
         try {
@@ -179,8 +177,6 @@ export const useAuthStore = defineStore('auth', () => {
               session.value = data.session
               user.value = data.session.user
               localStorage.setItem(SESSION_KEY, JSON.stringify(data.session))
-              // Esperar a que se carguen perfil y empresas ANTES de soltar loading,
-              // para evitar que el UI renderice sin currentEmpresa ni permisos.
               await Promise.all([cargarPerfil(), cargarEmpresas()])
             } else {
               localStorage.removeItem(SESSION_KEY)
@@ -190,10 +186,10 @@ export const useAuthStore = defineStore('auth', () => {
           localStorage.removeItem(SESSION_KEY)
         }
       }
-
     } catch (error) {
       console.error('[auth] Error initializing session:', error)
     } finally {
+      _initializing = false
       loading.value = false
     }
   }
@@ -245,13 +241,11 @@ export const useAuthStore = defineStore('auth', () => {
   async function cargarAppsDisponibles() {
     if (!currentEmpresaId.value || !user.value) return []
     try {
-      const { data: apps } = await supabase
-        .from('applications')
-        .select('id, slug, name, description, is_active, icon, orden')
-        .order('orden', { ascending: true })
-        .order('name')
+      // 1. Obtener apps incluidas en el plan activo de la suscripción
+      const { data: appsPorPlan } = await supabase
+        .rpc('get_apps_por_suscripcion', { p_empresa_id: Number(currentEmpresaId.value) })
 
-      // Filtrar apps donde el usuario tenga al menos un rol
+      // 2. Obtener apps donde el usuario tenga al menos un rol
       const { data: roles } = await supabase
         .from('user_roles')
         .select('application_id')
@@ -259,7 +253,10 @@ export const useAuthStore = defineStore('auth', () => {
         .eq('empresa_id', currentEmpresaId.value)
 
       const appsConRoles = new Set(roles?.map(r => r.application_id) ?? [])
-      return (apps ?? []).map(app => ({
+      const appsDelPlan = new Set(appsPorPlan?.map(a => a.id) ?? [])
+
+      // 3. Retornar solo apps que estén en AMBOS: plan + tiene rol
+      return (appsPorPlan ?? []).map(app => ({
         ...app,
         disponible: appsConRoles.has(app.id),
       }))
@@ -335,6 +332,23 @@ export const useAuthStore = defineStore('auth', () => {
     return data?.id ?? null
   }
 
+  async function guardarPerfil(datos) {
+    if (!user.value) return
+    const { error } = await supabase
+      .from('perfiles')
+      .update(datos)
+      .eq('id', user.value.id)
+    if (error) throw error
+    // Actualizar ref local
+    if (datos.nombre !== undefined) perfil.value.nombre = datos.nombre
+    if (datos.avatar_url !== undefined) perfil.value.avatar_url = datos.avatar_url
+    if (datos.phone !== undefined) perfil.value.phone = datos.phone
+    if (datos.idioma !== undefined) {
+      perfil.value.idioma = datos.idioma
+      i18n.global.locale.value = datos.idioma
+    }
+  }
+
   async function guardarIdioma(idioma) {
     if (!user.value) return
     try {
@@ -342,6 +356,8 @@ export const useAuthStore = defineStore('auth', () => {
         .from('perfiles')
         .update({ idioma })
         .eq('id', user.value.id)
+      perfil.value.idioma = idioma
+      i18n.global.locale.value = idioma
     } catch (err) {
       console.error('[auth] Error guardando idioma:', err)
     }
@@ -422,6 +438,7 @@ export const useAuthStore = defineStore('auth', () => {
     seleccionarEmpresa,
     cargarUsuariosEmpresa,
     cargarPermisos,
+    guardarPerfil,
     guardarIdioma,
     cargarAppsDisponibles,
     cargarUsuariosMultiEmpresa,

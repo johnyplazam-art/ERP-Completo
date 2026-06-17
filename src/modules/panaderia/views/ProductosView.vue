@@ -1,23 +1,39 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useProductosQuery, useDeleteProductoMutation } from '../composables/queries'
+import { toast } from 'vue-sonner'
+import { useProductosQuery, useDeleteProductoMutation, useUpdateProductoMutation, useGenerarProductosFaltantesMutation } from '../composables/queries'
 import { useConfirm } from 'primevue/useconfirm'
 import DataState from '@/core/components/DataState.vue'
 
 const { data: productos, isLoading, error } = useProductosQuery()
 const { mutate: eliminarProducto } = useDeleteProductoMutation()
+const updateMutation = useUpdateProductoMutation()
 const confirm = useConfirm()
 const searchQuery = ref('')
+const mostrarInactivos = ref(false)
 
 const filteredProductos = computed(() => {
   if (!productos.value) return []
-  if (!searchQuery.value) return productos.value
-  const q = searchQuery.value.toLowerCase()
-  return productos.value.filter(p =>
-    p.nombre.toLowerCase().includes(q) ||
-    p.categoria?.nombre?.toLowerCase().includes(q)
-  )
+  let list = productos.value
+
+  if (!mostrarInactivos.value) {
+    list = list.filter(p => p.activo)
+  }
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(p =>
+      p.nombre.toLowerCase().includes(q) ||
+      p.categoria?.nombre?.toLowerCase().includes(q)
+    )
+  }
+
+  return list
 })
+
+function toggleInactivos() {
+  mostrarInactivos.value = !mostrarInactivos.value
+}
 
 const confirmarDesactivar = (producto) => {
   confirm.require({
@@ -27,6 +43,44 @@ const confirmarDesactivar = (producto) => {
     rejectLabel: 'Cancelar',
     acceptLabel: 'Confirmar',
     accept: () => eliminarProducto(producto.id),
+  })
+}
+
+function reactivar(producto) {
+  confirm.require({
+    message: `¿Reactivar el producto "${producto.nombre}"?`,
+    header: 'Confirmar',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Confirmar',
+    accept: async () => {
+      try {
+        await updateMutation.mutateAsync({ id: producto.id, values: { activo: true } })
+        toast.success(`"${producto.nombre}" reactivado`)
+      } catch (err) {
+        toast.error(err.message || 'Error al reactivar producto')
+      }
+    },
+  })
+}
+
+const generarMutation = useGenerarProductosFaltantesMutation()
+
+async function generarFaltantes() {
+  confirm.require({
+    message: '¿Generar productos inactivos para todas las recetas que aún no tienen producto asociado?',
+    header: 'Generar productos faltantes',
+    icon: 'pi pi-refresh',
+    rejectLabel: 'Cancelar',
+    acceptLabel: 'Generar',
+    accept: async () => {
+      try {
+        const result = await generarMutation.mutateAsync()
+        toast.success(`Se crearon ${result.creados} producto(s) de ${result.total} receta(s) pendiente(s)`)
+      } catch (err) {
+        toast.error(err.message || 'Error al generar productos')
+      }
+    },
   })
 }
 
@@ -41,23 +95,48 @@ const formatPeso = (gr) => {
   <div>
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-2xl font-bold text-gray-900">Productos</h2>
-      <router-link
-        to="/panaderia/productos/nuevo"
-        class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-      >
-        <i class="pi pi-plus mr-2"></i>
-        Nuevo Producto
-      </router-link>
+      <div class="flex items-center gap-2">
+        <button
+          @click="generarFaltantes"
+          :disabled="generarMutation.isPending.value"
+          class="inline-flex items-center px-4 py-2 border border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors disabled:opacity-50"
+        >
+          <i
+            :class="generarMutation.isPending.value ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
+            class="mr-2 text-sm"
+          ></i>
+          Generar desde recetas
+        </button>
+        <router-link
+          to="/panaderia/productos/nuevo"
+          class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          <i class="pi pi-plus mr-2"></i>
+          Nuevo Producto
+        </router-link>
+      </div>
     </div>
 
     <!-- Search -->
-    <div class="mb-4">
+    <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <input
         v-model="searchQuery"
         type="text"
         placeholder="Buscar productos..."
-        class="touch-input block w-full max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
+        class="touch-input block w-full sm:max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
       />
+      <div class="flex items-center">
+        <button
+          @click="toggleInactivos"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
+          :class="mostrarInactivos
+            ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+            : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+        >
+          <i class="pi pi-eye-slash text-xs"></i>
+          Inactivos
+        </button>
+      </div>
     </div>
 
     <DataState
@@ -65,7 +144,7 @@ const formatPeso = (gr) => {
       :error="error"
       :empty="!filteredProductos.length"
       empty-icon="pi pi-tag"
-      :empty-text="searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay productos registrados'"
+      :empty-text="mostrarInactivos ? 'Sin productos inactivos' : (searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay productos registrados')"
       loading-text="Cargando productos..."
     >
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -114,7 +193,13 @@ const formatPeso = (gr) => {
                   >
                     Desactivar
                   </button>
-                  <span v-else class="text-gray-400 text-sm">Desactivado</span>
+                  <button
+                    v-else
+                    @click="reactivar(producto)"
+                    class="text-green-600 hover:text-green-800 text-sm font-medium"
+                  >
+                    Reactivar
+                  </button>
                 </div>
               </td>
             </tr>
