@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/core/store/auth'
+import IndustrySelector from '@/core/components/IndustrySelector.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -14,11 +15,13 @@ const password = ref('')
 const nombre = ref('')
 const empresa = ref('')
 const invitacion = ref('')
+const industria = ref('panaderia')
 
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
 const mode = ref('login')
+const step = ref(1) // 1 = account form, 2 = industry selection
 
 // ─── Computed ─────────────────────────────────────────
 
@@ -29,6 +32,7 @@ const isInvitation = computed(() => !!invitacion.value?.trim())
 
 function toggleMode() {
   mode.value = mode.value === 'login' ? 'signup' : 'login'
+  step.value = 1
   error.value = ''
   success.value = ''
   if (mode.value === 'login') {
@@ -60,6 +64,7 @@ async function handleSignup() {
   try {
     const metadata = {
       nombre: nombre.value.trim(),
+      industria: industria.value,
     }
 
     if (isInvitation.value) {
@@ -91,9 +96,26 @@ async function handleSignup() {
 function handleSubmit() {
   if (mode.value === 'login') {
     handleLogin()
+    return
+  }
+
+  // Signup multi-step: form → industry selector → submit
+  if (step.value === 1) {
+    error.value = ''
+    // Basic validation before moving to industry selection
+    if (!nombre.value.trim()) {
+      error.value = 'Completá tu nombre para continuar'
+      return
+    }
+    step.value = 2
   } else {
     handleSignup()
   }
+}
+
+function volverAlFormulario() {
+  step.value = 1
+  error.value = ''
 }
 
 // ─── Leer invitación desde URL ───────────────────────
@@ -180,78 +202,124 @@ onMounted(() => {
 
           <!-- Signup-only fields -->
           <template v-if="isSignup">
-            <hr class="border-gray-200" />
+            <!-- Step 1: Account details -->
+            <template v-if="step === 1">
+              <hr class="border-gray-200" />
 
-            <!-- Full name -->
-            <div>
-              <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
-                Nombre completo <span class="text-red-500">*</span>
-              </label>
-              <input
-                id="nombre"
-                v-model="nombre"
-                type="text"
-                required
-                autocomplete="name"
-                placeholder="Tu nombre"
-                class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
-              />
-            </div>
+              <!-- Full name -->
+              <div>
+                <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre completo <span class="text-red-500">*</span>
+                </label>
+                <input
+                  id="nombre"
+                  v-model="nombre"
+                  type="text"
+                  required
+                  autocomplete="name"
+                  placeholder="Tu nombre"
+                  class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
+                />
+              </div>
 
-            <!-- Invitation code (pre-filled from URL if present) -->
-            <div>
-              <label for="invitacion" class="block text-sm font-medium text-gray-700 mb-1">
-                Código de invitación
-                <span class="text-gray-400 font-normal">(opcional)</span>
-              </label>
-              <input
-                id="invitacion"
-                v-model="invitacion"
-                type="text"
-                autocomplete="off"
-                placeholder="Si te invitaron a una empresa, poné el código"
-                class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
-              />
-              <p class="mt-1 text-xs text-gray-400">
-                {{ isInvitation
-                  ? 'Te vas a unir a una empresa existente.'
-                  : 'Si no tenés código, se creará una empresa nueva automáticamente.'
-                }}
+              <!-- Invitation code (pre-filled from URL if present) -->
+              <div>
+                <label for="invitacion" class="block text-sm font-medium text-gray-700 mb-1">
+                  Código de invitación
+                  <span class="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  id="invitacion"
+                  v-model="invitacion"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="Si te invitaron a una empresa, poné el código"
+                  class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
+                />
+                <p class="mt-1 text-xs text-gray-400">
+                  {{ isInvitation
+                    ? 'Te vas a unir a una empresa existente.'
+                    : 'Si no tenés código, se creará una empresa nueva automáticamente.'
+                  }}
+                </p>
+              </div>
+
+              <!-- Company name (only if no invitation) -->
+              <div v-if="!isInvitation">
+                <label for="empresa" class="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre de la empresa
+                  <span class="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  id="empresa"
+                  v-model="empresa"
+                  type="text"
+                  autocomplete="organization"
+                  placeholder="Mi Panadería"
+                  class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
+                />
+                <p class="mt-1 text-xs text-gray-400">
+                  Si no ponés nombre, se usará "Mi Empresa".
+                </p>
+              </div>
+
+              <!-- Info box when using invitation -->
+              <div
+                v-if="isInvitation"
+                class="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700"
+              >
+                <i class="pi pi-info-circle mr-1"></i>
+                Te vas a unir a una empresa existente como usuario secundario.
+                El dueño de la empresa podrá asignarte un rol.
+              </div>
+
+              <!-- Submit button (step 1 → goes to industry selection) -->
+              <button
+                type="submit"
+                :disabled="loading"
+                class="w-full touch-input flex items-center justify-center bg-primary-600 text-white font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Continuar <i class="pi pi-chevron-right ml-2 text-sm"></i>
+              </button>
+            </template>
+
+            <!-- Step 2: Industry selection -->
+            <template v-if="step === 2">
+              <hr class="border-gray-200" />
+
+              <IndustrySelector v-model="industria" />
+
+              <p class="mt-2 text-xs text-gray-400">
+                Elegí la industria que mejor describa tu negocio.
+                Podés cambiarlo más tarde desde configuración.
               </p>
-            </div>
 
-            <!-- Company name (only if no invitation) -->
-            <div v-if="!isInvitation">
-              <label for="empresa" class="block text-sm font-medium text-gray-700 mb-1">
-                Nombre de la empresa
-                <span class="text-gray-400 font-normal">(opcional)</span>
-              </label>
-              <input
-                id="empresa"
-                v-model="empresa"
-                type="text"
-                autocomplete="organization"
-                placeholder="Mi Panadería"
-                class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
-              />
-              <p class="mt-1 text-xs text-gray-400">
-                Si no ponés nombre, se usará "Mi Empresa".
-              </p>
-            </div>
-
-            <!-- Info box when using invitation -->
-            <div
-              v-if="isInvitation"
-              class="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700"
-            >
-              <i class="pi pi-info-circle mr-1"></i>
-              Te vas a unir a una empresa existente como usuario secundario.
-              El dueño de la empresa podrá asignarte un rol.
-            </div>
+              <!-- Submit button (step 2 → create account) -->
+              <div class="flex items-center gap-3 mt-4">
+                <button
+                  type="button"
+                  @click="volverAlFormulario"
+                  class="touch-input flex items-center justify-center text-gray-600 font-medium rounded-lg px-4 py-2.5 text-sm hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                >
+                  <i class="pi pi-chevron-left mr-1 text-sm"></i>
+                  Atrás
+                </button>
+                <button
+                  type="submit"
+                  :disabled="loading"
+                  class="flex-1 touch-input flex items-center justify-center bg-primary-600 text-white font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <i v-if="loading" class="pi pi-spin pi-spinner mr-2"></i>
+                  <template v-if="loading">Creando cuenta...</template>
+                  <template v-else>Crear Cuenta y Empresa</template>
+                </button>
+              </div>
+            </template>
           </template>
 
-          <!-- Submit button -->
+          <!-- Submit button (login only — signup uses step-specific buttons) -->
           <button
+            v-if="mode === 'login'"
             type="submit"
             :disabled="loading"
             class="w-full touch-input flex items-center justify-center bg-primary-600 text-white font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -261,7 +329,7 @@ onMounted(() => {
               {{ isSignup ? 'Creando cuenta...' : 'Ingresando...' }}
             </template>
             <template v-else>
-              {{ isSignup ? 'Crear Cuenta y Empresa' : 'Ingresar' }}
+              Ingresar
             </template>
           </button>
         </form>

@@ -1,17 +1,19 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
 import { useConfirm } from 'primevue/useconfirm'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 
 const { t } = useI18n()
 const confirm = useConfirm()
+const queryClient = useQueryClient()
 
-const suscripciones = ref([])
-const planes = ref([])
-const empresas = ref([])
-const isLoading = ref(true)
+const SUSCRIPCIONES_KEY = ['suscripciones']
+const PLANES_KEY = ['planes']
+const EMPRESAS_KEY = ['admin-empresas-select']
+
 const isSaving = ref(false)
 const editando = ref(null)
 
@@ -23,29 +25,59 @@ const form = ref({
   renovacion_automatica: true,
 })
 
-const suscripcionesFiltradas = computed(() => suscripciones.value)
+// ─── Queries ──────────────────────────────────────────
 
-async function cargarDatos() {
-  isLoading.value = true
-  try {
-    const [suscRes, planesRes, empRes] = await Promise.all([
-      supabase
-        .from('suscripciones')
-        .select('*, plan:planes(*), empresa:empresas(nombre, slug)')
-        .order('created_at', { ascending: false }),
-      supabase.from('planes').select('*').order('precio'),
-      supabase.from('empresas').select('id, nombre, slug').order('nombre'),
-    ])
-    suscripciones.value = suscRes.data ?? []
-    planes.value = planesRes.data ?? []
-    empresas.value = empRes.data ?? []
-  } catch (err) {
-    console.error('[admin-suscripciones] Error:', err)
-    toast.error(t('errors.loadData'))
-  } finally {
-    isLoading.value = false
-  }
-}
+const { data: suscripciones, isLoading } = useQuery({
+  queryKey: SUSCRIPCIONES_KEY,
+  queryFn: () =>
+    supabase
+      .from('suscripciones')
+      .select('*, plan:planes(*), empresa:empresas(nombre, slug)')
+      .order('created_at', { ascending: false })
+      .then(r => { if (r.error) throw r.error; return r.data ?? [] }),
+})
+
+const { data: planes } = useQuery({
+  queryKey: PLANES_KEY,
+  queryFn: () =>
+    supabase.from('planes').select('*').order('precio').then(r => r.data ?? []),
+})
+
+const { data: empresas } = useQuery({
+  queryKey: EMPRESAS_KEY,
+  queryFn: () =>
+    supabase.from('empresas').select('id, nombre, slug').order('nombre').then(r => r.data ?? []),
+})
+
+const suscripcionesFiltradas = computed(() => suscripciones.value ?? [])
+
+// ─── Mutations ────────────────────────────────────────
+
+const createSusMutation = useMutation({
+  mutationFn: (payload) =>
+    supabase.from('suscripciones').insert(payload).then(r => { if (r.error) throw r.error }),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: SUSCRIPCIONES_KEY })
+    toast.success('Suscripción creada')
+  },
+})
+
+const updateSusMutation = useMutation({
+  mutationFn: ({ id, payload }) =>
+    supabase.from('suscripciones').update(payload).eq('id', id).then(r => { if (r.error) throw r.error }),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: SUSCRIPCIONES_KEY })
+    toast.success('Suscripción actualizada')
+  },
+})
+
+const changeEstadoMutation = useMutation({
+  mutationFn: ({ id, estado }) =>
+    supabase.from('suscripciones').update({ estado }).eq('id', id).then(r => { if (r.error) throw r.error }),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: SUSCRIPCIONES_KEY }),
+})
+
+// ─── UI Handlers ──────────────────────────────────────
 
 function nuevaSuscripcion() {
   editando.value = 'nueva'
@@ -91,20 +123,12 @@ async function guardar() {
     }
 
     if (editando.value === 'nueva') {
-      const { error } = await supabase.from('suscripciones').insert(payload)
-      if (error) throw error
-      toast.success('Suscripción creada')
+      await createSusMutation.mutateAsync(payload)
     } else {
-      const { error } = await supabase
-        .from('suscripciones')
-        .update(payload)
-        .eq('id', editando.value)
-      if (error) throw error
-      toast.success('Suscripción actualizada')
+      await updateSusMutation.mutateAsync({ id: editando.value, payload })
     }
 
     editando.value = null
-    await cargarDatos()
   } catch (err) {
     toast.error(err.message || 'Error al guardar suscripción')
   } finally {
@@ -112,22 +136,18 @@ async function guardar() {
   }
 }
 
-async function cambiarEstado(sus, nuevoEstado) {
-  try {
-    await supabase
-      .from('suscripciones')
-      .update({ estado: nuevoEstado })
-      .eq('id', sus.id)
-
-    if (nuevoEstado === 'cancelada') {
-      // Opcional: reactivar usuarios y empresa al cancelar?
-    }
-
-    toast.success(`Suscripción ${nuevoEstado}`)
-    await cargarDatos()
-  } catch (err) {
-    toast.error(err.message || 'Error al cambiar estado')
-  }
+function cambiarEstado(sus, nuevoEstado) {
+  changeEstadoMutation.mutate(
+    { id: sus.id, estado: nuevoEstado },
+    {
+      onSuccess: () => {
+        if (nuevoEstado === 'cancelada') {
+          // Opcional: reactivar usuarios y empresa al cancelar?
+        }
+        toast.success(`Suscripción ${nuevoEstado}`)
+      },
+    },
+  )
 }
 
 function confirmarCancelar(sus) {
@@ -166,8 +186,6 @@ const estadoClass = (estado) => {
   }
   return map[estado] || 'bg-gray-100 text-gray-500'
 }
-
-onMounted(cargarDatos)
 </script>
 
 <template>

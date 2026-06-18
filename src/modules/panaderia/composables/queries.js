@@ -190,23 +190,6 @@ export function useIngredienteQuery(id) {
   })
 }
 
-export function useCreateIngredienteMutation() {
-  const queryClient = useQueryClient()
-  const authStore = useAuthStore()
-  return useMutation({
-    mutationFn: (values) => createIngrediente({ ...values, empresa_id: authStore.currentEmpresaId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ingredientes'] }),
-  })
-}
-
-export function useUpdateIngredienteMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, values }) => updateIngrediente(id, values),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ingredientes'] }),
-  })
-}
-
 export function useProveedoresByIngredienteQuery(ingredienteId) {
   return useQuery({
     queryKey: ['proveedores_ingrediente', ingredienteId],
@@ -215,61 +198,72 @@ export function useProveedoresByIngredienteQuery(ingredienteId) {
   })
 }
 
-export function useDeleteIngredienteMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id) => deleteIngrediente(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ingredientes'] }),
-  })
+// ─── Factory Entities ────────────────────────────────
+
+/** @type {Record<string, ReturnType<typeof createCrudHooks>>} */
+const _f = {
+  ingredientes: createCrudHooks({
+    queryKey: ['ingredientes'],
+    scoped: true,
+    list: fetchIngredientes,
+    create: createIngrediente,
+    update: ({ id, values }) => updateIngrediente(id, values),
+    remove: deleteIngrediente,
+  }),
+  proveedores: createCrudHooks({
+    queryKey: ['proveedores'],
+    scoped: true,
+    list: fetchProveedores,
+    create: createProveedor,
+    update: ({ id, values }) => updateProveedor(id, values),
+    remove: deleteProveedor,
+  }),
+  recetas: createCrudHooks({
+    queryKey: ['recetas'],
+    scoped: true,
+    list: fetchRecetas,
+    update: ({ id, values }) => updateReceta(id, values),
+    remove: deleteReceta,
+  }),
+  productos: createCrudHooks({
+    queryKey: ['productos'],
+    scoped: true,
+    list: fetchProductos,
+    create: createProducto,
+    update: ({ id, values }) => updateProducto(id, values),
+    remove: deleteProducto,
+  }),
+  ordenes: createCrudHooks({
+    queryKey: ['ordenes_produccion'],
+    scoped: true,
+    list: fetchOrdenesProduccion,
+  }),
+  mermas: createCrudHooks({
+    queryKey: ['mermas'],
+    scoped: true,
+    list: fetchMermas,
+    update: ({ id, values }) => updateMerma(id, values),
+    remove: deleteMerma,
+  }),
 }
 
-// ─── Proveedores ─────────────────────────────────────
+// ─── Re-exports: Ingredientes ────────────────────────
 
-export function useProveedoresQuery() {
-  const authStore = useAuthStore()
-  const queryKey = computed(() => [...queryKeys.proveedores, authStore.currentEmpresaId])
-  return useQuery({
-    queryKey,
-    queryFn: () => fetchProveedores(authStore.currentEmpresaId),
-  })
-}
+export const useCreateIngredienteMutation = _f.ingredientes.useCreate
+export const useUpdateIngredienteMutation = _f.ingredientes.useUpdate
+export const useDeleteIngredienteMutation = _f.ingredientes.useRemove
 
-export function useCreateProveedorMutation() {
-  const queryClient = useQueryClient()
-  const authStore = useAuthStore()
-  return useMutation({
-    mutationFn: (values) => createProveedor({ ...values, empresa_id: authStore.currentEmpresaId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.proveedores }),
-  })
-}
+// ─── Re-exports: Proveedores ─────────────────────────
 
-export function useUpdateProveedorMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, values }) => updateProveedor(id, values),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.proveedores }),
-  })
-}
+export const useProveedoresQuery = _f.proveedores.useList
+export const useCreateProveedorMutation = _f.proveedores.useCreate
+export const useUpdateProveedorMutation = _f.proveedores.useUpdate
+export const useDeleteProveedorMutation = _f.proveedores.useRemove
 
-export function useDeleteProveedorMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id) => deleteProveedor(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.proveedores }),
-  })
-}
+// ─── Re-exports: Recetas ─────────────────────────────
 
-// ─── Recetas ─────────────────────────────────────────
-
-export function useRecetasQuery() {
-  const authStore = useAuthStore()
-  const queryKey = computed(() => [...queryKeys.recetas, authStore.currentEmpresaId])
-  return useQuery({
-    queryKey,
-    queryFn: () => fetchRecetas(authStore.currentEmpresaId),
-  })
-}
-
+export const useRecetasQuery = _f.recetas.useList
+// useCreateRecetaMutation: manual porque inyecta creado_por del usuario
 export function useCreateRecetaMutation() {
   const queryClient = useQueryClient()
   const authStore = useAuthStore()
@@ -278,58 +272,15 @@ export function useCreateRecetaMutation() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recetas'] }),
   })
 }
+export const useUpdateRecetaMutation = _f.recetas.useUpdate
+export const useDeleteRecetaMutation = _f.recetas.useRemove
 
-export function useUpdateRecetaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, values }) => updateReceta(id, values),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recetas'] }),
-  })
-}
+// ─── Re-exports: Productos ───────────────────────────
 
-export function useDeleteRecetaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id) => deleteReceta(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recetas'] }),
-  })
-}
-
-// ─── Productos ───────────────────────────────────────
-
-export function useProductosQuery() {
-  const authStore = useAuthStore()
-  const queryKey = computed(() => [...queryKeys.productos, authStore.currentEmpresaId])
-  return useQuery({
-    queryKey,
-    queryFn: () => fetchProductos(authStore.currentEmpresaId),
-  })
-}
-
-export function useCreateProductoMutation() {
-  const queryClient = useQueryClient()
-  const authStore = useAuthStore()
-  return useMutation({
-    mutationFn: (values) => createProducto({ ...values, empresa_id: authStore.currentEmpresaId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['productos'] }),
-  })
-}
-
-export function useUpdateProductoMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, values }) => updateProducto(id, values),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['productos'] }),
-  })
-}
-
-export function useDeleteProductoMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id) => deleteProducto(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['productos'] }),
-  })
-}
+export const useProductosQuery = _f.productos.useList
+export const useCreateProductoMutation = _f.productos.useCreate
+export const useUpdateProductoMutation = _f.productos.useUpdate
+export const useDeleteProductoMutation = _f.productos.useRemove
 
 export function useGenerarProductosFaltantesMutation() {
   const queryClient = useQueryClient()
@@ -343,17 +294,10 @@ export function useGenerarProductosFaltantesMutation() {
   })
 }
 
-// ─── Órdenes de Producción ──────────────────────────
+// ─── Re-exports: Órdenes ─────────────────────────────
 
-export function useOrdenesProduccionQuery() {
-  const authStore = useAuthStore()
-  const queryKey = computed(() => [...queryKeys.ordenesProduccion, authStore.currentEmpresaId])
-  return useQuery({
-    queryKey,
-    queryFn: () => fetchOrdenesProduccion(authStore.currentEmpresaId),
-  })
-}
-
+export const useOrdenesProduccionQuery = _f.ordenes.useList
+// useCreateOrdenMutation: manual porque inyecta usuario_responsable_id
 export function useCreateOrdenMutation() {
   const queryClient = useQueryClient()
   const authStore = useAuthStore()
@@ -388,6 +332,21 @@ export function useUpdateOrdenMutation() {
   })
 }
 
+// ─── Re-exports: Mermas ──────────────────────────────
+
+export const useMermasQuery = _f.mermas.useList
+// useCreateMermaMutation: manual porque inyecta registrado_por del usuario
+export function useCreateMermaMutation() {
+  const queryClient = useQueryClient()
+  const authStore = useAuthStore()
+  return useMutation({
+    mutationFn: (values) => createMerma({ ...values, empresa_id: authStore.currentEmpresaId, registrado_por: authStore.user?.id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.mermas }),
+  })
+}
+export const useUpdateMermaMutation = _f.mermas.useUpdate
+export const useDeleteMermaMutation = _f.mermas.useRemove
+
 export function useProductosConStockQuery(empresaId) {
   const id = computed(() => unref(empresaId))
   return useQuery({
@@ -406,21 +365,14 @@ export function useStockProductoQuery(id) {
 }
 
 export function useAuditLogsPaginated(filters = {}) {
-  const authStore = useAuthStore()
   const page = ref(1)
   const pageSize = 50
   const from = computed(() => (page.value - 1) * pageSize)
   const to = computed(() => from.value + pageSize - 1)
 
-  const queryKey = computed(() => ['audit_logs', filters, { page: page.value }])
-
   const { data, isLoading, error } = useQuery({
-    queryKey,
-    queryFn: () => fetchAuditLogs(undefined, {
-      ...filters,
-      from: from.value,
-      to: to.value,
-    }),
+    queryKey: computed(() => ['audit_logs', filters, { page: page.value }]),
+    queryFn: () => fetchAuditLogs({ ...filters, from: from.value, to: to.value }),
     placeholderData: keepPreviousData,
   })
 
@@ -433,9 +385,7 @@ export function useAuditLogsPaginated(filters = {}) {
   return {
     data: computed(() => data.value?.data ?? []),
     total: computed(() => data.value?.total ?? 0),
-    page,
-    pageSize,
-    totalPages,
+    page, pageSize, totalPages,
     setPage, nextPage, prevPage,
     isLoading, error,
   }
@@ -485,42 +435,6 @@ export function useStockValorizadoQuery(tipo, itemId) {
     queryKey: ['stock_valorizado', tipo, itemId],
     queryFn: () => fetchStockValorizado(tipo, itemId),
     enabled: !!tipo && !!itemId,
-  })
-}
-
-// ─── Mermas ──────────────────────────────────────────
-
-export function useMermasQuery() {
-  const authStore = useAuthStore()
-  const queryKey = computed(() => [...queryKeys.mermas, authStore.currentEmpresaId])
-  return useQuery({
-    queryKey,
-    queryFn: () => fetchMermas(authStore.currentEmpresaId),
-  })
-}
-
-export function useCreateMermaMutation() {
-  const queryClient = useQueryClient()
-  const authStore = useAuthStore()
-  return useMutation({
-    mutationFn: (values) => createMerma({ ...values, empresa_id: authStore.currentEmpresaId, registrado_por: authStore.user?.id }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.mermas }),
-  })
-}
-
-export function useUpdateMermaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, values }) => updateMerma(id, values),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.mermas }),
-  })
-}
-
-export function useDeleteMermaMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id) => deleteMerma(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.mermas }),
   })
 }
 
@@ -648,63 +562,21 @@ export function useMermasPaginated() {
 }
 
 export function useMovimientosMpPaginated(ingredienteId) {
-  const key = computed(() => [...queryKeys.movimientosMp(ingredienteId), 'paginated'])
-  const page = ref(1)
-  const pageSize = 25
-  const from = computed(() => (page.value - 1) * pageSize)
-  const to = computed(() => from.value + pageSize - 1)
-
-  const queryKey = computed(() => [...key.value, { page: page.value }])
-
-  const { data, isLoading, error } = useQuery({
-    queryKey,
-    queryFn: () => fetchMovimientosMp(ingredienteId ?? undefined, { from: from.value, to: to.value }),
-    placeholderData: keepPreviousData,
-    enabled: !!ingredienteId,
+  return usePaginatedList({
+    queryKey: ['movimientos_mp', ingredienteId],
+    list: (params) => fetchMovimientosMp(ingredienteId, params),
+    count: () => countMovimientosMp(ingredienteId),
+    pageSize: 25,
+    queryOpts: { enabled: !!ingredienteId },
   })
-
-  const { data: total } = useQuery({
-    queryKey: [...key.value, 'count'],
-    queryFn: () => countMovimientosMp(ingredienteId ?? undefined),
-    placeholderData: keepPreviousData,
-  })
-
-  const totalPages = computed(() => Math.max(1, Math.ceil((total ?? 0) / pageSize)))
-
-  function setPage(p) { page.value = Math.max(1, Math.min(p, totalPages.value)) }
-  function nextPage() { setPage(page.value + 1) }
-  function prevPage() { setPage(page.value - 1) }
-
-  return { data, total, page, pageSize, totalPages, setPage, nextPage, prevPage, isLoading, error }
 }
 
 export function useMovimientosPtPaginated(productoId) {
-  const key = computed(() => [...queryKeys.movimientosPt(productoId), 'paginated'])
-  const page = ref(1)
-  const pageSize = 25
-  const from = computed(() => (page.value - 1) * pageSize)
-  const to = computed(() => from.value + pageSize - 1)
-
-  const queryKey = computed(() => [...key.value, { page: page.value }])
-
-  const { data, isLoading, error } = useQuery({
-    queryKey,
-    queryFn: () => fetchMovimientosPt(productoId ?? undefined, { from: from.value, to: to.value }),
-    placeholderData: keepPreviousData,
-    enabled: !!productoId,
+  return usePaginatedList({
+    queryKey: ['movimientos_pt', productoId],
+    list: (params) => fetchMovimientosPt(productoId, params),
+    count: () => countMovimientosPt(productoId),
+    pageSize: 25,
+    queryOpts: { enabled: !!productoId },
   })
-
-  const { data: total } = useQuery({
-    queryKey: [...key.value, 'count'],
-    queryFn: () => countMovimientosPt(productoId ?? undefined),
-    placeholderData: keepPreviousData,
-  })
-
-  const totalPages = computed(() => Math.max(1, Math.ceil((total ?? 0) / pageSize)))
-
-  function setPage(p) { page.value = Math.max(1, Math.min(p, totalPages.value)) }
-  function nextPage() { setPage(page.value + 1) }
-  function prevPage() { setPage(page.value - 1) }
-
-  return { data, total, page, pageSize, totalPages, setPage, nextPage, prevPage, isLoading, error }
 }

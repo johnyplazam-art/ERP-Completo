@@ -349,20 +349,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function guardarIdioma(idioma) {
-    if (!user.value) return
-    try {
-      await supabase
-        .from('perfiles')
-        .update({ idioma })
-        .eq('id', user.value.id)
-      perfil.value.idioma = idioma
-      i18n.global.locale.value = idioma
-    } catch (err) {
-      console.error('[auth] Error guardando idioma:', err)
-    }
-  }
-
   // ─── Admin users ──────────────────────────────────
 
   async function cargarRolesPorApp(appId) {
@@ -439,7 +425,6 @@ export const useAuthStore = defineStore('auth', () => {
     cargarUsuariosEmpresa,
     cargarPermisos,
     guardarPerfil,
-    guardarIdioma,
     cargarAppsDisponibles,
     cargarUsuariosMultiEmpresa,
     getAppId,

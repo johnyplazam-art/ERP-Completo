@@ -14,7 +14,7 @@ const languages = [
 
 function cambiarIdioma(code) {
   locale.value = code
-  authStore.guardarIdioma(code)
+  authStore.guardarPerfil({ idioma: code })
   showMenu.value = false
 }
 </script>

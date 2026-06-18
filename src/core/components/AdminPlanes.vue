@@ -1,16 +1,18 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
 import { useConfirm } from 'primevue/useconfirm'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 
 const { t } = useI18n()
 const confirm = useConfirm()
+const queryClient = useQueryClient()
 
-const planes = ref([])
-const apps = ref([])
-const isLoading = ref(true)
+const PLANES_KEY = ['planes']
+const APPS_KEY = ['admin-apps']
+
 const isSaving = ref(false)
 const loadingPlan = ref(null)
 const editando = ref(null)
@@ -29,29 +31,53 @@ const form = ref({
 
 const PERIODOS = ['diario', 'mensual', 'anual']
 
-async function cargarPlanes() {
-  isLoading.value = true
-  try {
-    const { data } = await supabase
-      .from('planes')
-      .select('*')
-      .order('precio')
-    planes.value = data ?? []
-  } catch (err) {
-    console.error('[admin-planes] Error:', err)
-    toast.error(t('errors.loadData'))
-  } finally {
-    isLoading.value = false
-  }
-}
+// ─── Queries ──────────────────────────────────────────
 
-async function cargarApps() {
-  const { data } = await supabase
-    .from('applications')
-    .select('id, slug, name')
-    .order('name')
-  apps.value = data ?? []
-}
+const { data: planes, isLoading } = useQuery({
+  queryKey: PLANES_KEY,
+  queryFn: () =>
+    supabase.from('planes').select('*').order('precio').then(r => { if (r.error) throw r.error; return r.data ?? [] }),
+})
+
+const { data: apps } = useQuery({
+  queryKey: APPS_KEY,
+  queryFn: () =>
+    supabase.from('applications').select('id, slug, name').order('name').then(r => r.data ?? []),
+})
+
+// ─── Mutations ────────────────────────────────────────
+
+const createPlanMutation = useMutation({
+  mutationFn: (payload) =>
+    supabase.from('planes').insert(payload).then(r => { if (r.error) throw r.error }),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: PLANES_KEY })
+    toast.success('Plan creado exitosamente')
+  },
+})
+
+const updatePlanMutation = useMutation({
+  mutationFn: ({ id, payload }) =>
+    supabase.from('planes').update(payload).eq('id', id).then(r => { if (r.error) throw r.error }),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: PLANES_KEY })
+    toast.success('Plan actualizado exitosamente')
+  },
+})
+
+const togglePlanMutation = useMutation({
+  mutationFn: ({ id, activo }) =>
+    supabase.from('planes').update({ activo }).eq('id', id).then(r => { if (r.error) throw r.error }),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: PLANES_KEY }),
+})
+
+const deletePlanMutation = useMutation({
+  mutationFn: (id) =>
+    supabase.from('planes').delete().eq('id', id).then(r => { if (r.error) throw r.error }),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: PLANES_KEY }),
+})
+
+// ─── UI Handlers ──────────────────────────────────────
 
 function nuevoPlan() {
   editando.value = 'nueva'
@@ -114,17 +140,12 @@ async function guardar() {
     }
 
     if (editando.value === 'nueva') {
-      const { error } = await supabase.from('planes').insert(payload)
-      if (error) throw error
-      toast.success('Plan creado exitosamente')
+      await createPlanMutation.mutateAsync(payload)
     } else {
-      const { error } = await supabase.from('planes').update(payload).eq('id', editando.value)
-      if (error) throw error
-      toast.success('Plan actualizado exitosamente')
+      await updatePlanMutation.mutateAsync({ id: editando.value, payload })
     }
 
     editando.value = null
-    await cargarPlanes()
   } catch (err) {
     toast.error(err.message || 'Error al guardar plan')
   } finally {
@@ -135,8 +156,7 @@ async function guardar() {
 async function toggleActivo(plan) {
   loadingPlan.value = plan.id
   try {
-    await supabase.from('planes').update({ activo: !plan.activo }).eq('id', plan.id)
-    await cargarPlanes()
+    await togglePlanMutation.mutateAsync({ id: plan.id, activo: !plan.activo })
   } catch (err) {
     toast.error(err.message || 'Error al cambiar estado')
   } finally {
@@ -155,10 +175,8 @@ function eliminarPlan(plan) {
     accept: async () => {
       loadingPlan.value = plan.id
       try {
-        const { error } = await supabase.from('planes').delete().eq('id', plan.id)
-        if (error) throw error
+        await deletePlanMutation.mutateAsync(plan.id)
         toast.success(`Plan "${plan.nombre}" eliminado`)
-        await cargarPlanes()
       } catch (err) {
         toast.error(err.message || 'Error al eliminar plan')
       } finally {
