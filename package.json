@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run --exclude='tests/integration/**'",
+    "test:int": "vitest run tests/integration --exclude='node_modules/**' --exclude='.opencode/**'",
     "test:watch": "vitest run --watch",
     "test:coverage": "vitest run --coverage"
   },

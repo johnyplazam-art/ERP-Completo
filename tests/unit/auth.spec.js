@@ -188,11 +188,11 @@ describe('Auth Store', () => {
 
   describe('guardarIdioma', () => {
     it('should persist language preference in profile', async () => {
-      store.$patch({ user: { id: 'user-123' } })
+      store.$patch({ user: { id: 'user-123' }, perfil: { nombre: 'Test' } })
       const chain = makeChain({ data: null, error: null })
       supabase.from.mockReturnValue(chain)
 
-      await store.guardarIdioma('en')
+      await store.guardarPerfil({ idioma: 'en' })
 
       expect(supabase.from).toHaveBeenCalledWith('perfiles')
     })

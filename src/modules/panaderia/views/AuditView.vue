@@ -12,8 +12,8 @@ const filterDateTo = ref('')
 const filters = computed(() => ({
   action: filterAction.value || undefined,
   table: filterTable.value ? `%${filterTable.value}%` : undefined,
-  from: filterDateFrom.value ? new Date(filterDateFrom.value).toISOString() : undefined,
-  to: filterDateTo.value ? new Date(filterDateTo.value + 'T23:59:59').toISOString() : undefined,
+  dateFrom: filterDateFrom.value ? new Date(filterDateFrom.value).toISOString() : undefined,
+  dateTo: filterDateTo.value ? new Date(filterDateTo.value + 'T23:59:59').toISOString() : undefined,
 }))
 
 const {
@@ -146,12 +146,9 @@ function formatDate(iso) {
         <div v-if="totalPages > 1" class="border-t border-gray-100">
           <PaginatorBar
             :page="page"
-            :total-pages="totalPages"
             :total="total"
             :page-size="pageSize"
-            @set-page="setPage"
-            @next="nextPage"
-            @prev="prevPage"
+            @update:page="setPage"
           />
         </div>
       </div>

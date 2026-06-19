@@ -21,9 +21,10 @@ export const useAuthStore = defineStore('auth', () => {
   const userEmail = computed(() => user.value?.email ?? '')
   const currentEmpresaId = computed(() => currentEmpresa.value?.id ?? null)
   const industriaSlug = computed(() => currentIndustria.value?.slug ?? null)
+  const isPlatformAdmin = computed(() => perfil.value?.is_platform_admin ?? false)
 
   const currentRol = computed(() => rolActual.value)
-  const esAdmin = computed(() => tienePermiso('usuarios.manage'))
+  const esAdmin = computed(() => isPlatformAdmin.value || tienePermiso('usuarios.manage'))
   const puedeEscribir = computed(() =>
     ['ingredientes.create', 'recetas.create', 'ordenes.create', 'productos.create']
       .some(p => tienePermiso(p))
@@ -76,13 +77,29 @@ export const useAuthStore = defineStore('auth', () => {
   async function cargarEmpresas() {
     if (!user.value) return
     try {
-      const { data } = await supabase
+      const isPA = isPlatformAdmin.value
+
+      let query = supabase
         .from('empresa_usuarios')
         .select('*, empresa:empresas(*)')
-        .eq('usuario_id', user.value.id)
         .eq('activo', true)
+
+      if (!isPA) {
+        query = query.eq('usuario_id', user.value.id)
+      }
+
+      const { data } = await query
       empresaUsuarios.value = data ?? []
-      empresas.value = (data ?? []).map(eu => eu.empresa).filter(Boolean)
+
+      // Extraer empresas únicas
+      const seen = new Set()
+      empresas.value = (data ?? [])
+        .map(eu => eu.empresa)
+        .filter(e => {
+          if (!e || seen.has(e.id)) return false
+          seen.add(e.id)
+          return true
+        })
 
       // Restaurar última empresa activa del localStorage
       const savedId = localStorage.getItem('panaderia_empresa_id')
@@ -162,7 +179,8 @@ export const useAuthStore = defineStore('auth', () => {
         if (_initializing) return
 
         if (user.value) {
-          await Promise.all([cargarPerfil(), cargarEmpresas()])
+          await cargarPerfil()
+          await cargarEmpresas()
         } else {
           perfil.value = null
           empresas.value = []
@@ -185,7 +203,8 @@ export const useAuthStore = defineStore('auth', () => {
               session.value = data.session
               user.value = data.session.user
               localStorage.setItem(SESSION_KEY, JSON.stringify(data.session))
-              await Promise.all([cargarPerfil(), cargarEmpresas()])
+              await cargarPerfil()
+              await cargarEmpresas()
             } else {
               localStorage.removeItem(SESSION_KEY)
             }
@@ -247,7 +266,16 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function cargarAppsDisponibles() {
-    if (!currentEmpresaId.value || !user.value) return []
+    if (!user.value) return []
+    if (isPlatformAdmin.value) {
+      const { data } = await supabase
+        .from('applications')
+        .select('*')
+        .neq('slug', 'core')
+        .order('orden', { ascending: true, nullsFirst: false })
+      return (data ?? []).map(app => ({ ...app, disponible: true }))
+    }
+    if (!currentEmpresaId.value) return []
     try {
       // 1. Obtener apps incluidas en el plan activo de la suscripción
       const { data: appsPorPlan } = await supabase
@@ -261,7 +289,6 @@ export const useAuthStore = defineStore('auth', () => {
         .eq('empresa_id', currentEmpresaId.value)
 
       const appsConRoles = new Set(roles?.map(r => r.application_id) ?? [])
-      const appsDelPlan = new Set(appsPorPlan?.map(a => a.id) ?? [])
 
       // 3. Retornar solo apps que estén en AMBOS: plan + tiene rol
       return (appsPorPlan ?? []).map(app => ({
@@ -419,6 +446,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     userEmail,
     currentEmpresaId,
+    isPlatformAdmin,
     currentRol,
     esAdmin,
     puedeEscribir,

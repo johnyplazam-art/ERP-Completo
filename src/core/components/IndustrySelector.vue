@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useSupabaseClient } from '@supabase/supabase-js'
+import { supabase } from '@/core/supabase'
 
 const props = defineProps({
   modelValue: {
@@ -11,7 +11,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const supabase = useSupabaseClient()
 
 const industries = ref([])
 const loading = ref(true)
@@ -54,6 +53,8 @@ async function fetchIndustries() {
     loading.value = false
   }
 }
+
+onMounted(fetchIndustries)
 
 function selectIndustry(slug) {
   emit('update:modelValue', slug)

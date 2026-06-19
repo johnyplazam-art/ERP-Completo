@@ -7,21 +7,17 @@
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
-  v_empresa_id UUID; -- Cambiado a UUID si es el caso, pero mantengo INT si el esquema lo requiere
-  -- Nota: He notado que en las migraciones de RLS y Seed, los IDs se tratan como UUIDs o INTs. 
-  -- Ajustaré para que sea compatible con lo que el esquema espera.
-  -- Para este ejemplo, usaré el tipo que coincida con la tabla.
-  v_empresa_id_actual UUID; 
+  v_empresa_id_actual INT;
   v_invitation_code TEXT;
   v_industria_slug TEXT;
-  v_industria_id UUID;
-  v_core_app_id UUID;
-  v_admin_role_id UUID;
-  v_usuario_role_id UUID;
-  v_ind_app_id UUID;
-  v_ind_admin_role_id UUID;
-  v_ind_user_role_id UUID;
-  v_plan_gratuito_id UUID;
+  v_industria_id INT;
+  v_core_app_id INT;
+  v_admin_role_id INT;
+  v_usuario_role_id INT;
+  v_ind_app_id INT;
+  v_ind_admin_role_id INT;
+  v_ind_user_role_id INT;
+  v_plan_gratuito_id INT;
 BEGIN
   -- ==========================================================
   -- 1. CREAR PERFIL (CRÍTICO)

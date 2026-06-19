@@ -2,12 +2,14 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/core/store/auth'
+import { useRoute } from 'vue-router'
 import { useInvite } from '@/core/composables/useInvite'
 import { toast } from 'vue-sonner'
 import { useConfirm } from 'primevue/useconfirm'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const route = useRoute()
 const confirm = useConfirm()
 const { copiarInvitacion: copiarLink } = useInvite()
 const usuarios = ref([])
@@ -20,8 +22,9 @@ const searchQuery = ref('')
 
 // ─── Confirmación de remover usuario ──────────────────
 
-const puedeInvitar = computed(() => authStore.tienePermiso('usuarios.invite'))
-const puedeGestionarRoles = computed(() => authStore.tienePermiso('usuarios.manage'))
+const esModoGlobal = computed(() => route.name === 'admin-todos-usuarios')
+const puedeInvitar = computed(() => authStore.isPlatformAdmin || authStore.tienePermiso('usuarios.invite'))
+const puedeGestionarRoles = computed(() => authStore.isPlatformAdmin || authStore.tienePermiso('usuarios.manage'))
 
 // Empresas disponibles para el filtro
 const empresasUnicas = computed(() => {

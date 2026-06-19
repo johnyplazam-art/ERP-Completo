@@ -54,6 +54,19 @@ const routes = [
         component: () => import('@/core/components/AdminSuscripciones.vue'),
         meta: { title: 'Suscripciones', role: 'admin' },
       },
+      // Platform admin routes
+      {
+        path: 'admin/empresas',
+        name: 'admin-empresas',
+        component: () => import('@/core/components/AdminAllEmpresas.vue'),
+        meta: { title: 'Todas las Empresas', platformAdmin: true },
+      },
+      {
+        path: 'admin/todos-usuarios',
+        name: 'admin-todos-usuarios',
+        component: () => import('@/core/components/AdminUsers.vue'),
+        meta: { title: 'Todos los Usuarios', platformAdmin: true },
+      },
     ],
   },
 ]
@@ -82,6 +95,11 @@ router.beforeEach((to, _from, next) => {
   }
 
   if (to.meta.role === 'admin' && !authStore.esAdmin) {
+    next({ name: 'home' })
+    return
+  }
+
+  if (to.meta.platformAdmin && !authStore.isPlatformAdmin) {
     next({ name: 'home' })
     return
   }

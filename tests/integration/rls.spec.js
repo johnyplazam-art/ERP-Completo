@@ -1,33 +1,28 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { supabase } from '@/core/supabase'
-
-/**
- * TEST DE INTEGRACIÓN: RLS (Row Level Security)
- * 
- * NOTA: Estos tests utilizan un usuario pre-creado en el seed para garantizar
- * estabilidad y evitar problemas con el flujo de registro.
- */
+import { supabase, admin } from './helpers/supabase'
+import { setupTestUser, TEST_EMAIL, TEST_PASSWORD } from './helpers/setup'
 
 describe('RLS Policies - Multi-Industry Platform', () => {
-  let testUserAuthId
   let empresaA_id
   let empresaB_id
 
   beforeAll(async () => {
-    // 1. Setup: IDs deterministas del seed
-    empresaA_id = '00000000-0000-0000-0000-000000000080' // Panaderia Central
-    empresaB_id = '00000000-0000-0000-0000-000000000090' // Tienda de Ropa
+    await setupTestUser()
 
-    // 2. Login con el usuario del seed
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: 'testuser@example.com',
-      password: 'password123'
+    const { data: emps } = await admin
+      .from('empresas')
+      .select('id, slug')
+      .in('slug', ['emp-panaderia-central', 'otra-empresa'])
+
+    empresaA_id = emps.find(e => e.slug === 'emp-panaderia-central').id
+    empresaB_id = emps.find(e => e.slug === 'otra-empresa').id
+
+    // Ensure we're signed in
+    const { error } = await supabase.auth.signInWithPassword({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
     })
-
-    if (error) throw new Error(`Error de login: ${error.message}`)
-    if (!data.user) throw new Error('No se pudo obtener el usuario tras el login')
-    
-    testUserAuthId = data.user.id
+    if (error) throw new Error(`Login failed: ${error.message}`)
   })
 
   describe('Empresas & Multi-tenancy', () => {
@@ -49,20 +44,19 @@ describe('RLS Policies - Multi-Industry Platform', () => {
         .eq('id', empresaB_id)
         .maybeSingle()
 
+      expect(error).toBeNull()
       expect(data).toBeNull()
     })
   })
 
   describe('Roles & Permisos', () => {
     it('debe restringir la gestión de miembros a los dueños de la empresa', async () => {
-      // Intentar insertar un nuevo miembro en la empresa B desde el usuario de la empresa A
       const { error } = await supabase
         .from('empresa_usuarios')
         .insert({
           empresa_id: empresaB_id,
           usuario_id: '00000000-0000-0000-0000-000000009999',
-          rol_id: '00000000-0000-0000-0000-000000000020', // admin_tienda
-          es_dueno: false
+          es_dueno: false,
         })
 
       if (error) {

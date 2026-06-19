@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
@@ -200,10 +200,6 @@ function formatPeriodo(p) {
   return map[p] || p
 }
 
-onMounted(() => {
-  cargarPlanes()
-  cargarApps()
-})
 </script>
 
 <template>

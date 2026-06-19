@@ -33,7 +33,7 @@ vi.mock('@/core/supabase', () => ({
       onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     },
     from: vi.fn(),
-    rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
   },
 }))
 
@@ -685,10 +685,12 @@ describe('recetas', () => {
   it('createReceta — inserts receta then ingredientes then refetches', async () => {
     const chainReceta = makeChain({ data: { id: 1, nombre: 'Pan' }, error: null })
     const chainIng = makeChain({ error: null })
+    const chainCat = makeChain({ data: null, error: null })
     const chainFetch = makeChain({ data: { id: 1, nombre: 'Pan', ingredientes: [] }, error: null })
     supabase.from
       .mockReturnValueOnce(chainReceta)
       .mockReturnValueOnce(chainIng)
+      .mockReturnValueOnce(chainCat)
       .mockReturnValueOnce(chainFetch)
 
     const result = await mod.createReceta({
@@ -707,9 +709,11 @@ describe('recetas', () => {
 
   it('createReceta — without ingredientes still creates receta', async () => {
     const chainReceta = makeChain({ data: { id: 2 }, error: null })
+    const chainCat = makeChain({ data: null, error: null })
     const chainFetch = makeChain({ data: { id: 2 }, error: null })
     supabase.from
       .mockReturnValueOnce(chainReceta)
+      .mockReturnValueOnce(chainCat)
       .mockReturnValueOnce(chainFetch)
     const result = await mod.createReceta({ nombre: 'Base', empresa_id: 1, creado_por: 'u1' })
     expect(result.id).toBe(2)
