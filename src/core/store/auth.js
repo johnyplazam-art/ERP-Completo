@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const perfil = ref(null)
   const empresas = ref([])
   const currentEmpresa = ref(null)
+  const currentIndustria = ref(null)
   const empresaUsuarios = ref([])
   const permisos = ref([])
   const rolActual = ref(null)
@@ -19,6 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value && !!session.value)
   const userEmail = computed(() => user.value?.email ?? '')
   const currentEmpresaId = computed(() => currentEmpresa.value?.id ?? null)
+  const industriaSlug = computed(() => currentIndustria.value?.slug ?? null)
 
   const currentRol = computed(() => rolActual.value)
   const esAdmin = computed(() => tienePermiso('usuarios.manage'))
@@ -85,9 +87,13 @@ export const useAuthStore = defineStore('auth', () => {
       // Restaurar última empresa activa del localStorage
       const savedId = localStorage.getItem('panaderia_empresa_id')
       if (savedId && empresas.value.some(e => e.id === Number(savedId))) {
-        currentEmpresa.value = empresas.value.find(e => e.id === Number(savedId))
+        const emp = empresas.value.find(e => e.id === Number(savedId))
+        currentEmpresa.value = emp
+        currentIndustria.value = emp.industria_principal
       } else if (empresas.value.length > 0) {
-        currentEmpresa.value = empresas.value[0]
+        const emp = empresas.value[0]
+        currentEmpresa.value = emp
+        currentIndustria.value = emp.industria_principal
       }
 
       // Cargar permisos para la empresa seleccionada
@@ -123,12 +129,14 @@ export const useAuthStore = defineStore('auth', () => {
     currentEmpresa.value = empresa
     if (empresa) {
       localStorage.setItem('panaderia_empresa_id', String(empresa.id))
+      currentIndustria.value = empresa.industria_principal
       await cargarPermisos(empresa.id)
       await cargarRolActual()
     } else {
       localStorage.removeItem('panaderia_empresa_id')
       permisos.value = []
       rolActual.value = null
+      currentIndustria.value = null
     }
   }
 
