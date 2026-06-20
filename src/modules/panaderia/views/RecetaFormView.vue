@@ -4,8 +4,9 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
 import { recetaSchema } from '../validations/index'
-import { getSelectValue } from '@/core/composables/useSelectValue'
-import { useCategoriasRecetaQuery, useUnidadesMedidaQuery, useIngredientesQuery, useRecetasQuery, useCreateRecetaMutation, useUpdateRecetaMutation, useRecalcularCostoMutation } from '../composables/queries'
+import { useCategoriasRecetaQuery, useUnidadesMedidaQuery, useIngredientesQuery, useRecetasQuery, useCreateRecetaMutation, useUpdateRecetaMutation, useRecalcularCostoMutation, useCategoriasIngredienteQuery, useCreateCategoriaRecetaMutation, useCreateUnidadMedidaMutation, useCreateIngredienteMutation } from '../composables/queries'
+import { useQueryClient } from '@tanstack/vue-query'
+import InlineAddSelect from '../components/InlineAddSelect.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,6 +19,29 @@ const { data: recetas, refetch: refetchRecetas } = useRecetasQuery()
 const createMutation = useCreateRecetaMutation()
 const updateMutation = useUpdateRecetaMutation()
 const recalcularCosto = useRecalcularCostoMutation()
+
+const queryClient = useQueryClient()
+const { data: categoriasIngrediente } = useCategoriasIngredienteQuery()
+const createCategoriaMutation = useCreateCategoriaRecetaMutation()
+const createUnidadMutation = useCreateUnidadMedidaMutation()
+const createIngredienteMutation = useCreateIngredienteMutation()
+
+const categoriaFields = [
+  { key: 'nombre', label: 'Nombre', type: 'text', required: true },
+]
+
+const unidadFields = [
+  { key: 'nombre', label: 'Nombre', type: 'text', required: true },
+  { key: 'simbolo', label: 'Símbolo', type: 'text', required: true },
+]
+
+const ingredientFields = computed(() => [
+  { key: 'nombre', label: 'Nombre', type: 'text', required: true },
+  { key: 'categoria_id', label: 'Categoría', type: 'select', options: categoriasIngrediente.value ?? [], optionLabel: 'nombre', optionValue: 'id', required: true },
+  { key: 'unidad_base_id', label: 'Unidad base', type: 'select', options: unidades.value ?? [], optionLabel: 'nombre', optionValue: 'id', required: true },
+  { key: 'perecedero', label: 'Perecedero', type: 'checkbox' },
+  { key: 'stock_minimo', label: 'Stock mínimo', type: 'number', min: 0 },
+])
 
 async function handleRecalcular() {
   try {
@@ -92,13 +116,16 @@ const removeIngrediente = (index) => {
   setFieldValue('ingredientes', next)
 }
 
-const onIngredienteChange = (index, event) => {
-  const selectedId = getSelectValue(event)
+const onIngredienteChange = (index, selectedId) => {
   if (!selectedId) return
-  const ing = ingredientes.value?.find(i => i.id === selectedId)
+  const ing = ingredientes.value?.find(i => i.id === Number(selectedId))
   if (ing) {
     setFieldValue(`ingredientes[${index}].unidad_id`, ing.unidad_base_id)
   }
+}
+
+const onIngredienteCreate = (index, newIng) => {
+  setFieldValue(`ingredientes[${index}].unidad_id`, newIng.unidad_base_id)
 }
 
 const onSubmit = handleSubmit(async (formValues) => {
@@ -149,16 +176,15 @@ const onSubmit = handleSubmit(async (formValues) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
-            <select
-              :value="values.categoria_id"
-              @change="setFieldValue('categoria_id', getSelectValue($event))"
-              class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
-            >
-              <option :value="null" disabled>Seleccionar...</option>
-              <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
-                {{ cat.nombre }}
-              </option>
-            </select>
+            <InlineAddSelect
+              :model-value="values.categoria_id"
+              @update:model-value="setFieldValue('categoria_id', $event)"
+              :options="categorias ?? []"
+              placeholder="Seleccionar..."
+              create-label="Nueva categoría"
+              :fields="categoriaFields"
+              :create-fn="(data) => createCategoriaMutation.mutateAsync(data)"
+            />
             <p v-if="errors.categoria_id" class="mt-1 text-sm text-red-600">{{ errors.categoria_id }}</p>
           </div>
         </div>
@@ -199,16 +225,16 @@ const onSubmit = handleSubmit(async (formValues) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Unidad *</label>
-            <select
-              :value="values.rendimiento_unidad_id"
-              @change="setFieldValue('rendimiento_unidad_id', getSelectValue($event))"
-              class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
-            >
-              <option :value="null" disabled>Seleccionar...</option>
-              <option v-for="u in unidades" :key="u.id" :value="u.id">
-                {{ u.nombre }} ({{ u.simbolo }})
-              </option>
-            </select>
+            <InlineAddSelect
+              :model-value="values.rendimiento_unidad_id"
+              @update:model-value="setFieldValue('rendimiento_unidad_id', $event)"
+              :options="unidades ?? []"
+              :format-option="u => `${u.nombre} (${u.simbolo})`"
+              placeholder="Seleccionar..."
+              create-label="Nueva unidad"
+              :fields="unidadFields"
+              :create-fn="(data) => createUnidadMutation.mutateAsync(data)"
+            />
             <p v-if="errors.rendimiento_unidad_id" class="mt-1 text-sm text-red-600">{{ errors.rendimiento_unidad_id }}</p>
           </div>
         </div>
@@ -234,16 +260,20 @@ const onSubmit = handleSubmit(async (formValues) => {
           <span class="text-sm text-gray-400 w-6 mt-2">{{ index + 1 }}</span>
 
           <div class="flex-1">
-            <select
-              :value="values.ingredientes[index].ingrediente_id"
-              class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
-              @change="setFieldValue('ingredientes[' + index + '].ingrediente_id', getSelectValue($event)); onIngredienteChange(index, $event)"
-            >
-              <option :value="null" disabled>Ingrediente...</option>
-              <option v-for="item in ingredientes" :key="item.id" :value="item.id">
-                {{ item.nombre }}
-              </option>
-            </select>
+            <InlineAddSelect
+              :model-value="values.ingredientes[index].ingrediente_id"
+              @update:model-value="
+                setFieldValue('ingredientes[' + index + '].ingrediente_id', $event);
+                onIngredienteChange(index, $event)
+              "
+              :options="ingredientes ?? []"
+              placeholder="Ingrediente..."
+              select-class="text-sm"
+              create-label="Nuevo ingrediente"
+              :fields="ingredientFields"
+              :create-fn="(data) => createIngredienteMutation.mutateAsync(data)"
+              @create="onIngredienteCreate(index, $event)"
+            />
             <p v-if="errors[`ingredientes[${index}].ingrediente_id`]" class="mt-1 text-sm text-red-600">
               {{ errors[`ingredientes[${index}].ingrediente_id`] }}
             </p>
@@ -265,16 +295,17 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div class="w-28">
-            <select
-              :value="values.ingredientes[index].unidad_id"
-              @change="setFieldValue('ingredientes[' + index + '].unidad_id', getSelectValue($event))"
-              class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
-            >
-              <option :value="null" disabled>Unidad</option>
-              <option v-for="u in unidades" :key="u.id" :value="u.id">
-                {{ u.simbolo }}
-              </option>
-            </select>
+            <InlineAddSelect
+              :model-value="values.ingredientes[index].unidad_id"
+              @update:model-value="setFieldValue('ingredientes[' + index + '].unidad_id', $event)"
+              :options="unidades ?? []"
+              :format-option="u => u.simbolo"
+              placeholder="Unidad"
+              select-class="text-sm"
+              create-label="Nueva unidad"
+              :fields="unidadFields"
+              :create-fn="(data) => createUnidadMutation.mutateAsync(data)"
+            />
             <p v-if="errors[`ingredientes[${index}].unidad_id`]" class="mt-1 text-sm text-red-600">
               {{ errors[`ingredientes[${index}].unidad_id`] }}
             </p>

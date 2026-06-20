@@ -10,6 +10,18 @@ const routes = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: () => import('@/core/components/ForgotPasswordView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('@/core/components/ResetPasswordView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/',
     component: () => import('@/core/components/AppLayout.vue'),
     children: [

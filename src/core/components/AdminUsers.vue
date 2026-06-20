@@ -5,12 +5,12 @@ import { useAuthStore } from '@/core/store/auth'
 import { useRoute } from 'vue-router'
 import { useInvite } from '@/core/composables/useInvite'
 import { toast } from 'vue-sonner'
-import { useConfirm } from 'primevue/useconfirm'
+import { supabase } from '@/core/supabase'
 
 const { t } = useI18n()
+
 const authStore = useAuthStore()
 const route = useRoute()
-const confirm = useConfirm()
 const { copiarInvitacion: copiarLink } = useInvite()
 const usuarios = ref([])
 const isLoading = ref(false)
@@ -19,6 +19,88 @@ const isLoadingRoles = ref(false)
 const loadingAction = ref(null) // key de la fila en operación: "${usuario_id}:${empresa_id}"
 const empresaFiltro = ref(null) // null = todas
 const searchQuery = ref('')
+
+// ─── Edit profile modal ─────────────────────────────
+
+const editModal = ref(null)
+const editLoading = ref(false)
+
+function abrirEditar(eu) {
+  editModal.value = {
+    usuario_id: eu.usuario_id,
+    nombre: eu.usuario?.nombre || '',
+    apellido: eu.usuario?.apellido || '',
+    phone: eu.usuario?.phone || '',
+    tipo_documento: eu.usuario?.tipo_documento || 'DNI',
+    documento: eu.usuario?.documento || '',
+    fecha_nacimiento: eu.usuario?.fecha_nacimiento || '',
+    direccion: eu.usuario?.direccion || '',
+    ciudad: eu.usuario?.ciudad || '',
+    provincia: eu.usuario?.provincia || '',
+    pais: eu.usuario?.pais || 'AR',
+    puesto: eu.usuario?.puesto || '',
+    idioma: eu.usuario?.idioma || 'es',
+  }
+}
+
+function cerrarEditar() {
+  editModal.value = null
+  editLoading.value = false
+}
+
+async function guardarEditar() {
+  if (!editModal.value?.nombre.trim()) {
+    toast.error('El nombre es obligatorio')
+    return
+  }
+  editLoading.value = true
+  try {
+    const { error } = await supabase
+      .from('perfiles')
+      .update({
+        nombre: editModal.value.nombre.trim(),
+        apellido: editModal.value.apellido.trim(),
+        phone: editModal.value.phone.trim(),
+        tipo_documento: editModal.value.tipo_documento,
+        documento: editModal.value.documento.trim(),
+        fecha_nacimiento: editModal.value.fecha_nacimiento || null,
+        direccion: editModal.value.direccion.trim(),
+        ciudad: editModal.value.ciudad.trim(),
+        provincia: editModal.value.provincia.trim(),
+        pais: editModal.value.pais,
+        puesto: editModal.value.puesto.trim(),
+        idioma: editModal.value.idioma,
+      })
+      .eq('id', editModal.value.usuario_id)
+    if (error) throw error
+    toast.success('Perfil actualizado')
+    cerrarEditar()
+    await cargarUsuarios()
+  } catch (err) {
+    toast.error(err.message || 'Error al actualizar perfil')
+  } finally {
+    editLoading.value = false
+  }
+}
+
+// ─── Reset password ─────────────────────────────────
+
+const resetLoading = ref(false)
+
+async function resetPassUsuario(userEmail) {
+  resetLoading.value = true
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+      redirectTo: `${window.location.origin}/#/reset-password`,
+    })
+    if (error) throw error
+    toast.success('Correo de recuperación enviado')
+  } catch (err) {
+    toast.error(err.message || 'Error al enviar correo de recuperación')
+  } finally {
+    resetLoading.value = false
+  }
+}
 
 // ─── Confirmación de remover usuario ──────────────────
 
@@ -49,6 +131,7 @@ const usuariosFiltrados = computed(() => {
     const q = searchQuery.value.toLowerCase()
     filtered = filtered.filter(u =>
       (u.usuario?.nombre || '').toLowerCase().includes(q) ||
+      (u.usuario?.apellido || '').toLowerCase().includes(q) ||
       (u.email || '').toLowerCase().includes(q)
     )
   }
@@ -277,8 +360,8 @@ watch(() => authStore.user, async () => {
                     {{ (eu.usuario?.nombre || '?').charAt(0).toUpperCase() }}
                   </div>
                   <div class="min-w-0">
-                    <span class="font-medium text-gray-900 truncate block max-w-[140px]">
-                      {{ eu.usuario?.nombre || 'Sin nombre' }}
+                    <span class="font-medium text-gray-900 truncate block max-w-[160px]">
+                      {{ [eu.usuario?.nombre, eu.usuario?.apellido].filter(Boolean).join(' ') || 'Sin nombre' }}
                     </span>
                     <span
                       v-if="eu.usuario_id === authStore.user?.id"
@@ -351,12 +434,34 @@ watch(() => authStore.user, async () => {
               <!-- Actions -->
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
+                  <!-- Edit user -->
+                  <button
+                    v-if="puedeGestionarRoles"
+                    @click="abrirEditar(eu)"
+                    class="text-sm text-gray-500 hover:text-blue-600 transition-colors"
+                    title="Editar perfil"
+                  >
+                    <i class="pi pi-pencil text-lg"></i>
+                  </button>
+
+                  <!-- Reset password -->
+                  <button
+                    v-if="puedeGestionarRoles && eu.usuario_id !== authStore.user?.id"
+                    @click="resetPassUsuario(eu.email)"
+                    class="text-sm text-gray-500 hover:text-purple-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    :disabled="resetLoading"
+                    title="Enviar recuperación de contraseña"
+                  >
+                    <i class="pi pi-key text-lg"></i>
+                  </button>
+
+                  <!-- Toggle active -->
                   <button
                     v-if="eu.usuario_id !== authStore.user?.id"
                     @click="toggleActivo(eu.usuario_id, eu.empresa_id, !eu.activo)"
                     class="text-sm text-gray-500 hover:text-amber-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     :disabled="loadingAction === `${eu.usuario_id}:${eu.empresa_id}`"
-                    :title="eu.activo ? t('users.deactivate') : t('users.activate')"
+                    :title="eu.activo ? 'Desactivar' : 'Activar'"
                   >
                     <i :class="eu.activo ? 'pi pi-ban' : 'pi pi-check-circle'" class="text-lg"></i>
                   </button>
@@ -367,7 +472,7 @@ watch(() => authStore.user, async () => {
                     @click="confirmarRemover(eu)"
                     class="text-sm text-gray-500 hover:text-red-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     :disabled="loadingAction === `${eu.usuario_id}:${eu.empresa_id}`"
-                    :title="t('users.removeUser')"
+                    title="Remover usuario"
                   >
                     <i class="pi pi-trash text-lg"></i>
                   </button>
@@ -380,6 +485,159 @@ watch(() => authStore.user, async () => {
         </table>
       </div>
     </div>
+
+    <!-- Edit user modal -->
+    <Teleport to="body">
+      <div
+        v-if="editModal"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        @click.self="cerrarEditar"
+      >
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Editar perfil de usuario</h3>
+
+          <form @submit.prevent="guardarEditar" class="space-y-5">
+            <!-- 👤 Información personal -->
+            <div class="space-y-3">
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Información personal</h4>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Nombre <span class="text-red-500">*</span></label>
+                  <input v-model="editModal.nombre" type="text" required
+                    class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                  <input v-model="editModal.apellido" type="text"
+                    class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <input v-model="editModal.phone" type="text"
+                  class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Idioma</label>
+                <select v-model="editModal.idioma"
+                  class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+
+            <hr class="border-gray-200" />
+
+            <!-- 🪪 Documentación -->
+            <div class="space-y-3">
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Documentación</h4>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Tipo documento</label>
+                  <select v-model="editModal.tipo_documento"
+                    class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
+                    <option value="DNI">DNI</option>
+                    <option value="CI">Cédula</option>
+                    <option value="Pasaporte">Pasaporte</option>
+                    <option value="CUIT">CUIT</option>
+                    <option value="RUT">RUT</option>
+                    <option value="NIF">NIF</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Número documento</label>
+                  <input v-model="editModal.documento" type="text"
+                    class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
+                <input v-model="editModal.fecha_nacimiento" type="date"
+                  class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
+              </div>
+            </div>
+
+            <hr class="border-gray-200" />
+
+            <!-- 📍 Dirección -->
+            <div class="space-y-3">
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dirección</h4>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                <input v-model="editModal.direccion" type="text" placeholder="Calle y número"
+                  class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                  <input v-model="editModal.ciudad" type="text"
+                    class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                  <input v-model="editModal.provincia" type="text"
+                    class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">País</label>
+                <select v-model="editModal.pais"
+                  class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
+                  <option value="AR">Argentina</option>
+                  <option value="UY">Uruguay</option>
+                  <option value="CL">Chile</option>
+                  <option value="PY">Paraguay</option>
+                  <option value="BO">Bolivia</option>
+                  <option value="PE">Perú</option>
+                  <option value="EC">Ecuador</option>
+                  <option value="CO">Colombia</option>
+                  <option value="VE">Venezuela</option>
+                  <option value="MX">México</option>
+                  <option value="ES">España</option>
+                  <option value="US">Estados Unidos</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+            </div>
+
+            <hr class="border-gray-200" />
+
+            <!-- 💼 Laboral -->
+            <div class="space-y-3">
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Información laboral</h4>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Puesto / Cargo</label>
+                <input v-model="editModal.puesto" type="text" placeholder="Ej: Panadero, Administrador"
+                  class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+              <button type="button" @click="cerrarEditar"
+                class="flex-1 touch-input text-gray-600 font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-gray-100 transition-colors">
+                Cancelar
+              </button>
+              <button type="submit" :disabled="editLoading"
+                class="flex-1 touch-input flex items-center justify-center bg-primary-600 text-white font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                <i v-if="editLoading" class="pi pi-spin pi-spinner mr-2"></i>
+                {{ editLoading ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
 
     <ConfirmDialog />
   </div>

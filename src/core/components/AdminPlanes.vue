@@ -5,6 +5,7 @@ import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
 import { useConfirm } from 'primevue/useconfirm'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { formatCurrency } from '@/core/composables/useCurrency'
 
 const { t } = useI18n()
 const confirm = useConfirm()
@@ -187,12 +188,7 @@ function eliminarPlan(plan) {
 }
 
 function formatPrecio(precio) {
-  return Number(precio).toLocaleString('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })
+  return formatCurrency(precio)
 }
 
 function formatPeriodo(p) {

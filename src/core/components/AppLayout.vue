@@ -15,8 +15,6 @@ const router = useRouter()
 
 // ─── Nav sections ─────────────────────────────────────
 
-const puedeAdmin = computed(() => authStore.tienePermiso('usuarios.manage'))
-
 // Configuración de rutas por aplicación
 const APP_ROUTES_CONFIG = {
   panaderia: [
@@ -45,12 +43,7 @@ const APP_ROUTES_CONFIG = {
   academico: [
     { to: '/academico', icon: 'pi pi-chart-bar', label: t('nav.dashboard') },
   ],
-  admin: [
-    { to: '/admin/usuarios', icon: 'pi pi-users', label: t('nav.usuarios'), permission: puedeAdmin.value },
-    { to: '/admin/apps', icon: 'pi pi-palette', label: t('nav.apps'), permission: puedeAdmin.value },
-    { to: '/admin/planes', icon: 'pi pi-credit-card', label: 'Planes', permission: puedeAdmin.value },
-    { to: '/admin/suscripciones', icon: 'pi pi-sync', label: 'Suscripciones', permission: puedeAdmin.value },
-  ]
+  admin: []
 }
 
 const appsDisponibles = ref([])
@@ -81,6 +74,9 @@ const navItems = computed(() => {
     })
     items.push({ to: '/admin/empresas', icon: 'pi pi-building', label: 'Todas las Empresas' })
     items.push({ to: '/admin/todos-usuarios', icon: 'pi pi-globe', label: 'Todos los Usuarios' })
+    items.push({ to: '/admin/apps', icon: 'pi pi-palette', label: 'Apps' })
+    items.push({ to: '/admin/planes', icon: 'pi pi-credit-card', label: 'Planes' })
+    items.push({ to: '/admin/suscripciones', icon: 'pi pi-sync', label: 'Suscripciones' })
   }
 
   // 3. Apps dinámicas — solo mostrar la sección activa

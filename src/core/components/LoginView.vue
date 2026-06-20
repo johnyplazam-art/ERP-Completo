@@ -317,6 +317,16 @@ onMounted(() => {
             </template>
           </template>
 
+          <!-- Forgot password (login only) -->
+          <div v-if="mode === 'login'" class="text-right">
+            <router-link
+              to="/forgot-password"
+              class="text-sm text-primary-600 hover:underline font-medium"
+            >
+              ¿Olvidaste tu contraseña?
+            </router-link>
+          </div>
+
           <!-- Submit button (login only — signup uses step-specific buttons) -->
           <button
             v-if="mode === 'login'"

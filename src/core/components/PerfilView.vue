@@ -11,15 +11,33 @@ const isSaving = ref(false)
 
 const form = ref({
   nombre: '',
+  apellido: '',
   avatar_url: '',
   phone: '',
+  tipo_documento: 'DNI',
+  documento: '',
+  fecha_nacimiento: '',
+  direccion: '',
+  ciudad: '',
+  provincia: '',
+  pais: 'AR',
+  puesto: '',
 })
 
 watch(() => authStore.perfil, (p) => {
   if (p) {
     form.value.nombre = p.nombre || ''
+    form.value.apellido = p.apellido || ''
     form.value.avatar_url = p.avatar_url || ''
     form.value.phone = p.phone || ''
+    form.value.tipo_documento = p.tipo_documento || 'DNI'
+    form.value.documento = p.documento || ''
+    form.value.fecha_nacimiento = p.fecha_nacimiento || ''
+    form.value.direccion = p.direccion || ''
+    form.value.ciudad = p.ciudad || ''
+    form.value.provincia = p.provincia || ''
+    form.value.pais = p.pais || 'AR'
+    form.value.puesto = p.puesto || ''
   }
 }, { immediate: true })
 
@@ -43,8 +61,17 @@ async function guardar() {
   try {
     await authStore.guardarPerfil({
       nombre: form.value.nombre.trim(),
+      apellido: form.value.apellido.trim(),
       avatar_url: form.value.avatar_url.trim() || null,
       phone: form.value.phone.trim() || null,
+      tipo_documento: form.value.tipo_documento,
+      documento: form.value.documento.trim(),
+      fecha_nacimiento: form.value.fecha_nacimiento || null,
+      direccion: form.value.direccion.trim(),
+      ciudad: form.value.ciudad.trim(),
+      provincia: form.value.provincia.trim(),
+      pais: form.value.pais,
+      puesto: form.value.puesto.trim(),
     })
     toast.success('Perfil actualizado exitosamente')
   } catch (err) {
@@ -80,46 +107,136 @@ async function cambiarIdioma(idioma) {
           <span v-else>{{ (form.nombre || authStore.perfil?.nombre || '?').charAt(0).toUpperCase() }}</span>
         </div>
         <div>
-          <p class="text-lg font-semibold text-gray-900">{{ form.nombre || 'Sin nombre' }}</p>
+          <p class="text-lg font-semibold text-gray-900">{{ [form.nombre, form.apellido].filter(Boolean).join(' ') || 'Sin nombre' }}</p>
           <p class="text-sm text-gray-500">{{ email }}</p>
         </div>
       </div>
 
       <hr class="border-gray-200" />
 
-      <form @submit.prevent="guardar" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-          <input
-            v-model="form.nombre"
-            type="text"
-            required
-            :disabled="isSaving"
-            class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-          />
+      <form @submit.prevent="guardar" class="space-y-5">
+        <!-- 👤 Información personal -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Información personal</h4>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+              <input v-model="form.nombre" type="text" required :disabled="isSaving"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+              <input v-model="form.apellido" type="text" :disabled="isSaving"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+              <input v-model="form.phone" type="tel" :disabled="isSaving" placeholder="+54 11 1234-5678"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">URL de Avatar</label>
+              <input v-model="form.avatar_url" type="url" :disabled="isSaving" placeholder="https://ejemplo.com/avatar.jpg"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">URL de Avatar</label>
-          <input
-            v-model="form.avatar_url"
-            type="url"
-            :disabled="isSaving"
-            placeholder="https://ejemplo.com/avatar.jpg"
-            class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-          />
-          <p class="mt-1 text-xs text-gray-400">Pegá una URL de imagen para tu avatar (opcional)</p>
+        <hr class="border-gray-200" />
+
+        <!-- 🪪 Documentación -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Documentación</h4>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Tipo documento</label>
+              <select v-model="form.tipo_documento" :disabled="isSaving"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50">
+                <option value="DNI">DNI</option>
+                <option value="CI">Cédula de Identidad</option>
+                <option value="Pasaporte">Pasaporte</option>
+                <option value="RUT">RUT</option>
+                <option value="CUIT">CUIT</option>
+                <option value="NIF">NIF</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Número documento</label>
+              <input v-model="form.documento" type="text" :disabled="isSaving"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
+            <input v-model="form.fecha_nacimiento" type="date" :disabled="isSaving"
+              class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+          </div>
         </div>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-          <input
-            v-model="form.phone"
-            type="tel"
-            :disabled="isSaving"
-            placeholder="+54 11 1234-5678"
-            class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-          />
+        <hr class="border-gray-200" />
+
+        <!-- 📍 Dirección -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dirección</h4>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+            <input v-model="form.direccion" type="text" placeholder="Calle y número" :disabled="isSaving"
+              class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+              <input v-model="form.ciudad" type="text" :disabled="isSaving"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+              <input v-model="form.provincia" type="text" :disabled="isSaving"
+                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">País</label>
+            <select v-model="form.pais" :disabled="isSaving"
+              class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50">
+              <option value="AR">Argentina</option>
+              <option value="UY">Uruguay</option>
+              <option value="CL">Chile</option>
+              <option value="PY">Paraguay</option>
+              <option value="BO">Bolivia</option>
+              <option value="PE">Perú</option>
+              <option value="EC">Ecuador</option>
+              <option value="CO">Colombia</option>
+              <option value="VE">Venezuela</option>
+              <option value="MX">México</option>
+              <option value="ES">España</option>
+              <option value="US">Estados Unidos</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <hr class="border-gray-200" />
+
+        <!-- 💼 Laboral -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Información laboral</h4>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Puesto / Cargo</label>
+            <input v-model="form.puesto" type="text" placeholder="Ej: Panadero, Administrador, Vendedor" :disabled="isSaving"
+              class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
+          </div>
         </div>
 
         <div class="pt-2">
