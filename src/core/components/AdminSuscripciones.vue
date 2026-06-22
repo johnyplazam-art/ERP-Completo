@@ -1,11 +1,13 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { formatCurrency } from '@/core/composables/useCurrency'
 
 const queryClient = useQueryClient()
+const { t } = useI18n()
 
 const SUSCRIPCIONES_KEY = ['suscripciones']
 const PLANES_KEY = ['planes']
@@ -84,7 +86,7 @@ const createSusMutation = useMutation({
     supabase.from('suscripciones').insert(payload).then(r => { if (r.error) throw r.error }),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: SUSCRIPCIONES_KEY })
-    toast.success('Suscripción creada')
+    toast.success(t('subscriptions.created'))
   },
 })
 
@@ -93,7 +95,7 @@ const updateSusMutation = useMutation({
     supabase.from('suscripciones').update(payload).eq('id', id).then(r => { if (r.error) throw r.error }),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: SUSCRIPCIONES_KEY })
-    toast.success('Suscripción actualizada')
+    toast.success(t('subscriptions.updated'))
   },
 })
 
@@ -108,7 +110,7 @@ const deleteSusMutation = useMutation({
     supabase.from('suscripciones').delete().eq('id', id).then(r => { if (r.error) throw r.error }),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: SUSCRIPCIONES_KEY })
-    toast.success('Suscripción eliminada')
+    toast.success(t('subscriptions.deleted'))
   },
 })
 
@@ -142,7 +144,7 @@ function cancelar() {
 
 async function guardar() {
   if (!form.value.empresa_id || !form.value.plan_id) {
-    toast.error('Empresa y plan son obligatorios')
+    toast.error(t('subscriptions.requiredCompanyPlan'))
     return
   }
 
@@ -165,7 +167,7 @@ async function guardar() {
 
     editando.value = null
   } catch (err) {
-    toast.error(err.message || 'Error al guardar suscripción')
+    toast.error(err.message || t('subscriptions.saveError'))
   } finally {
     isSaving.value = false
   }
@@ -174,7 +176,7 @@ async function guardar() {
 function cambiarEstado(sus, nuevoEstado) {
   changeEstadoMutation.mutate(
     { id: sus.id, estado: nuevoEstado },
-    { onSuccess: () => toast.success(`Suscripción ${nuevoEstado}`) },
+    { onSuccess: () => toast.success(t('subscriptions.stateChanged', { estado: nuevoEstado })) },
   )
 }
 
@@ -191,7 +193,7 @@ async function eliminarSuscripcion() {
     showDeleteConfirm.value = false
     susAEliminar.value = null
   } catch (err) {
-    toast.error(err.message || 'Error al eliminar')
+    toast.error(err.message || t('subscriptions.deleteError'))
   } finally {
     isDeleting.value = false
   }
@@ -227,34 +229,34 @@ function formatIngresos(n) {
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900">Suscripciones</h2>
-        <p class="text-sm text-gray-500 mt-1">Gestioná las suscripciones de cada empresa</p>
+        <h2 class="text-2xl font-bold text-gray-900">{{ t('subscriptions.title') }}</h2>
+        <p class="text-sm text-gray-500 mt-1">{{ t('subscriptions.subtitle') }}</p>
       </div>
       <button
         @click="nuevaSuscripcion"
         class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
       >
         <i class="pi pi-plus mr-2"></i>
-        Nueva Suscripción
+        {{ t('subscriptions.newSubscription') }}
       </button>
     </div>
 
     <!-- Stats -->
     <div class="grid grid-cols-4 gap-4 mb-6">
       <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Total</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">{{ t('companies.total') }}</p>
         <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.total }}</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Activas</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">{{ t('companies.activeCount') }}</p>
         <p class="text-2xl font-bold text-green-600 mt-1">{{ stats.activas }}</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Expiradas / Canceladas</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">{{ t('subscriptions.expiredCancelled') }}</p>
         <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.expiradas }}</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Ingresos estimados / mes</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">{{ t('subscriptions.estimatedRevenue') }}</p>
         <p class="text-2xl font-bold text-primary-600 mt-1">{{ formatIngresos(stats.ingresosEst) }}</p>
       </div>
     </div>
@@ -265,7 +267,7 @@ function formatIngresos(n) {
       <input
         v-model="searchQuery"
         type="text"
-        placeholder="Buscar por empresa o plan..."
+        :placeholder="t('subscriptions.searchPlaceholder')"
         class="pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-primary-500 w-72"
       />
     </div>
@@ -273,13 +275,13 @@ function formatIngresos(n) {
     <!-- Loading -->
     <div v-if="isLoading" class="text-center py-20 text-gray-400">
       <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-      <p>Cargando suscripciones...</p>
+      <p>{{ t('subscriptions.loading') }}</p>
     </div>
 
     <!-- Empty -->
     <div v-else-if="!suscripciones?.length" class="text-center py-20 text-gray-400">
       <i class="pi pi-credit-card text-4xl mb-3"></i>
-      <p>No hay suscripciones registradas</p>
+      <p>{{ t('subscriptions.noSubscriptions') }}</p>
     </div>
 
     <!-- Table -->
@@ -288,13 +290,13 @@ function formatIngresos(n) {
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-gray-50 text-left text-gray-500 font-medium">
-              <th class="px-4 py-3">Empresa</th>
-              <th class="px-4 py-3">Plan</th>
-              <th class="px-4 py-3">Inicio</th>
-              <th class="px-4 py-3">Fin</th>
-              <th class="px-4 py-3">Estado</th>
-              <th class="px-4 py-3">Auto-renovación</th>
-              <th class="px-4 py-3">Acciones</th>
+              <th class="px-4 py-3">{{ t('admin.company') }}</th>
+              <th class="px-4 py-3">{{ t('subscriptions.selectPlan') }}</th>
+              <th class="px-4 py-3">{{ t('subscriptions.startDate') }}</th>
+              <th class="px-4 py-3">{{ t('subscriptions.endDate') }}</th>
+              <th class="px-4 py-3">{{ t('subscriptions.autoRenew') }}</th>
+              <th class="px-4 py-3">{{ t('subscriptions.autoRenew') }}</th>
+              <th class="px-4 py-3">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -325,7 +327,7 @@ function formatIngresos(n) {
                   <button
                     @click="editarSus(sus)"
                     class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50"
-                    title="Editar"
+                    :title="t('common.edit')"
                   >
                     <i class="pi pi-pencil"></i>
                   </button>
@@ -333,7 +335,7 @@ function formatIngresos(n) {
                     v-if="sus.estado === 'activa'"
                     @click="cambiarEstado(sus, 'cancelada')"
                     class="p-1.5 rounded-lg text-gray-400 hover:text-yellow-600 hover:bg-yellow-50"
-                    title="Cancelar"
+                    :title="t('common.cancel')"
                   >
                     <i class="pi pi-ban"></i>
                   </button>
@@ -348,7 +350,7 @@ function formatIngresos(n) {
                   <button
                     @click="confirmarEliminar(sus)"
                     class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
-                    title="Eliminar"
+                    :title="t('common.delete')"
                   >
                     <i class="pi pi-trash"></i>
                   </button>
@@ -369,19 +371,19 @@ function formatIngresos(n) {
       >
         <div class="bg-white rounded-xl shadow-xl border border-gray-200 p-6 max-w-lg w-full mx-4">
           <h3 class="text-lg font-semibold text-gray-900 mb-6">
-            {{ editando === 'nueva' ? 'Nueva Suscripción' : 'Editar Suscripción' }}
+            {{ editando === 'nueva' ? t('subscriptions.newSubscription') : t('subscriptions.editSubscription') }}
           </h3>
 
           <form @submit.prevent="guardar" class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Empresa *</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('admin.company') }} *</label>
               <select
                 v-model="form.empresa_id"
                 required
                 :disabled="isSaving"
                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
               >
-                <option :value="null" disabled>Seleccionar empresa...</option>
+                <option :value="null" disabled>{{ t('subscriptions.selectCompany') }}</option>
                 <option v-for="emp in empresas" :key="emp.id" :value="emp.id">
                   {{ emp.nombre }} ({{ emp.slug }})
                 </option>
@@ -389,14 +391,14 @@ function formatIngresos(n) {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Plan *</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('subscriptions.selectPlan') }} *</label>
               <select
                 v-model="form.plan_id"
                 required
                 :disabled="isSaving"
                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
               >
-                <option :value="null" disabled>Seleccionar plan...</option>
+                <option :value="null" disabled>{{ t('subscriptions.selectPlan') }}</option>
                 <option v-for="plan in planes" :key="plan.id" :value="plan.id">
                   {{ plan.nombre }} (${{ Number(plan.precio).toLocaleString('es-AR') }}/{{ plan.periodo }})
                 </option>
@@ -405,7 +407,7 @@ function formatIngresos(n) {
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('subscriptions.startDate') }}</label>
                 <input
                   v-model="form.fecha_inicio"
                   type="date"
@@ -414,14 +416,14 @@ function formatIngresos(n) {
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('subscriptions.endDate') }}</label>
                 <input
                   v-model="form.fecha_fin"
                   type="date"
                   :disabled="isSaving"
                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
                 />
-                <p class="mt-1 text-xs text-gray-400">Dejar vacío = sin vencimiento</p>
+                <p class="mt-1 text-xs text-gray-400">{{ t('subscriptions.noExpiry') }}</p>
               </div>
             </div>
 
@@ -432,7 +434,7 @@ function formatIngresos(n) {
                 :disabled="isSaving"
                 class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
-              <span class="text-sm text-gray-700">Renovación automática</span>
+              <span class="text-sm text-gray-700">{{ t('subscriptions.autoRenewLabel') }}</span>
             </label>
 
             <div class="flex justify-end gap-3 pt-2">
@@ -441,14 +443,14 @@ function formatIngresos(n) {
                 :disabled="isSaving"
                 @click="cancelar"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
-              >Cancelar</button>
+              >{{ t('common.cancel') }}</button>
               <button
                 type="submit"
                 :disabled="isSaving"
                 class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
                 <i :class="isSaving ? 'pi pi-spin pi-spinner mr-1' : 'pi pi-check mr-1'"></i>
-                {{ isSaving ? 'Guardando...' : 'Guardar' }}
+                {{ isSaving ? t('common.saving') : t('common.save') }}
               </button>
             </div>
           </form>
@@ -464,23 +466,22 @@ function formatIngresos(n) {
         @click.self="showDeleteConfirm = false"
       >
         <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4" @click.stop>
-          <h3 class="text-lg font-semibold text-gray-900">Eliminar suscripción</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ t('subscriptions.deleteTitle') }}</h3>
           <p class="text-sm text-gray-600">
-            ¿Estás seguro de eliminar la suscripción de <strong>{{ susAEliminar?.empresa?.nombre }}</strong>?
-            Esta acción no se puede deshacer.
+            {{ t('subscriptions.deleteConfirm', { nombre: susAEliminar?.empresa?.nombre }) }}
           </p>
           <div class="flex justify-end gap-3">
             <button
-              @click="showDeleteConfirm = false"
+                @click="showDeleteConfirm = false"
               class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
-            >Cancelar</button>
+            >{{ t('common.cancel') }}</button>
             <button
               @click="eliminarSuscripcion"
               :disabled="isDeleting"
               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm"
             >
               <i v-if="isDeleting" class="pi pi-spin pi-spinner mr-1"></i>
-              Eliminar
+              {{ t('common.delete') }}
             </button>
           </div>
         </div>

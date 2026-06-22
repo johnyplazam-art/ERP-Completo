@@ -13,6 +13,8 @@ import {
   useUpdateProductoMutation,
 } from '../composables/queries'
 import { calcularCostoProducto } from '../composables/database'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -110,11 +112,11 @@ const onSubmit = handleSubmit(async (formValues) => {
     <form @submit="onSubmit" class="max-w-3xl space-y-6">
       <!-- Basic Info -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h3 class="text-lg font-semibold text-gray-900">Información General</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('productos.formSection') }}</h3>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('productos.formName') }} *</label>
             <input
               :value="values.nombre"
               @input="setFieldValue('nombre', $event.target.value)"
@@ -127,13 +129,13 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('productos.formCategory') }} *</label>
             <select
               :value="values.categoria_id"
               @change="setFieldValue('categoria_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option :value="null" disabled>Seleccionar...</option>
+              <option :value="null" disabled>{{ t('crud.selectOption') }}</option>
               <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
                 {{ cat.nombre }}
               </option>
@@ -143,7 +145,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('productos.formDescription') }}</label>
           <textarea
             :value="values.descripcion"
             @input="setFieldValue('descripcion', $event.target.value)"
@@ -155,13 +157,13 @@ const onSubmit = handleSubmit(async (formValues) => {
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Receta asociada</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('productos.formRecipe') }}</label>
             <select
               :value="values.receta_id"
               @change="setFieldValue('receta_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option :value="null">Sin receta</option>
+              <option :value="null">{{ t('productos.formNoRecipe') }}</option>
               <option v-for="r in recetas?.filter(x => x.activa)" :key="r.id" :value="r.id">
                 {{ r.nombre }}
               </option>
@@ -169,7 +171,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Código de barras</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('productos.formBarcode') }}</label>
             <input
               :value="values.codigo_barras"
               @input="setFieldValue('codigo_barras', $event.target.value)"
@@ -183,11 +185,11 @@ const onSubmit = handleSubmit(async (formValues) => {
 
       <!-- Pricing & Weight -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h3 class="text-lg font-semibold text-gray-900">Precio y Peso</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('productos.formPricing') }}</h3>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Precio de venta *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('productos.formSalePrice') }} *</label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
               <input
@@ -203,7 +205,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div v-if="values.receta_id && values.peso_unitario_gr">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Precio de costo</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('productos.formCostPrice') }}</label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
               <input
@@ -213,11 +215,11 @@ const onSubmit = handleSubmit(async (formValues) => {
                 class="touch-input block w-full rounded-lg border border-gray-200 bg-gray-50 text-gray-500 pl-8 focus:ring-0 cursor-not-allowed"
               />
             </div>
-            <p class="mt-1 text-xs text-gray-400">Calculado desde costo de receta</p>
+            <p class="mt-1 text-xs text-gray-400">{{ t('productos.formCostTooltip') }}</p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Peso unitario (gramos)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('productos.formUnitWeight') }}</label>
             <input
               :value="values.peso_unitario_gr"
               @input="setFieldValue('peso_unitario_gr', $event.target.value === '' ? null : $event.target.valueAsNumber)"
@@ -239,7 +241,7 @@ const onSubmit = handleSubmit(async (formValues) => {
             @change="setFieldValue('activo', $event.target.checked)"
             class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
-          <label for="activo" class="text-sm font-medium text-gray-700">Activo</label>
+          <label for="activo" class="text-sm font-medium text-gray-700">{{ t('productos.formActive') }}</label>
         </div>
       </div>
 

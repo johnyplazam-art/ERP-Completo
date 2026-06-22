@@ -53,7 +53,7 @@ const createPlanMutation = useMutation({
     supabase.from('planes').insert(payload).then(r => { if (r.error) throw r.error }),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: PLANES_KEY })
-    toast.success('Plan creado exitosamente')
+    toast.success(t('pricing.created'))
   },
 })
 
@@ -62,7 +62,7 @@ const updatePlanMutation = useMutation({
     supabase.from('planes').update(payload).eq('id', id).then(r => { if (r.error) throw r.error }),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: PLANES_KEY })
-    toast.success('Plan actualizado exitosamente')
+    toast.success(t('pricing.updated'))
   },
 })
 
@@ -116,11 +116,11 @@ function cancelar() {
 
 async function guardar() {
   if (!form.value.nombre.trim()) {
-    toast.error('El nombre es obligatorio')
+    toast.error(t('pricing.nameRequired'))
     return
   }
   if (!form.value.slug.trim()) {
-    toast.error('El slug es obligatorio')
+    toast.error(t('pricing.slugRequired'))
     return
   }
 
@@ -148,7 +148,7 @@ async function guardar() {
 
     editando.value = null
   } catch (err) {
-    toast.error(err.message || 'Error al guardar plan')
+    toast.error(err.message || t('pricing.saveError'))
   } finally {
     isSaving.value = false
   }
@@ -159,7 +159,7 @@ async function toggleActivo(plan) {
   try {
     await togglePlanMutation.mutateAsync({ id: plan.id, activo: !plan.activo })
   } catch (err) {
-    toast.error(err.message || 'Error al cambiar estado')
+    toast.error(err.message || t('pricing.toggleError'))
   } finally {
     loadingPlan.value = null
   }
@@ -167,17 +167,17 @@ async function toggleActivo(plan) {
 
 function eliminarPlan(plan) {
   confirm.require({
-    message: `¿Eliminar el plan "${plan.nombre}"? Las suscripciones activas se quedarán sin referencia.`,
-    header: 'Eliminar plan',
+    message: t('pricing.deleteConfirm', { nombre: plan.nombre }),
+    header: t('pricing.deleteTitle'),
     icon: 'pi pi-exclamation-triangle',
     rejectLabel: t('common.cancel'),
-    acceptLabel: 'Eliminar',
+    acceptLabel: t('pricing.deleteConfirmLabel'),
     acceptClass: 'p-button-danger',
     accept: async () => {
       loadingPlan.value = plan.id
       try {
         await deletePlanMutation.mutateAsync(plan.id)
-        toast.success(`Plan "${plan.nombre}" eliminado`)
+        toast.success(t('pricing.deleted', { nombre: plan.nombre }))
       } catch (err) {
         toast.error(err.message || 'Error al eliminar plan')
       } finally {
@@ -192,8 +192,10 @@ function formatPrecio(precio) {
 }
 
 function formatPeriodo(p) {
-  const map = { diario: '/día', mensual: '/mes', anual: '/año' }
-  return map[p] || p
+  if (p === 'diario') return t('pricing.perDay')
+  if (p === 'mensual') return t('pricing.perMonth')
+  if (p === 'anual') return t('pricing.perYear')
+  return p
 }
 
 </script>
@@ -202,15 +204,15 @@ function formatPeriodo(p) {
   <div>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900">Planes de Suscripción</h2>
-        <p class="text-sm text-gray-500 mt-1">Definí los planes disponibles y qué apps incluye cada uno</p>
+        <h2 class="text-2xl font-bold text-gray-900">{{ t('pricing.plansTitle') }}</h2>
+        <p class="text-sm text-gray-500 mt-1">{{ t('pricing.plansSubtitle') }}</p>
       </div>
       <button
         @click="nuevoPlan"
         class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
       >
         <i class="pi pi-plus mr-2"></i>
-        Nuevo Plan
+        {{ t('pricing.newPlan') }}
       </button>
     </div>
 
@@ -221,7 +223,7 @@ function formatPeriodo(p) {
 
     <div v-else-if="!planes.length" class="text-center py-20 text-gray-400">
       <i class="pi pi-credit-card text-4xl mb-3"></i>
-      <p>No hay planes creados</p>
+      <p>{{ t('pricing.noPlans') }}</p>
     </div>
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -240,12 +242,12 @@ function formatPeriodo(p) {
             class="px-2 py-0.5 rounded-full text-xs font-medium shrink-0"
             :class="plan.activo ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'"
           >
-            {{ plan.activo ? 'Activo' : 'Inactivo' }}
+            {{ plan.activo ? t('pricing.active') : t('pricing.inactive') }}
           </span>
         </div>
 
         <div class="text-2xl font-bold text-gray-900 mb-1">
-          {{ plan.precio === 0 ? 'Gratis' : formatPrecio(plan.precio) }}
+          {{ plan.precio === 0 ? t('pricing.free') : formatPrecio(plan.precio) }}
           <span class="text-sm font-normal text-gray-400">{{ formatPeriodo(plan.periodo) }}</span>
         </div>
 
@@ -263,9 +265,9 @@ function formatPeriodo(p) {
 
         <div class="mt-auto flex items-center justify-between pt-3 border-t border-gray-100">
           <div class="text-xs text-gray-400 space-y-0.5">
-            <div v-if="plan.features?.max_usuarios">Hasta {{ plan.features.max_usuarios }} usuarios</div>
-            <div v-if="plan.features?.max_empresas">{{ plan.features.max_empresas }} empresa(s)</div>
-            <div v-else>Sin límite</div>
+            <div v-if="plan.features?.max_usuarios">{{ t('pricing.upToUsers', { n: plan.features.max_usuarios }) }}</div>
+            <div v-if="plan.features?.max_empresas">{{ t('pricing.nCompanies', { n: plan.features.max_empresas }) }}</div>
+            <div v-else>{{ t('pricing.unlimited') }}</div>
           </div>
 
           <div class="flex items-center gap-1">
@@ -309,13 +311,13 @@ function formatPeriodo(p) {
       >
         <div class="bg-white rounded-xl shadow-xl border border-gray-200 p-6 max-w-lg w-full mx-4">
           <h3 class="text-lg font-semibold text-gray-900 mb-6">
-            {{ editando === 'nueva' ? 'Nuevo Plan' : 'Editar Plan' }}
+            {{ editando === 'nueva' ? t('pricing.newPlan') : t('pricing.editPlan') }}
           </h3>
 
           <form @submit.prevent="guardar" class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('pricing.formName') }} *</label>
                 <input
                   v-model="form.nombre"
                   type="text"
@@ -326,7 +328,7 @@ function formatPeriodo(p) {
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Slug *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('pricing.formSlug') }} *</label>
                 <input
                   v-model="form.slug"
                   type="text"
@@ -339,7 +341,7 @@ function formatPeriodo(p) {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('pricing.formDescription') }}</label>
               <textarea
                 v-model="form.descripcion"
                 rows="2"
@@ -350,7 +352,7 @@ function formatPeriodo(p) {
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Precio</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('pricing.formPrice') }}</label>
                 <input
                   v-model.number="form.precio"
                   type="number"
@@ -361,7 +363,7 @@ function formatPeriodo(p) {
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Período</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('pricing.formPeriod') }}</label>
                 <select
                   v-model="form.periodo"
                   :disabled="isSaving"
@@ -373,7 +375,7 @@ function formatPeriodo(p) {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Apps incluidas</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('pricing.formApps') }}</label>
               <div class="flex flex-wrap gap-2">
                 <label
                   v-for="app in apps"
@@ -400,24 +402,24 @@ function formatPeriodo(p) {
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Máx. usuarios</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('pricing.formMaxUsers') }}</label>
                 <input
                   v-model.number="form.max_usuarios"
                   type="number"
                   min="0"
                   :disabled="isSaving"
-                  placeholder="0 = ilimitado"
+                  :placeholder="t('pricing.placeholderUnlimited')"
                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Máx. empresas</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('pricing.formMaxCompanies') }}</label>
                 <input
                   v-model.number="form.max_empresas"
                   type="number"
                   min="0"
                   :disabled="isSaving"
-                  placeholder="0 = ilimitado"
+                  :placeholder="t('pricing.placeholderUnlimited')"
                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
                 />
               </div>
@@ -430,7 +432,7 @@ function formatPeriodo(p) {
                 :disabled="isSaving"
                 class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
-              <span class="text-sm text-gray-700">Plan activo</span>
+              <span class="text-sm text-gray-700">{{ t('pricing.formActive') }}</span>
             </div>
 
             <div class="flex justify-end gap-3 pt-2">
@@ -448,7 +450,7 @@ function formatPeriodo(p) {
                 class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
               >
                 <i :class="isSaving ? 'pi pi-spin pi-spinner mr-1' : 'pi pi-check mr-1'"></i>
-                {{ t('common.save') }}
+                {{ isSaving ? t('common.saving') : t('common.save') }}
               </button>
             </div>
           </form>

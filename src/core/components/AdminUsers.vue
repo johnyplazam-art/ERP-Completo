@@ -50,7 +50,7 @@ function cerrarEditar() {
 
 async function guardarEditar() {
   if (!editModal.value?.nombre.trim()) {
-    toast.error('El nombre es obligatorio')
+    toast.error(t('profile.nameRequired'))
     return
   }
   editLoading.value = true
@@ -73,11 +73,11 @@ async function guardarEditar() {
       })
       .eq('id', editModal.value.usuario_id)
     if (error) throw error
-    toast.success('Perfil actualizado')
+    toast.success(t('profile.updated'))
     cerrarEditar()
     await cargarUsuarios()
   } catch (err) {
-    toast.error(err.message || 'Error al actualizar perfil')
+    toast.error(err.message || t('profile.saveError'))
   } finally {
     editLoading.value = false
   }
@@ -94,9 +94,9 @@ async function resetPassUsuario(userEmail) {
       redirectTo: `${window.location.origin}/#/reset-password`,
     })
     if (error) throw error
-    toast.success('Correo de recuperación enviado')
+    toast.success(t('admin.resetPassSent'))
   } catch (err) {
-    toast.error(err.message || 'Error al enviar correo de recuperación')
+    toast.error(err.message || t('admin.resetPassError'))
   } finally {
     resetLoading.value = false
   }
@@ -139,15 +139,15 @@ const usuariosFiltrados = computed(() => {
   return filtered
 })
 
-const panaderiaAppId = ref(null)
+const currentAppId = ref(null)
 
-async function cargarPanaderiaAppId() {
-  if (panaderiaAppId.value) return
+async function cargarAppId() {
+  if (currentAppId.value) return
   try {
-    panaderiaAppId.value = await authStore.getAppId('panaderia')
+    currentAppId.value = await authStore.getAppId(authStore.currentAppSlug)
   } catch (err) {
     console.error('[admin-users] Error cargando appId:', err)
-    panaderiaAppId.value = null
+    currentAppId.value = null
   }
 }
 
@@ -167,7 +167,7 @@ async function cargarUsuarios() {
 }
 
 async function cargarRoles() {
-  const appId = panaderiaAppId.value
+  const appId = currentAppId.value
   if (!appId) return
 
   isLoadingRoles.value = true
@@ -188,7 +188,7 @@ const rolesAsignables = computed(() => {
 })
 
 async function cambiarRol(usuarioId, empresaId, nuevoRoleId) {
-  const appId = panaderiaAppId.value
+  const appId = currentAppId.value
   if (!appId) return
 
   const key = `${usuarioId}:${empresaId}`
@@ -241,7 +241,7 @@ function confirmarRemover(eu) {
     acceptClass: 'p-button-danger',
     accept: async () => {
       try {
-        await authStore.removerUsuario(eu.usuario_id, eu.empresa_id, panaderiaAppId.value)
+        await authStore.removerUsuario(eu.usuario_id, eu.empresa_id, currentAppId.value)
         toast.success(t('users.removeSuccess'))
         await cargarUsuarios()
       } catch (err) {
@@ -262,7 +262,7 @@ async function copiarInvitacion() {
 // Init
 watch(() => authStore.user, async () => {
   if (authStore.user) {
-    await cargarPanaderiaAppId()
+    await cargarAppId()
     cargarUsuarios()
     cargarRoles()
   }
@@ -334,7 +334,7 @@ watch(() => authStore.user, async () => {
           <thead>
             <tr class="bg-gray-50 text-left text-gray-500 font-medium">
               <th class="px-4 py-3">{{ t('users.title') }}</th>
-              <th class="px-4 py-3">Email</th>
+              <th class="px-4 py-3">{{ t('auth.email') }}</th>
               <th class="px-4 py-3">{{ t('admin.company') }}</th>
               <th class="px-4 py-3">{{ t('admin.type') }}</th>
               <th class="px-4 py-3">{{ t('users.role') }}</th>
@@ -361,7 +361,7 @@ watch(() => authStore.user, async () => {
                   </div>
                   <div class="min-w-0">
                     <span class="font-medium text-gray-900 truncate block max-w-[160px]">
-                      {{ [eu.usuario?.nombre, eu.usuario?.apellido].filter(Boolean).join(' ') || 'Sin nombre' }}
+                      {{ [eu.usuario?.nombre, eu.usuario?.apellido].filter(Boolean).join(' ') || t('profile.noName') }}
                     </span>
                     <span
                       v-if="eu.usuario_id === authStore.user?.id"
@@ -439,7 +439,7 @@ watch(() => authStore.user, async () => {
                     v-if="puedeGestionarRoles"
                     @click="abrirEditar(eu)"
                     class="text-sm text-gray-500 hover:text-blue-600 transition-colors"
-                    title="Editar perfil"
+                    :title="t('common.edit')"
                   >
                     <i class="pi pi-pencil text-lg"></i>
                   </button>
@@ -450,7 +450,7 @@ watch(() => authStore.user, async () => {
                     @click="resetPassUsuario(eu.email)"
                     class="text-sm text-gray-500 hover:text-purple-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     :disabled="resetLoading"
-                    title="Enviar recuperación de contraseña"
+                    :title="t('admin.resetPassTooltip')"
                   >
                     <i class="pi pi-key text-lg"></i>
                   </button>
@@ -461,7 +461,7 @@ watch(() => authStore.user, async () => {
                     @click="toggleActivo(eu.usuario_id, eu.empresa_id, !eu.activo)"
                     class="text-sm text-gray-500 hover:text-amber-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     :disabled="loadingAction === `${eu.usuario_id}:${eu.empresa_id}`"
-                    :title="eu.activo ? 'Desactivar' : 'Activar'"
+                    :title="eu.activo ? t('users.deactivate') : t('users.activate')"
                   >
                     <i :class="eu.activo ? 'pi pi-ban' : 'pi pi-check-circle'" class="text-lg"></i>
                   </button>
@@ -472,7 +472,7 @@ watch(() => authStore.user, async () => {
                     @click="confirmarRemover(eu)"
                     class="text-sm text-gray-500 hover:text-red-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     :disabled="loadingAction === `${eu.usuario_id}:${eu.empresa_id}`"
-                    title="Remover usuario"
+                    :title="t('users.removeUser')"
                   >
                     <i class="pi pi-trash text-lg"></i>
                   </button>
@@ -494,38 +494,38 @@ watch(() => authStore.user, async () => {
         @click.self="cerrarEditar"
       >
         <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Editar perfil de usuario</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('admin.editUserTitle') }}</h3>
 
           <form @submit.prevent="guardarEditar" class="space-y-5">
             <!-- 👤 Información personal -->
             <div class="space-y-3">
-              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Información personal</h4>
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('profile.personalInfo') }}</h4>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Nombre <span class="text-red-500">*</span></label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.name') }} <span class="text-red-500">*</span></label>
                   <input v-model="editModal.nombre" type="text" required
                     class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.lastName') }}</label>
                   <input v-model="editModal.apellido" type="text"
                     class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
                 </div>
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.phone') }}</label>
                 <input v-model="editModal.phone" type="text"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Idioma</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('language.select') }}</label>
                 <select v-model="editModal.idioma"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
-                  <option value="es">Español</option>
-                  <option value="en">English</option>
+                  <option value="es">{{ t('language.es') }}</option>
+                  <option value="en">{{ t('language.en') }}</option>
                 </select>
               </div>
             </div>
@@ -534,31 +534,31 @@ watch(() => authStore.user, async () => {
 
             <!-- 🪪 Documentación -->
             <div class="space-y-3">
-              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Documentación</h4>
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('profile.documentation') }}</h4>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Tipo documento</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.documentType') }}</label>
                   <select v-model="editModal.tipo_documento"
                     class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
                     <option value="DNI">DNI</option>
-                    <option value="CI">Cédula</option>
-                    <option value="Pasaporte">Pasaporte</option>
+                    <option value="CI">{{ t('profile.documentTypeCi') }}</option>
+                    <option value="Pasaporte">{{ t('profile.documentTypePassport') }}</option>
                     <option value="CUIT">CUIT</option>
                     <option value="RUT">RUT</option>
                     <option value="NIF">NIF</option>
-                    <option value="Otro">Otro</option>
+                    <option value="Otro">{{ t('profile.documentTypeOther') }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Número documento</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.documentNumber') }}</label>
                   <input v-model="editModal.documento" type="text"
                     class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
                 </div>
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.birthDate') }}</label>
                 <input v-model="editModal.fecha_nacimiento" type="date"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
@@ -568,44 +568,44 @@ watch(() => authStore.user, async () => {
 
             <!-- 📍 Dirección -->
             <div class="space-y-3">
-              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dirección</h4>
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('profile.address') }}</h4>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-                <input v-model="editModal.direccion" type="text" placeholder="Calle y número"
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.address') }}</label>
+                <input v-model="editModal.direccion" type="text" :placeholder="t('admin.streetPlaceholder')"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.city') }}</label>
                   <input v-model="editModal.ciudad" type="text"
                     class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.province') }}</label>
                   <input v-model="editModal.provincia" type="text"
                     class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
                 </div>
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">País</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.country') }}</label>
                 <select v-model="editModal.pais"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
-                  <option value="AR">Argentina</option>
-                  <option value="UY">Uruguay</option>
-                  <option value="CL">Chile</option>
-                  <option value="PY">Paraguay</option>
-                  <option value="BO">Bolivia</option>
-                  <option value="PE">Perú</option>
-                  <option value="EC">Ecuador</option>
-                  <option value="CO">Colombia</option>
-                  <option value="VE">Venezuela</option>
-                  <option value="MX">México</option>
-                  <option value="ES">España</option>
-                  <option value="US">Estados Unidos</option>
-                  <option value="Otro">Otro</option>
+                  <option value="AR">{{ t('countries.AR') }}</option>
+                  <option value="UY">{{ t('countries.UY') }}</option>
+                  <option value="CL">{{ t('countries.CL') }}</option>
+                  <option value="PY">{{ t('countries.PY') }}</option>
+                  <option value="BO">{{ t('countries.BO') }}</option>
+                  <option value="PE">{{ t('countries.PE') }}</option>
+                  <option value="EC">{{ t('countries.EC') }}</option>
+                  <option value="CO">{{ t('countries.CO') }}</option>
+                  <option value="VE">{{ t('countries.VE') }}</option>
+                  <option value="MX">{{ t('countries.MX') }}</option>
+                  <option value="ES">{{ t('countries.ES') }}</option>
+                  <option value="US">{{ t('countries.US') }}</option>
+                  <option value="Otro">{{ t('countries.Other') }}</option>
                 </select>
               </div>
             </div>
@@ -614,11 +614,11 @@ watch(() => authStore.user, async () => {
 
             <!-- 💼 Laboral -->
             <div class="space-y-3">
-              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Información laboral</h4>
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('profile.employment') }}</h4>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Puesto / Cargo</label>
-                <input v-model="editModal.puesto" type="text" placeholder="Ej: Panadero, Administrador"
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.position') }}</label>
+                <input v-model="editModal.puesto" type="text" :placeholder="t('admin.positionPlaceholder')"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
             </div>
@@ -626,12 +626,12 @@ watch(() => authStore.user, async () => {
             <div class="flex items-center gap-3 pt-2">
               <button type="button" @click="cerrarEditar"
                 class="flex-1 touch-input text-gray-600 font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-gray-100 transition-colors">
-                Cancelar
+                {{ t('common.cancel') }}
               </button>
               <button type="submit" :disabled="editLoading"
                 class="flex-1 touch-input flex items-center justify-center bg-primary-600 text-white font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 <i v-if="editLoading" class="pi pi-spin pi-spinner mr-2"></i>
-                {{ editLoading ? 'Guardando...' : 'Guardar cambios' }}
+                {{ editLoading ? t('common.saving') : t('common.saveChanges') }}
               </button>
             </div>
           </form>

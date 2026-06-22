@@ -16,6 +16,11 @@ export const useAuthStore = defineStore('auth', () => {
   const empresaUsuarios = ref([])
   const permisos = ref([])
   const rolActual = ref(null)
+  const currentAppSlug = ref('panaderia')
+
+  function setCurrentApp(slug) {
+    currentAppSlug.value = slug
+  }
 
   const isAuthenticated = computed(() => !!user.value && !!session.value)
   const userEmail = computed(() => user.value?.email ?? '')
@@ -34,15 +39,16 @@ export const useAuthStore = defineStore('auth', () => {
     return permisos.value.includes(accion)
   }
 
-  async function cargarPermisos(empresaId) {
+  async function cargarPermisos(empresaId, appSlug) {
     if (!user.value || !empresaId) {
       permisos.value = []
       return
     }
+    const slug = appSlug || currentAppSlug.value
     try {
       const { data } = await supabase.rpc('get_user_permissions', {
         p_user_id: user.value.id,
-        p_app_slug: 'panaderia',
+        p_app_slug: slug,
         p_empresa_id: empresaId,
       })
       permisos.value = (data ?? []).map(p => p.action_name)
@@ -52,13 +58,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function cargarRolActual() {
+  async function cargarRolActual(appSlug) {
     if (!user.value || !currentEmpresaId.value) {
       rolActual.value = null
       return
     }
+    const slug = appSlug || currentAppSlug.value
     try {
-      const appId = await getAppId('panaderia')
+      const appId = await getAppId(slug)
       if (!appId) return
       const { data } = await supabase
         .from('user_roles')
@@ -102,7 +109,7 @@ export const useAuthStore = defineStore('auth', () => {
         })
 
       // Restaurar última empresa activa del localStorage
-      const savedId = localStorage.getItem('panaderia_empresa_id')
+      const savedId = localStorage.getItem('current_empresa_id') || localStorage.getItem('panaderia_empresa_id')
       if (savedId && empresas.value.some(e => e.id === Number(savedId))) {
         const emp = empresas.value.find(e => e.id === Number(savedId))
         currentEmpresa.value = emp
@@ -136,6 +143,7 @@ export const useAuthStore = defineStore('auth', () => {
       // Restaurar idioma guardado
       if (data?.idioma) {
         i18n.global.locale.value = data.idioma
+        localStorage.setItem('locale', data.idioma)
       }
     } catch (err) {
       console.error('[auth] Error cargando perfil:', err)
@@ -145,12 +153,12 @@ export const useAuthStore = defineStore('auth', () => {
   async function seleccionarEmpresa(empresa) {
     currentEmpresa.value = empresa
     if (empresa) {
-      localStorage.setItem('panaderia_empresa_id', String(empresa.id))
+      localStorage.setItem('current_empresa_id', String(empresa.id))
       currentIndustria.value = empresa.industria_principal
       await cargarPermisos(empresa.id)
       await cargarRolActual()
     } else {
-      localStorage.removeItem('panaderia_empresa_id')
+      localStorage.removeItem('current_empresa_id')
       permisos.value = []
       rolActual.value = null
       currentIndustria.value = null
@@ -301,8 +309,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function cargarUsuariosMultiEmpresa(empresaId = null) {
+  async function cargarUsuariosMultiEmpresa(empresaId = null, appSlug) {
     if (!user.value) return []
+    const slug = appSlug || currentAppSlug.value
     try {
       // Base: empresa_usuarios + perfiles
       let query = supabase
@@ -324,7 +333,7 @@ export const useAuthStore = defineStore('auth', () => {
       const userIds = [...new Set(memberships.map(m => m.usuario_id))]
 
       // Roles actuales desde user_roles
-      const appId = await getAppId('panaderia')
+      const appId = await getAppId(slug)
       const { data: userRoles } = await supabase
         .from('user_roles')
         .select('user_id, empresa_id, role_id, role:roles(slug, name)')
@@ -381,6 +390,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (datos.idioma !== undefined) {
       perfil.value.idioma = datos.idioma
       i18n.global.locale.value = datos.idioma
+      localStorage.setItem('locale', datos.idioma)
     }
   }
 
@@ -443,6 +453,8 @@ export const useAuthStore = defineStore('auth', () => {
     empresaUsuarios,
     permisos,
     rolActual,
+    currentAppSlug,
+    setCurrentApp,
     isAuthenticated,
     userEmail,
     currentEmpresaId,

@@ -6,6 +6,8 @@ import { toast } from 'vue-sonner'
 import DataState from '@/core/components/DataState.vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useAuthStore } from '@/core/store/auth'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const queryClient = useQueryClient()
 const authStore = useAuthStore()
@@ -204,30 +206,30 @@ const puedeCancelar = (estado) => {
         <div v-if="expandedRow === orden.id" class="p-4 animate-fadeIn">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-3">
             <div>
-              <span class="text-gray-500">Programada:</span>
+              <span class="text-gray-500">{{ t('produccion.scheduled') }}</span>
               <p class="font-medium">{{ orden.fecha_programada }}</p>
             </div>
             <div>
-              <span class="text-gray-500">Responsable:</span>
+              <span class="text-gray-500">{{ t('produccion.responsible') }}</span>
               <p class="font-medium">{{ orden.responsable?.nombre || '-' }}</p>
             </div>
             <div v-if="orden.fecha_inicio">
-              <span class="text-gray-500">Inicio:</span>
+              <span class="text-gray-500">{{ t('produccion.start') }}</span>
               <p class="font-medium">{{ new Date(orden.fecha_inicio).toLocaleString() }}</p>
             </div>
             <div v-if="orden.fecha_fin">
-              <span class="text-gray-500">Fin:</span>
+              <span class="text-gray-500">{{ t('produccion.end') }}</span>
               <p class="font-medium">{{ new Date(orden.fecha_fin).toLocaleString() }}</p>
             </div>
             <div v-if="orden.costo_total_estimado > 0">
-              <span class="text-gray-500">Costo est.:</span>
+              <span class="text-gray-500">{{ t('produccion.estimatedCost') }}</span>
               <p class="font-medium tabular-nums">$ {{ Number(orden.costo_total_estimado).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
             </div>
           </div>
 
           <!-- Details -->
           <div v-if="orden.detalles?.length" class="border-t pt-3">
-            <p class="text-xs text-gray-500 mb-2">Productos:</p>
+            <p class="text-xs text-gray-500 mb-2">{{ t('produccion.products') }}</p>
             <div v-for="det in orden.detalles" :key="det.id" class="flex items-center justify-between py-1">
               <span class="text-sm font-medium">{{ det.producto?.nombre }}</span>
               <span class="text-sm text-gray-600">
@@ -238,7 +240,7 @@ const puedeCancelar = (estado) => {
 
           <!-- Matteria prima calculada -->
           <div v-if="calculosMap[orden.id]" class="border-t pt-3 mt-3">
-            <p class="text-xs text-gray-500 mb-2">Materia prima necesaria:</p>
+            <p class="text-xs text-gray-500 mb-2">{{ t('produccion.rawMaterials') }}</p>
             <div v-if="calculosMap[orden.id].loading" class="text-sm text-gray-400">
               <i class="pi pi-spin pi-spinner mr-1"></i> Calculando...
             </div>
@@ -249,8 +251,8 @@ const puedeCancelar = (estado) => {
               <table class="w-full text-sm">
                 <thead>
                   <tr class="text-left text-gray-500 font-medium text-xs">
-                    <th class="pb-1 pr-4">Ingrediente</th>
-                    <th class="pb-1 text-right">Cantidad</th>
+                    <th class="pb-1 pr-4">{{ t('produccion.formIngredient') }}</th>
+                    <th class="pb-1 text-right">{{ t('produccion.formTotalQty') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">

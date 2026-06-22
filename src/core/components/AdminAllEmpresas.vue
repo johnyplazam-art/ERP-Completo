@@ -4,8 +4,10 @@ import { supabase } from '@/core/supabase'
 import { useAuthStore } from '@/core/store/auth'
 import { toast } from 'vue-sonner'
 import { formatCurrency, getMonedas } from '@/core/composables/useCurrency'
+import { useI18n } from 'vue-i18n'
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const empresas = ref([])
 const industrias = ref([])
@@ -100,7 +102,7 @@ async function cargarEmpresas() {
     }))
   } catch (err) {
     console.error('[admin-empresas] Error:', err)
-    toast.error('Error al cargar empresas')
+    toast.error(t('companies.loadError'))
   } finally {
     isLoading.value = false
   }
@@ -168,11 +170,11 @@ function cerrarModal() {
 
 async function guardarEmpresa() {
   if (!formData.value.nombre.trim()) {
-    modalError.value = 'El nombre es obligatorio'
+    modalError.value = t('companies.nameRequired')
     return
   }
   if (!formData.value.slug.trim()) {
-    modalError.value = 'El slug es obligatorio'
+    modalError.value = t('companies.slugRequired')
     return
   }
 
@@ -212,18 +214,18 @@ async function guardarEmpresa() {
         .update(payload)
         .eq('id', formData.value._id)
       if (error) throw error
-      toast.success('Empresa actualizada')
+      toast.success(t('companies.updated'))
     } else {
       const { error } = await supabase
         .from('empresas')
         .insert(payload)
       if (error) throw error
-      toast.success('Empresa creada')
+      toast.success(t('companies.created'))
     }
     cerrarModal()
     await cargarEmpresas()
   } catch (err) {
-    modalError.value = err.message || 'Error al guardar'
+    modalError.value = err.message || t('companies.saveError')
   } finally {
     isSaving.value = false
   }
@@ -239,9 +241,9 @@ async function toggleActiva(empresa) {
       .eq('id', empresa.id)
     if (error) throw error
     empresa.activa = nueva
-    toast.success(nueva ? 'Empresa activada' : 'Empresa desactivada')
+    toast.success(nueva ? t('companies.activated') : t('companies.deactivated'))
   } catch (err) {
-    toast.error(err.message || 'Error al cambiar estado')
+    toast.error(err.message || t('companies.toggleError'))
   }
 }
 
@@ -260,12 +262,12 @@ async function eliminarEmpresa() {
       .delete()
       .eq('id', empresaAEliminar.value.id)
     if (error) throw error
-    toast.success('Empresa eliminada')
+    toast.success(t('companies.deleted'))
     showDeleteConfirm.value = false
     empresaAEliminar.value = null
     await cargarEmpresas()
   } catch (err) {
-    toast.error(err.message || 'Error al eliminar')
+    toast.error(err.message || t('companies.deleteError'))
   } finally {
     isDeleting.value = false
   }
@@ -279,14 +281,14 @@ cargarEmpresas()
   <div>
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Todas las Empresas</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('companies.title') }}</h2>
       <div class="flex items-center gap-3">
         <div class="relative">
           <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Buscar empresa..."
+            :placeholder="t('companies.searchPlaceholder')"
             class="pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-primary-500 w-64"
           />
         </div>
@@ -294,7 +296,7 @@ cargarEmpresas()
           @click="abrirModalCrear"
           class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
         >
-          <i class="pi pi-plus mr-2"></i>Nueva Empresa
+          <i class="pi pi-plus mr-2"></i>{{ t('companies.newCompany') }}
         </button>
       </div>
     </div>
@@ -302,15 +304,15 @@ cargarEmpresas()
     <!-- Stats -->
     <div class="grid grid-cols-3 gap-4 mb-6">
       <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Total</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">{{ t('companies.total') }}</p>
         <p class="text-2xl font-bold text-gray-900 mt-1">{{ empresas.length }}</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Activas</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">{{ t('companies.activeCount') }}</p>
         <p class="text-2xl font-bold text-green-600 mt-1">{{ empresas.filter(e => e.activa !== false).length }}</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Usuarios totales</p>
+        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">{{ t('companies.totalUsers') }}</p>
         <p class="text-2xl font-bold text-gray-900 mt-1">{{ totalUsuarios }}</p>
       </div>
     </div>
@@ -318,13 +320,13 @@ cargarEmpresas()
     <!-- Loading -->
     <div v-if="isLoading" class="text-center py-20 text-gray-400">
       <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-      <p>Cargando empresas...</p>
+      <p>{{ t('companies.loading') }}</p>
     </div>
 
     <!-- Empty -->
     <div v-else-if="!empresasFiltradas.length" class="text-center py-20 text-gray-400">
       <i class="pi pi-building text-4xl mb-3"></i>
-      <p>No se encontraron empresas</p>
+      <p>{{ t('companies.noCompanies') }}</p>
     </div>
 
     <!-- Grid -->
@@ -379,7 +381,7 @@ cargarEmpresas()
             </div>
             <div v-else class="flex items-center gap-2 text-sm text-gray-400">
               <i class="pi pi-credit-card text-xs"></i>
-              <span>Sin suscripción</span>
+              <span>{{ t('companies.noSubscription') }}</span>
             </div>
           </div>
         </div>
@@ -399,13 +401,13 @@ cargarEmpresas()
               @click="abrirModalEditar(emp)"
               class="text-xs text-primary-600 hover:text-primary-700 font-medium"
             >
-              <i class="pi pi-pencil mr-1"></i>Editar
+              <i class="pi pi-pencil mr-1"></i>{{ t('common.edit') }}
             </button>
             <button
               @click="confirmarEliminar(emp)"
               class="text-xs text-red-500 hover:text-red-700 font-medium"
             >
-              <i class="pi pi-trash mr-1"></i>Eliminar
+              <i class="pi pi-trash mr-1"></i>{{ t('common.delete') }}
             </button>
           </div>
         </div>
@@ -421,21 +423,21 @@ cargarEmpresas()
       >
         <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-4" @click.stop>
           <h3 class="text-lg font-semibold text-gray-900">
-            {{ modalEditando ? 'Editar Empresa' : 'Nueva Empresa' }}
+            {{ modalEditando ? t('companies.editCompany') : t('companies.newCompany') }}
           </h3>
 
           <!-- 📋 Información básica -->
           <div class="space-y-3">
-            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Información básica</h4>
+            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('companies.formBasicInfo') }}</h4>
 
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Nombre *</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('profile.name') }} *</label>
                 <input v-model="formData.nombre" @input="autoSlug(formData.nombre)" type="text" required
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Slug *</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('companies.formSlug') }} *</label>
                 <input v-model="formData.slug" type="text" required
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
@@ -443,15 +445,15 @@ cargarEmpresas()
 
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Industria principal</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('companies.formIndustry') }}</label>
                 <select v-model="formData.industria_principal"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
-                  <option :value="null">Sin industria</option>
+                  <option :value="null">{{ t('companies.formNoIndustry') }}</option>
                   <option v-for="ind in industrias" :key="ind.id" :value="ind.id">{{ ind.nombre }}</option>
                 </select>
               </div>
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Moneda</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('companies.formCurrency') }}</label>
                 <select v-model="formData.moneda"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
                   <option v-for="m in getMonedas()" :key="m.code" :value="m.code">{{ m.label }}</option>
@@ -469,17 +471,17 @@ cargarEmpresas()
 
           <!-- 💼 Información fiscal -->
           <div class="space-y-3">
-            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Información fiscal</h4>
+            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('companies.formTaxInfo') }}</h4>
 
             <div class="space-y-1">
-              <label class="block text-sm font-medium text-gray-700">Razón social</label>
+              <label class="block text-sm font-medium text-gray-700">{{ t('companies.formBusinessName') }}</label>
               <input v-model="formData.razon_social" type="text" placeholder="Razón social (si difiere del nombre)"
                 class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Tipo documento</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('profile.documentType') }}</label>
                 <select v-model="formData.tipo_documento"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
                   <option value="CUIT">CUIT</option>
@@ -490,11 +492,11 @@ cargarEmpresas()
                   <option value="RIF">RIF</option>
                   <option value="DNI">DNI</option>
                   <option value="NIF">NIF</option>
-                  <option value="Otro">Otro</option>
+                  <option value="Otro">{{ t('companies.formOther') }}</option>
                 </select>
               </div>
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Número documento</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('profile.documentNumber') }}</label>
                 <input v-model="formData.documento" type="text" placeholder="XX-XXXXXXXX-X"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
@@ -505,22 +507,22 @@ cargarEmpresas()
 
           <!-- 📍 Dirección -->
           <div class="space-y-3">
-            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dirección</h4>
+            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('companies.formAddress') }}</h4>
 
             <div class="space-y-1">
-              <label class="block text-sm font-medium text-gray-700">Dirección</label>
+              <label class="block text-sm font-medium text-gray-700">{{ t('profile.address') }}</label>
               <input v-model="formData.direccion" type="text" placeholder="Calle y número"
                 class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Ciudad</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('profile.city') }}</label>
                 <input v-model="formData.ciudad" type="text"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Provincia</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('profile.province') }}</label>
                 <input v-model="formData.provincia" type="text"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
@@ -528,26 +530,26 @@ cargarEmpresas()
 
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">País</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('profile.country') }}</label>
                 <select v-model="formData.pais"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm">
-                  <option value="AR">Argentina</option>
-                  <option value="UY">Uruguay</option>
-                  <option value="CL">Chile</option>
-                  <option value="PY">Paraguay</option>
-                  <option value="BO">Bolivia</option>
-                  <option value="PE">Perú</option>
-                  <option value="EC">Ecuador</option>
-                  <option value="CO">Colombia</option>
-                  <option value="VE">Venezuela</option>
-                  <option value="MX">México</option>
-                  <option value="ES">España</option>
-                  <option value="US">Estados Unidos</option>
-                  <option value="Otro">Otro</option>
+                  <option value="AR">{{ t('countries.AR') }}</option>
+                  <option value="UY">{{ t('countries.UY') }}</option>
+                  <option value="CL">{{ t('countries.CL') }}</option>
+                  <option value="PY">{{ t('countries.PY') }}</option>
+                  <option value="BO">{{ t('countries.BO') }}</option>
+                  <option value="PE">{{ t('countries.PE') }}</option>
+                  <option value="EC">{{ t('countries.EC') }}</option>
+                  <option value="CO">{{ t('countries.CO') }}</option>
+                  <option value="VE">{{ t('countries.VE') }}</option>
+                  <option value="MX">{{ t('countries.MX') }}</option>
+                  <option value="ES">{{ t('countries.ES') }}</option>
+                  <option value="US">{{ t('countries.US') }}</option>
+                  <option value="Otro">{{ t('countries.Other') }}</option>
                 </select>
               </div>
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Código postal</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('companies.formPostalCode') }}</label>
                 <input v-model="formData.codigo_postal" type="text"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
@@ -558,23 +560,23 @@ cargarEmpresas()
 
           <!-- 📞 Contacto -->
           <div class="space-y-3">
-            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Contacto</h4>
+            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('companies.formContact') }}</h4>
 
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Teléfono</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('profile.phone') }}</label>
                 <input v-model="formData.telefono" type="tel" placeholder="+54 11 1234-5678"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
               <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Email</label>
+                <label class="block text-sm font-medium text-gray-700">{{ t('auth.email') }}</label>
                 <input v-model="formData.email" type="email" placeholder="empresa@ejemplo.com"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
               </div>
             </div>
 
             <div class="space-y-1">
-              <label class="block text-sm font-medium text-gray-700">Sitio web</label>
+              <label class="block text-sm font-medium text-gray-700">{{ t('companies.formWebsite') }}</label>
               <input v-model="formData.website" type="url" placeholder="https://ejemplo.com"
                 class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
             </div>
@@ -584,13 +586,13 @@ cargarEmpresas()
 
           <!-- 🖼️ Branding -->
           <div class="space-y-3">
-            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Branding</h4>
+            <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('companies.formBranding') }}</h4>
 
             <div class="space-y-1">
-              <label class="block text-sm font-medium text-gray-700">Logo URL</label>
+              <label class="block text-sm font-medium text-gray-700">{{ t('companies.formLogoUrl') }}</label>
               <input v-model="formData.logo_url" type="url" placeholder="https://ejemplo.com/logo.png"
                 class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
-              <p class="text-xs text-gray-400">URL pública del logo de la empresa</p>
+              <p class="text-xs text-gray-400">{{ t('companies.formLogoUrlHint') }}</p>
             </div>
           </div>
 
@@ -603,7 +605,7 @@ cargarEmpresas()
               type="button"
               @click="cerrarModal"
               class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
-            >Cancelar</button>
+            >{{ t('common.cancel') }}</button>
             <button
               type="button"
               @click="guardarEmpresa"
@@ -611,7 +613,7 @@ cargarEmpresas()
               class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm"
             >
               <i v-if="isSaving" class="pi pi-spin pi-spinner mr-1"></i>
-              {{ modalEditando ? 'Guardar' : 'Crear' }}
+              {{ t('common.save') }}
             </button>
           </div>
         </div>
@@ -626,23 +628,22 @@ cargarEmpresas()
         @click.self="showDeleteConfirm = false"
       >
         <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4" @click.stop>
-          <h3 class="text-lg font-semibold text-gray-900">Eliminar empresa</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ t('companies.deleteTitle') }}</h3>
           <p class="text-sm text-gray-600">
-            ¿Estás seguro de eliminar <strong>{{ empresaAEliminar?.nombre }}</strong>?
-            Esta acción no se puede deshacer.
+            {{ t('companies.deleteConfirm', { nombre: empresaAEliminar?.nombre }) }}
           </p>
           <div class="flex justify-end gap-3">
             <button
               @click="showDeleteConfirm = false"
               class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
-            >Cancelar</button>
+            >{{ t('common.cancel') }}</button>
             <button
               @click="eliminarEmpresa"
               :disabled="isDeleting"
               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm"
             >
               <i v-if="isDeleting" class="pi pi-spin pi-spinner mr-1"></i>
-              Eliminar
+              {{ t('common.delete') }}
             </button>
           </div>
         </div>

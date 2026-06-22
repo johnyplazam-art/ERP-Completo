@@ -36,18 +36,20 @@ function getUserAgent() {
  *   })
  *
  * Actions comunes: INSERT, UPDATE, DELETE, LOGIN, LOGIN_FAIL, EXPORT, CANCEL
+ * appSlug: opcional, por defecto usa authStore.currentAppSlug
  */
 export function useAudit() {
   const authStore = useAuthStore()
 
   async function log(
     action,
-    { table, entityId, oldValue, newValue, trace, sourceIp } = {},
+    { table, entityId, oldValue, newValue, trace, sourceIp, appSlug } = {},
   ) {
     if (!authStore.user) return
 
     try {
-      const appId = await authStore.getAppId('panaderia')
+      const slug = appSlug || authStore.currentAppSlug
+      const appId = await authStore.getAppId(slug)
 
       await supabase.from('audit_logs').insert({
         user_id: authStore.user.id,

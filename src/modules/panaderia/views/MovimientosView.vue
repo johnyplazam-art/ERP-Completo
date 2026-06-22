@@ -16,6 +16,8 @@ import {
   fetchPrecioCostoProducto,
 } from '../composables/database'
 import PaginatorBar from '../components/PaginatorBar.vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const authStore = useAuthStore()
 const empresaId = computed(() => authStore.currentEmpresaId)
@@ -173,13 +175,13 @@ const formatCantidad = (val, unit) => {
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Movimientos de Inventario</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('movimientos.title') }}</h2>
       <button
         @click="abrirNuevo"
         class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
       >
         <i class="pi pi-plus mr-2"></i>
-        Nuevo Movimiento
+        {{ t('movimientos.modalTitle') }}
       </button>
     </div>
 
@@ -203,7 +205,7 @@ const formatCantidad = (val, unit) => {
         v-model="filterIngredienteId"
         class="touch-input rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 text-sm"
       >
-        <option :value="null">Todos los ingredientes</option>
+        <option :value="null">{{ t('movimientos.filterAllIngredients') }}</option>
         <option v-for="i in ingredientes" :key="i.id" :value="i.id">{{ i.nombre }}</option>
       </select>
       <select
@@ -211,18 +213,18 @@ const formatCantidad = (val, unit) => {
         v-model="filterProductoId"
         class="touch-input rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 text-sm"
       >
-        <option :value="null">Todos los productos</option>
+        <option :value="null">{{ t('movimientos.filterAllProducts') }}</option>
         <option v-for="p in productos" :key="p.id" :value="p.id">{{ p.nombre }}</option>
       </select>
       <select
         v-model="filterTipo"
         class="touch-input rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 text-sm"
       >
-        <option value="">Todos los tipos</option>
-        <option value="ingreso">Ingreso</option>
-        <option value="egreso">Egreso</option>
-        <option value="ajuste">Ajuste</option>
-        <option value="merma">Merma</option>
+        <option value="">{{ t('movimientos.filterAllTypes') }}</option>
+        <option value="ingreso">{{ t('movimientos.labelIngreso') }}</option>
+        <option value="egreso">{{ t('movimientos.labelEgreso') }}</option>
+        <option value="ajuste">{{ t('movimientos.labelAjuste') }}</option>
+        <option value="merma">{{ t('movimientos.labelMerma') }}</option>
       </select>
     </div>
 
@@ -240,14 +242,14 @@ const formatCantidad = (val, unit) => {
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-gray-50 text-left text-gray-500 font-medium">
-                <th class="px-4 py-3">Fecha</th>
-                <th class="px-4 py-3">Ingrediente</th>
-                <th class="px-4 py-3">Tipo</th>
-                <th class="px-4 py-3">Cantidad</th>
-                <th class="px-4 py-3">Unidad</th>
-                <th class="px-4 py-3 text-right">Precio</th>
-                <th class="px-4 py-3 text-right">Valor</th>
-                <th class="px-4 py-3">Nota</th>
+                <th class="px-4 py-3">{{ t('movimientos.date') }}</th>
+                <th class="px-4 py-3">{{ t('movimientos.ingredient') }}</th>
+                <th class="px-4 py-3">{{ t('movimientos.type') }}</th>
+                <th class="px-4 py-3">{{ t('movimientos.quantity') }}</th>
+                <th class="px-4 py-3">{{ t('movimientos.unit') }}</th>
+                <th class="px-4 py-3 text-right">{{ t('movimientos.price') }}</th>
+                <th class="px-4 py-3 text-right">{{ t('movimientos.value') }}</th>
+                <th class="px-4 py-3">{{ t('movimientos.note') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -303,13 +305,13 @@ const formatCantidad = (val, unit) => {
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-gray-50 text-left text-gray-500 font-medium">
-              <th class="px-4 py-3">Fecha</th>
-              <th class="px-4 py-3">Producto</th>
-              <th class="px-4 py-3">Tipo</th>
-              <th class="px-4 py-3">Cantidad</th>
-              <th class="px-4 py-3 text-right">Precio</th>
-              <th class="px-4 py-3 text-right">Valor</th>
-              <th class="px-4 py-3">Nota</th>
+              <th class="px-4 py-3">{{ t('movimientos.date') }}</th>
+              <th class="px-4 py-3">{{ t('movimientos.product') }}</th>
+              <th class="px-4 py-3">{{ t('movimientos.type') }}</th>
+              <th class="px-4 py-3">{{ t('movimientos.quantity') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('movimientos.price') }}</th>
+              <th class="px-4 py-3 text-right">{{ t('movimientos.value') }}</th>
+              <th class="px-4 py-3">{{ t('movimientos.note') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
@@ -352,7 +354,7 @@ const formatCantidad = (val, unit) => {
     >
       <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">Nuevo Movimiento</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ t('movimientos.modalTitle') }}</h3>
           <button @click="showModal = false" class="text-gray-400 hover:text-gray-600">
             <i class="pi pi-times text-xl"></i>
           </button>
@@ -360,47 +362,47 @@ const formatCantidad = (val, unit) => {
 
         <form @submit.prevent="guardarMovimiento" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('movimientos.type') }} <span class="text-red-500">*</span></label>
             <select
               v-model="newForm.tipo"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option value="ingreso">Ingreso</option>
-              <option value="egreso">Egreso</option>
-              <option value="ajuste">Ajuste</option>
-              <option value="merma">Merma</option>
+              <option value="ingreso">{{ t('movimientos.labelIngreso') }}</option>
+              <option value="egreso">{{ t('movimientos.labelEgreso') }}</option>
+              <option value="ajuste">{{ t('movimientos.labelAjuste') }}</option>
+              <option value="merma">{{ t('movimientos.labelMerma') }}</option>
             </select>
           </div>
 
           <div v-if="activeTab === 'mp'">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Ingrediente <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('movimientos.ingredient') }} <span class="text-red-500">*</span></label>
             <select
               v-model="newForm.ingrediente_id"
               @change="onIngredienteSelected"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option value="" disabled>Seleccionar ingrediente...</option>
+              <option value="" disabled>{{ t('movimientos.selectIngredient') }}</option>
               <option v-for="i in ingredientes" :key="i.id" :value="i.id">{{ i.nombre }}</option>
             </select>
           </div>
 
           <div v-if="activeTab === 'pt'">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Producto <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('movimientos.product') }} <span class="text-red-500">*</span></label>
             <select
               v-model="newForm.producto_id"
               @change="onProductoSelected"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option value="" disabled>Seleccionar producto...</option>
+              <option value="" disabled>{{ t('movimientos.selectProduct') }}</option>
               <option v-for="p in productos" :key="p.id" :value="p.id">{{ p.nombre }}</option>
             </select>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('movimientos.quantity') }} <span class="text-red-500">*</span></label>
             <input
               v-model.number="newForm.cantidad"
               type="number"
@@ -412,7 +414,7 @@ const formatCantidad = (val, unit) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Precio unitario</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('movimientos.unitPrice') }}</label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
               <input
@@ -427,7 +429,7 @@ const formatCantidad = (val, unit) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nota</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('movimientos.note') }}</label>
             <input
               v-model="newForm.nota"
               type="text"

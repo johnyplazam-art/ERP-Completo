@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 import {
   useCategoriasIngredienteQuery,
   useCreateCategoriaIngredienteMutation,
@@ -27,13 +29,13 @@ import CrudTable from '../components/CrudTable.vue'
 
 // ─── Tabs ─────────────────────────────────────────────
 
-const tabs = [
-  { key: 'categorias-ingrediente', label: 'Cat. Ingredientes', icon: 'pi pi-tag' },
-  { key: 'categorias-receta', label: 'Cat. Recetas', icon: 'pi pi-book' },
-  { key: 'categorias-producto', label: 'Cat. Productos', icon: 'pi pi-box' },
-  { key: 'unidades-medida', label: 'Unidades', icon: 'pi pi-sliders-v' },
-  { key: 'conversiones', label: 'Conversiones', icon: 'pi pi-arrow-right-arrow-left' },
-]
+const tabs = computed(() => [
+  { key: 'categorias-ingrediente', label: t('catalogos.categoriasIngrediente'), icon: 'pi pi-tag' },
+  { key: 'categorias-receta', label: t('catalogos.categoriasReceta'), icon: 'pi pi-book' },
+  { key: 'categorias-producto', label: t('catalogos.categoriasProducto'), icon: 'pi pi-box' },
+  { key: 'unidades-medida', label: t('catalogos.unidades'), icon: 'pi pi-sliders-v' },
+  { key: 'conversiones', label: t('catalogos.conversiones'), icon: 'pi pi-arrow-right-arrow-left' },
+])
 
 const activeTab = ref('categorias-ingrediente')
 const tableRef = ref(null)
@@ -89,61 +91,61 @@ const activeMutations = computed(() => mutations[activeTab.value])
 
 // ─── Config por tab ───────────────────────────────────
 
-const tabConfigs = {
+const tabConfigs = computed(() => ({
   'categorias-ingrediente': {
-    headers: ['Nombre', 'Descripción'],
+    headers: [t('catalogos.nombre'), t('catalogos.descripcion')],
     fieldRender: (item) => [item.nombre, item.descripcion || '-'],
     fields: [
-      { key: 'nombre', label: 'Nombre', type: 'text', required: true, placeholder: 'Ej: Harinas y derivados' },
-      { key: 'descripcion', label: 'Descripción', type: 'text', required: false, placeholder: 'Descripción opcional' },
+      { key: 'nombre', label: t('catalogos.nombre'), type: 'text', required: true, placeholder: 'Ej: Harinas y derivados' },
+      { key: 'descripcion', label: t('catalogos.descripcion'), type: 'text', required: false, placeholder: 'Descripción opcional' },
     ],
     tableName: 'categorias_ingrediente',
   },
   'categorias-receta': {
-    headers: ['Nombre', 'Descripción'],
+    headers: [t('catalogos.nombre'), t('catalogos.descripcion')],
     fieldRender: (item) => [item.nombre, item.descripcion || '-'],
     fields: [
-      { key: 'nombre', label: 'Nombre', type: 'text', required: true, placeholder: 'Ej: Panes artesanales' },
-      { key: 'descripcion', label: 'Descripción', type: 'text', required: false, placeholder: 'Descripción opcional' },
+      { key: 'nombre', label: t('catalogos.nombre'), type: 'text', required: true, placeholder: 'Ej: Panes artesanales' },
+      { key: 'descripcion', label: t('catalogos.descripcion'), type: 'text', required: false, placeholder: 'Descripción opcional' },
     ],
     tableName: 'categorias_receta',
   },
   'categorias-producto': {
-    headers: ['Nombre', 'Descripción'],
+    headers: [t('catalogos.nombre'), t('catalogos.descripcion')],
     fieldRender: (item) => [item.nombre, item.descripcion || '-'],
     fields: [
-      { key: 'nombre', label: 'Nombre', type: 'text', required: true, placeholder: 'Ej: Panes' },
-      { key: 'descripcion', label: 'Descripción', type: 'text', required: false, placeholder: 'Descripción opcional' },
+      { key: 'nombre', label: t('catalogos.nombre'), type: 'text', required: true, placeholder: 'Ej: Panes' },
+      { key: 'descripcion', label: t('catalogos.descripcion'), type: 'text', required: false, placeholder: 'Descripción opcional' },
     ],
     tableName: 'categorias_producto',
   },
   'unidades-medida': {
-    headers: ['Nombre', 'Símbolo'],
+    headers: [t('catalogos.nombre'), t('catalogos.simbolo')],
     fieldRender: (item) => [item.nombre, item.simbolo],
     fields: [
-      { key: 'nombre', label: 'Nombre', type: 'text', required: true, placeholder: 'Ej: Kilogramo' },
-      { key: 'simbolo', label: 'Símbolo', type: 'text', required: true, placeholder: 'Ej: kg' },
+      { key: 'nombre', label: t('catalogos.nombre'), type: 'text', required: true, placeholder: 'Ej: Kilogramo' },
+      { key: 'simbolo', label: t('catalogos.simbolo'), type: 'text', required: true, placeholder: 'Ej: kg' },
     ],
     tableName: 'unidades_medida',
   },
   'conversiones': {
-    headers: ['Unidad Origen', 'Unidad Destino', 'Factor'],
+    headers: [t('catalogos.unidadOrigen'), t('catalogos.unidadDestino'), t('catalogos.factor')],
     fieldRender: (item) => [
       item.origen ? `${item.origen.nombre} (${item.origen.simbolo})` : `#${item.unidad_origen_id}`,
       item.destino ? `${item.destino.nombre} (${item.destino.simbolo})` : `#${item.unidad_destino_id}`,
       item.factor_multiplicacion,
     ],
     fields: [
-      { key: 'unidad_origen_id', label: 'Unidad Origen', type: 'select', required: true, placeholder: 'Seleccionar unidad', options: [] },
-      { key: 'unidad_destino_id', label: 'Unidad Destino', type: 'select', required: true, placeholder: 'Seleccionar unidad', options: [] },
-      { key: 'factor_multiplicacion', label: 'Factor', type: 'number', required: true, placeholder: 'Ej: 1000' },
+      { key: 'unidad_origen_id', label: t('catalogos.unidadOrigen'), type: 'select', required: true, placeholder: 'Seleccionar unidad', options: [] },
+      { key: 'unidad_destino_id', label: t('catalogos.unidadDestino'), type: 'select', required: true, placeholder: 'Seleccionar unidad', options: [] },
+      { key: 'factor_multiplicacion', label: t('catalogos.factor'), type: 'number', required: true, placeholder: 'Ej: 1000' },
     ],
     tableName: 'conversiones_unidades',
   },
-}
+}))
 
 const activeConfig = computed(() => {
-  const cfg = tabConfigs[activeTab.value]
+  const cfg = tabConfigs.value[activeTab.value]
   if (activeTab.value === 'conversiones' && cfg) {
     cfg.fields[0].options = opcionesUnidades.value
     cfg.fields[1].options = opcionesUnidades.value
@@ -170,13 +172,13 @@ function handleDelete(id) {
   <div>
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Catálogos</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('nav.catalogos') }}</h2>
       <button
         @click="tableRef?.openCreate()"
         class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
       >
         <i class="pi pi-plus mr-2"></i>
-        Nuevo
+        {{ t('common.new') }}
       </button>
     </div>
 

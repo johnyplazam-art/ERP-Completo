@@ -5,11 +5,13 @@ import { useConfirm } from 'primevue/useconfirm'
 import { supabase } from '@/core/supabase'
 import { toast } from 'vue-sonner'
 import DataState from '@/core/components/DataState.vue'
+import { useI18n } from 'vue-i18n'
 import {
   createIngredienteProveedor,
   updateIngredienteProveedor,
   deleteIngredienteProveedor,
 } from '../composables/database'
+const { t } = useI18n()
 
 const { data: proveedores, isLoading, error, refetch } = useProveedoresQuery()
 const { mutate: eliminarProveedor } = useDeleteProveedorMutation()
@@ -153,7 +155,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Proveedores</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('proveedores.title') }}</h2>
       <router-link
         to="/panaderia/proveedores/nuevo"
         class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
@@ -197,12 +199,12 @@ function confirmarEliminarIngrediente(item, provNombre) {
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-gray-50 text-left text-gray-500 font-medium">
-              <th class="px-4 py-3">Nombre</th>
-              <th class="px-4 py-3">Contacto</th>
-              <th class="px-4 py-3">Teléfono</th>
-              <th class="px-4 py-3">Email</th>
-              <th class="px-4 py-3">Estado</th>
-              <th class="px-4 py-3">Acciones</th>
+              <th class="px-4 py-3">{{ t('proveedores.name') }}</th>
+              <th class="px-4 py-3">{{ t('proveedores.contact') }}</th>
+              <th class="px-4 py-3">{{ t('proveedores.phone') }}</th>
+              <th class="px-4 py-3">{{ t('proveedores.email') }}</th>
+              <th class="px-4 py-3">{{ t('proveedores.status') }}</th>
+              <th class="px-4 py-3">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
@@ -235,9 +237,9 @@ function confirmarEliminarIngrediente(item, provNombre) {
                     <router-link
                       :to="`/panaderia/proveedores/${prov.id}`"
                       class="text-primary-600 hover:text-primary-800 text-sm font-medium"
-                    >
-                      Editar
-                    </router-link>
+>
+                       {{ t('proveedores.edit') }}
+                     </router-link>
                     <button
                       v-if="prov.activo"
                       @click="confirmarDesactivar(prov)"
@@ -259,7 +261,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
                 <td colspan="6" class="px-4 py-0 bg-gray-50">
                   <div class="py-3 animate-fadeIn">
                     <div class="flex items-center justify-between mb-2 px-2">
-                      <span class="text-sm font-semibold text-gray-700">Ingredientes y precios</span>
+                      <span class="text-sm font-semibold text-gray-700">{{ t('proveedores.ingredientsAndPrices') }}</span>
                       <button
                         @click.stop="abrirAgregarIngrediente(prov.id)"
                         class="text-xs text-primary-600 hover:text-primary-800 font-medium"
@@ -286,19 +288,19 @@ function confirmarEliminarIngrediente(item, provNombre) {
                           <span
                             v-if="item.es_preferido"
                             class="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded font-medium"
-                          >Preferido</span>
+                          >{{ t('proveedores.preferred') }}</span>
                           <span v-if="item.plazo_entrega_dias" class="text-xs text-gray-400">
-                            {{ item.plazo_entrega_dias }} días
+                            {{ item.plazo_entrega_dias }} {{ t('proveedores.days') }}
                           </span>
                           <div class="flex gap-2">
                             <button
                               @click.stop="abrirEditarIngrediente(item)"
                               class="text-primary-600 hover:text-primary-800 text-xs font-medium"
-                            >Editar</button>
+                            >{{ t('proveedores.edit') }}</button>
                             <button
                               @click.stop="confirmarEliminarIngrediente(item, prov.nombre)"
                               class="text-red-500 hover:text-red-700 text-xs font-medium"
-                            >Quitar</button>
+                            >{{ t('proveedores.remove') }}</button>
                           </div>
                         </div>
                       </div>

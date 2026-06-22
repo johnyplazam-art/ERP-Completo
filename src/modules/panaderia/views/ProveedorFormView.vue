@@ -4,11 +4,13 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { toast } from 'vue-sonner'
 import { proveedorSchema } from '../validations/index'
+import { useI18n } from 'vue-i18n'
 import {
   useProveedoresQuery,
   useCreateProveedorMutation,
   useUpdateProveedorMutation,
 } from '../composables/queries'
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -86,11 +88,11 @@ const onSubmit = handleSubmit(async (formValues) => {
     <form @submit="onSubmit" class="max-w-3xl space-y-6">
       <!-- Basic Info -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h3 class="text-lg font-semibold text-gray-900">Información del Proveedor</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('proveedores.formSection') }}</h3>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('proveedores.formName') }} *</label>
             <input
               :value="values.nombre"
               @input="setFieldValue('nombre', $event.target.value)"
@@ -103,7 +105,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Contacto</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('proveedores.formContact') }}</label>
             <input
               :value="values.contacto"
               @input="setFieldValue('contacto', $event.target.value)"
@@ -116,7 +118,7 @@ const onSubmit = handleSubmit(async (formValues) => {
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('proveedores.formPhone') }}</label>
             <input
               :value="values.telefono"
               @input="setFieldValue('telefono', $event.target.value)"
@@ -127,7 +129,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('proveedores.formEmail') }}</label>
             <input
               :value="values.email"
               @input="setFieldValue('email', $event.target.value)"
@@ -140,7 +142,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('proveedores.formAddress') }}</label>
             <input
               :value="values.direccion"
               @input="setFieldValue('direccion', $event.target.value)"

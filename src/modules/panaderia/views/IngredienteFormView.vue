@@ -21,6 +21,8 @@ import {
   deleteIngredienteProveedor,
 } from '../composables/database'
 import { useQueryClient } from '@tanstack/vue-query'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -197,11 +199,11 @@ const onSubmit = handleSubmit(async (formValues) => {
     <form v-else @submit="onSubmit" class="max-w-3xl space-y-6">
       <!-- Basic Info -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h3 class="text-lg font-semibold text-gray-900">Información General</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('inventario.formSectionGeneral') }}</h3>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('inventario.formName') }} *</label>
             <input
               :value="values.nombre"
               @input="setFieldValue('nombre', $event.target.value)"
@@ -214,13 +216,13 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('inventario.formCategory') }} *</label>
             <select
               :value="values.categoria_id"
               @change="setFieldValue('categoria_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option :value="null" disabled>Seleccionar...</option>
+              <option :value="null" disabled>{{ t('crud.selectOption') }}</option>
               <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
                 {{ cat.nombre }}
               </option>
@@ -231,13 +233,13 @@ const onSubmit = handleSubmit(async (formValues) => {
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Unidad base *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('inventario.formBaseUnit') }} *</label>
             <select
               :value="values.unidad_base_id"
               @change="setFieldValue('unidad_base_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option :value="null" disabled>Seleccionar...</option>
+              <option :value="null" disabled>{{ t('crud.selectOption') }}</option>
               <option v-for="u in unidades" :key="u.id" :value="u.id">
                 {{ u.nombre }} ({{ u.simbolo }})
               </option>
@@ -246,7 +248,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Stock mínimo</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('inventario.formMinStock') }}</label>
             <input
               :value="values.stock_minimo"
               @input="setFieldValue('stock_minimo', $event.target.valueAsNumber)"
@@ -258,7 +260,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('inventario.formLocation') }}</label>
             <input
               :value="values.ubicacion"
               @input="setFieldValue('ubicacion', $event.target.value)"
@@ -272,7 +274,7 @@ const onSubmit = handleSubmit(async (formValues) => {
 
       <!-- Storage & Shelf Life -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h3 class="text-lg font-semibold text-gray-900">Almacenamiento</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('inventario.formStorage') }}</h3>
 
         <div class="flex items-center gap-2 mb-4">
           <input
@@ -282,12 +284,12 @@ const onSubmit = handleSubmit(async (formValues) => {
             @change="setFieldValue('perecedero', $event.target.checked)"
             class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
-          <label for="perecedero" class="text-sm font-medium text-gray-700">Es perecedero</label>
+          <label for="perecedero" class="text-sm font-medium text-gray-700">{{ t('inventario.formPerishable') }}</label>
         </div>
 
         <div v-if="values.perecedero" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Vida útil (días)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('inventario.formShelfLife') }}</label>
             <input
               :value="values.vida_util_dias"
               @input="setFieldValue('vida_util_dias', $event.target.value === '' ? null : $event.target.valueAsNumber)"
@@ -308,7 +310,7 @@ const onSubmit = handleSubmit(async (formValues) => {
             @change="setFieldValue('activo', $event.target.checked)"
             class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
-          <label for="activo" class="text-sm font-medium text-gray-700">Activo</label>
+          <label for="activo" class="text-sm font-medium text-gray-700">{{ t('inventario.formActive') }}</label>
         </div>
       </div>
 
@@ -319,7 +321,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           @click="toggleProveedores"
           class="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors text-left"
         >
-          <h3 class="text-lg font-semibold text-gray-900">Proveedores y Precios</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ t('inventario.formSuppliers') }}</h3>
           <i
             class="pi text-gray-400 transition-transform duration-200"
             :class="provExpanded ? 'pi-chevron-up' : 'pi-chevron-down'"
@@ -361,12 +363,12 @@ const onSubmit = handleSubmit(async (formValues) => {
                   type="button"
                   @click="abrirEditarProveedor(item)"
                   class="text-xs text-primary-600 hover:text-primary-800 font-medium"
-                >Editar</button>
+                >{{ t('inventario.edit') }}</button>
                 <button
                   type="button"
                   @click="confirmarEliminarProveedor(item)"
                   class="text-xs text-red-500 hover:text-red-700 font-medium"
-                >Quitar</button>
+                >{{ t('proveedores.remove') }}</button>
               </div>
             </div>
           </div>
@@ -422,19 +424,19 @@ const onSubmit = handleSubmit(async (formValues) => {
 
         <form @submit.prevent="guardarProveedor" class="space-y-4">
           <div v-if="!editingProvItem">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Proveedor <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('inventario.supplier') }} <span class="text-red-500">*</span></label>
             <select
               v-model="provFormData.proveedor_id"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option value="" disabled>Seleccionar proveedor...</option>
+              <option value="" disabled>{{ t('inventario.selectSupplier') }}</option>
               <option v-for="p in proveedoresDisponibles" :key="p.id" :value="p.id">{{ p.nombre }}</option>
             </select>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Precio actual <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('inventario.currentPrice') }} <span class="text-red-500">*</span></label>
             <input
               v-model.number="provFormData.precio_actual"
               type="number"
@@ -446,7 +448,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Plazo de entrega (días)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('inventario.deliveryTime') }}</label>
             <input
               v-model.number="provFormData.plazo_entrega_dias"
               type="number"

@@ -3,11 +3,13 @@ import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import { useProductosQuery, useDeleteProductoMutation, useUpdateProductoMutation, useGenerarProductosFaltantesMutation } from '../composables/queries'
 import { useConfirm } from 'primevue/useconfirm'
+import { useI18n } from 'vue-i18n'
 import DataState from '@/core/components/DataState.vue'
 
 const { data: productos, isLoading, error } = useProductosQuery()
 const { mutate: eliminarProducto } = useDeleteProductoMutation()
 const updateMutation = useUpdateProductoMutation()
+const { t } = useI18n()
 const confirm = useConfirm()
 const searchQuery = ref('')
 const mostrarInactivos = ref(false)
@@ -37,28 +39,28 @@ function toggleInactivos() {
 
 const confirmarDesactivar = (producto) => {
   confirm.require({
-    message: `¿Desactivar el producto "${producto.nombre}"?`,
-    header: 'Confirmar',
+    message: t('productos.deactivateConfirm', { nombre: producto.nombre }),
+    header: t('common.confirm'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancelar',
-    acceptLabel: 'Confirmar',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('common.confirm'),
     accept: () => eliminarProducto(producto.id),
   })
 }
 
 function reactivar(producto) {
   confirm.require({
-    message: `¿Reactivar el producto "${producto.nombre}"?`,
-    header: 'Confirmar',
+    message: t('productos.reactivateConfirm', { nombre: producto.nombre }),
+    header: t('common.confirm'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancelar',
-    acceptLabel: 'Confirmar',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('common.confirm'),
     accept: async () => {
       try {
         await updateMutation.mutateAsync({ id: producto.id, values: { activo: true } })
-        toast.success(`"${producto.nombre}" reactivado`)
+        toast.success(t('productos.reactivated', { nombre: producto.nombre }))
       } catch (err) {
-        toast.error(err.message || 'Error al reactivar producto')
+        toast.error(err.message || t('productos.reactivateError'))
       }
     },
   })
@@ -68,17 +70,17 @@ const generarMutation = useGenerarProductosFaltantesMutation()
 
 async function generarFaltantes() {
   confirm.require({
-    message: '¿Generar productos inactivos para todas las recetas que aún no tienen producto asociado?',
-    header: 'Generar productos faltantes',
+    message: t('productos.generateConfirm'),
+    header: t('productos.generateTitle'),
     icon: 'pi pi-refresh',
-    rejectLabel: 'Cancelar',
-    acceptLabel: 'Generar',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('common.confirm'),
     accept: async () => {
       try {
         const result = await generarMutation.mutateAsync()
-        toast.success(`Se crearon ${result.creados} producto(s) de ${result.total} receta(s) pendiente(s)`)
+        toast.success(t('productos.generateResult', { creados: result.creados, total: result.total }))
       } catch (err) {
-        toast.error(err.message || 'Error al generar productos')
+        toast.error(err.message || t('productos.generateError'))
       }
     },
   })
@@ -94,7 +96,7 @@ const formatPeso = (gr) => {
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Productos</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('productos.title') }}</h2>
       <div class="flex items-center gap-2">
         <button
           @click="generarFaltantes"
@@ -105,14 +107,14 @@ const formatPeso = (gr) => {
             :class="generarMutation.isPending.value ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"
             class="mr-2 text-sm"
           ></i>
-          Generar desde recetas
+          {{ t('productos.generateFromRecipes') }}
         </button>
         <router-link
           to="/panaderia/productos/nuevo"
           class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
         >
           <i class="pi pi-plus mr-2"></i>
-          Nuevo Producto
+          {{ t('productos.new') }}
         </router-link>
       </div>
     </div>
@@ -122,7 +124,7 @@ const formatPeso = (gr) => {
       <input
         v-model="searchQuery"
         type="text"
-        placeholder="Buscar productos..."
+        :placeholder="t('productos.search')"
         class="touch-input block w-full sm:max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
       />
       <div class="flex items-center">
@@ -134,7 +136,7 @@ const formatPeso = (gr) => {
             : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
         >
           <i class="pi pi-eye-slash text-xs"></i>
-          Inactivos
+          {{ t('productos.inactive') }}
         </button>
       </div>
     </div>
@@ -144,21 +146,21 @@ const formatPeso = (gr) => {
       :error="error"
       :empty="!filteredProductos.length"
       empty-icon="pi pi-tag"
-      :empty-text="mostrarInactivos ? 'Sin productos inactivos' : (searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay productos registrados')"
-      loading-text="Cargando productos..."
+      :empty-text="mostrarInactivos ? t('productos.emptyInactive') : (searchQuery ? t('productos.emptySearch') : t('productos.empty'))"
+      :loading-text="t('productos.loading')"
     >
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-gray-50 text-left text-gray-500 font-medium">
-              <th class="px-4 py-3">Nombre</th>
-              <th class="px-4 py-3">Categoría</th>
-              <th class="px-4 py-3">Precio</th>
-              <th class="px-4 py-3">Receta</th>
-              <th class="px-4 py-3">Peso</th>
-              <th class="px-4 py-3">Estado</th>
-              <th class="px-4 py-3">Acciones</th>
+              <th class="px-4 py-3">{{ t('productos.name') }}</th>
+              <th class="px-4 py-3">{{ t('productos.category') }}</th>
+              <th class="px-4 py-3">{{ t('productos.price') }}</th>
+              <th class="px-4 py-3">{{ t('productos.recipe') }}</th>
+              <th class="px-4 py-3">{{ t('productos.weight') }}</th>
+              <th class="px-4 py-3">{{ t('productos.status') }}</th>
+              <th class="px-4 py-3">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
@@ -175,7 +177,7 @@ const formatPeso = (gr) => {
                   class="px-2 py-1 text-xs font-medium rounded-full"
                   :class="producto.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
                 >
-                  {{ producto.activo ? 'Activo' : 'Inactivo' }}
+                  {{ producto.activo ? t('productos.active') : t('productos.inactiveStatus') }}
                 </span>
               </td>
               <td class="px-4 py-3">
@@ -184,21 +186,21 @@ const formatPeso = (gr) => {
                     :to="`/panaderia/productos/${producto.id}`"
                     class="text-primary-600 hover:text-primary-800 text-sm font-medium"
                   >
-                    Editar
+                    {{ t('productos.edit') }}
                   </router-link>
                   <button
                     v-if="producto.activo"
                     @click="confirmarDesactivar(producto)"
                     class="text-red-500 hover:text-red-700 text-sm font-medium"
                   >
-                    Desactivar
+                    {{ t('productos.deactivate') }}
                   </button>
                   <button
                     v-else
                     @click="reactivar(producto)"
                     class="text-green-600 hover:text-green-800 text-sm font-medium"
                   >
-                    Reactivar
+                    {{ t('productos.reactivate') }}
                   </button>
                 </div>
               </td>

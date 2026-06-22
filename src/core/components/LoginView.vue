@@ -1,11 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/core/store/auth'
 import IndustrySelector from '@/core/components/IndustrySelector.vue'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 const authStore = useAuthStore()
 
 // ─── Form fields ──────────────────────────────────────
@@ -50,7 +52,7 @@ async function handleLogin() {
     await authStore.login(email.value, password.value)
     router.push('/')
   } catch (err) {
-    error.value = err.message || 'Error al iniciar sesión'
+    error.value = err.message || t('auth.loginError')
   } finally {
     loading.value = false
   }
@@ -76,18 +78,18 @@ async function handleSignup() {
     const { data } = await authStore.signup(email.value, password.value, metadata)
 
     if (data?.user?.identities?.length === 0) {
-      error.value = 'Este correo ya está registrado. Iniciá sesión.'
+      error.value = t('auth.emailExists')
     } else if (data?.user?.confirmation_sent_at) {
       success.value = isInvitation.value
-        ? 'Te registraste correctamente. Revisá tu correo para confirmar y acceder a la empresa.'
-        : 'Empresa creada correctamente. Revisá tu correo para confirmar la cuenta.'
+        ? t('auth.confirmEmail')
+        : t('auth.confirmEmail')
     } else {
       success.value = isInvitation.value
-        ? 'Todo listo. Ya podés iniciar sesión y acceder a la empresa.'
-        : 'Empresa creada correctamente. Ya podés iniciar sesión.'
+        ? t('auth.successJoin')
+        : t('auth.successNewCompany')
     }
   } catch (err) {
-    error.value = err.message || 'Error al registrarse'
+    error.value = err.message || t('auth.signupError')
   } finally {
     loading.value = false
   }
@@ -104,7 +106,7 @@ function handleSubmit() {
     error.value = ''
     // Basic validation before moving to industry selection
     if (!nombre.value.trim()) {
-      error.value = 'Completá tu nombre para continuar'
+      error.value = t('auth.nameRequired')
       return
     }
     step.value = 2
@@ -136,14 +138,14 @@ onMounted(() => {
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-primary-600">SIAS ERP</h1>
         <p class="mt-2 text-gray-500">
-          {{ isSignup ? 'Creá tu empresa y empezá a gestionar' : 'Sistema de Gestión de Panadería' }}
+          {{ isSignup ? t('auth.subtitleSignup') : t('auth.subtitleLogin') }}
         </p>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <!-- Title -->
         <h2 class="text-lg font-semibold text-gray-900 mb-6">
-          {{ isSignup ? 'Crear Cuenta y Empresa' : 'Iniciar Sesión' }}
+          {{ isSignup ? t('auth.signupTitle') : t('auth.loginTitle') }}
         </h2>
 
         <!-- Error -->
@@ -171,7 +173,7 @@ onMounted(() => {
           <!-- Email -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-              Correo electrónico
+              {{ t('auth.email') }}
             </label>
             <input
               id="email"
@@ -179,7 +181,7 @@ onMounted(() => {
               type="email"
               required
               autocomplete="email"
-              placeholder="correo@ejemplo.com"
+              :placeholder="t('auth.emailPlaceholder')"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
             />
           </div>
@@ -187,7 +189,7 @@ onMounted(() => {
           <!-- Password -->
           <div>
             <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
-              Contraseña
+              {{ t('auth.password') }}
             </label>
             <input
               id="password"
@@ -208,16 +210,16 @@ onMounted(() => {
 
               <!-- Full name -->
               <div>
-                <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre completo <span class="text-red-500">*</span>
-                </label>
-                <input
-                  id="nombre"
-                  v-model="nombre"
-                  type="text"
-                  required
-                  autocomplete="name"
-                  placeholder="Tu nombre"
+              <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
+                {{ t('auth.fullName') }} <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="nombre"
+                v-model="nombre"
+                type="text"
+                required
+                autocomplete="name"
+                :placeholder="t('auth.fullNamePlaceholder')"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
                 />
               </div>
@@ -225,41 +227,38 @@ onMounted(() => {
               <!-- Invitation code (pre-filled from URL if present) -->
               <div>
                 <label for="invitacion" class="block text-sm font-medium text-gray-700 mb-1">
-                  Código de invitación
-                  <span class="text-gray-400 font-normal">(opcional)</span>
+                  {{ t('auth.invitationCode') }}
+                  <span class="text-gray-400 font-normal">{{ t('auth.invitationOptional') }}</span>
                 </label>
                 <input
                   id="invitacion"
                   v-model="invitacion"
                   type="text"
                   autocomplete="off"
-                  placeholder="Si te invitaron a una empresa, poné el código"
+                  :placeholder="t('auth.invitationPlaceholder')"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
                 />
                 <p class="mt-1 text-xs text-gray-400">
-                  {{ isInvitation
-                    ? 'Te vas a unir a una empresa existente.'
-                    : 'Si no tenés código, se creará una empresa nueva automáticamente.'
-                  }}
+                  {{ isInvitation ? t('auth.joinCompany') : t('auth.noCodeAutoCreate') }}
                 </p>
               </div>
 
               <!-- Company name (only if no invitation) -->
               <div v-if="!isInvitation">
                 <label for="empresa" class="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre de la empresa
-                  <span class="text-gray-400 font-normal">(opcional)</span>
+                  {{ t('auth.companyName') }}
+                  <span class="text-gray-400 font-normal">{{ t('auth.invitationOptional') }}</span>
                 </label>
                 <input
                   id="empresa"
                   v-model="empresa"
                   type="text"
                   autocomplete="organization"
-                  placeholder="Mi Panadería"
+                  :placeholder="t('auth.companyPlaceholder')"
                   class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
                 />
                 <p class="mt-1 text-xs text-gray-400">
-                  Si no ponés nombre, se usará "Mi Empresa".
+                  {{ t('auth.companyDefault') }}
                 </p>
               </div>
 
@@ -269,8 +268,7 @@ onMounted(() => {
                 class="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700"
               >
                 <i class="pi pi-info-circle mr-1"></i>
-                Te vas a unir a una empresa existente como usuario secundario.
-                El dueño de la empresa podrá asignarte un rol.
+                {{ t('auth.joinInfo') }}
               </div>
 
               <!-- Submit button (step 1 → goes to industry selection) -->
@@ -279,7 +277,7 @@ onMounted(() => {
                 :disabled="loading"
                 class="w-full touch-input flex items-center justify-center bg-primary-600 text-white font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Continuar <i class="pi pi-chevron-right ml-2 text-sm"></i>
+                {{ t('auth.continue') }} <i class="pi pi-chevron-right ml-2 text-sm"></i>
               </button>
             </template>
 
@@ -290,8 +288,7 @@ onMounted(() => {
               <IndustrySelector v-model="industria" />
 
               <p class="mt-2 text-xs text-gray-400">
-                Elegí la industria que mejor describa tu negocio.
-                Podés cambiarlo más tarde desde configuración.
+                {{ t('auth.chooseIndustry') }}
               </p>
 
               <!-- Submit button (step 2 → create account) -->
@@ -302,7 +299,7 @@ onMounted(() => {
                   class="touch-input flex items-center justify-center text-gray-600 font-medium rounded-lg px-4 py-2.5 text-sm hover:text-gray-800 hover:bg-gray-100 transition-colors"
                 >
                   <i class="pi pi-chevron-left mr-1 text-sm"></i>
-                  Atrás
+                  {{ t('auth.back') }}
                 </button>
                 <button
                   type="submit"
@@ -310,8 +307,7 @@ onMounted(() => {
                   class="flex-1 touch-input flex items-center justify-center bg-primary-600 text-white font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <i v-if="loading" class="pi pi-spin pi-spinner mr-2"></i>
-                  <template v-if="loading">Creando cuenta...</template>
-                  <template v-else>Crear Cuenta y Empresa</template>
+                  {{ loading ? t('auth.creatingAccount') : t('auth.createAccount') }}
                 </button>
               </div>
             </template>
@@ -323,7 +319,7 @@ onMounted(() => {
               to="/forgot-password"
               class="text-sm text-primary-600 hover:underline font-medium"
             >
-              ¿Olvidaste tu contraseña?
+              {{ t('auth.forgotPassword') }}
             </router-link>
           </div>
 
@@ -335,12 +331,10 @@ onMounted(() => {
             class="w-full touch-input flex items-center justify-center bg-primary-600 text-white font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <i v-if="loading" class="pi pi-spin pi-spinner mr-2"></i>
-            <template v-if="loading">
-              {{ isSignup ? 'Creando cuenta...' : 'Ingresando...' }}
-            </template>
-            <template v-else>
-              Ingresar
-            </template>
+            {{ loading
+              ? (isSignup ? t('auth.creatingAccount') : t('auth.loginLoading'))
+              : t('auth.loginButton')
+            }}
           </button>
         </form>
 
@@ -349,19 +343,19 @@ onMounted(() => {
           <template v-if="isSignup">
             ¿Ya tenés cuenta?
             <button type="button" @click="toggleMode" class="text-primary-600 font-medium hover:underline ml-1">
-              Iniciar Sesión
+              {{ t('auth.toggleLogin') }}
             </button>
           </template>
           <template v-else>
             ¿No tenés cuenta?
             <button type="button" @click="toggleMode" class="text-primary-600 font-medium hover:underline ml-1">
-              Crear Cuenta y Empresa
+              {{ t('auth.toggleSignup') }}
             </button>
           </template>
         </div>
         <div v-else class="mt-4 text-center text-sm text-gray-500">
           <button type="button" @click="toggleMode" class="text-primary-600 font-medium hover:underline">
-            Volver a Iniciar Sesión
+            {{ t('auth.backToLogin') }}
           </button>
         </div>
       </div>

@@ -12,6 +12,8 @@ import {
 } from '../composables/queries'
 import PaginatorBar from '../components/PaginatorBar.vue'
 import DataState from '@/core/components/DataState.vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const confirm = useConfirm()
 const authStore = useAuthStore()
@@ -136,7 +138,7 @@ const tipoLabel = {
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Mermas</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('mermas.title') }}</h2>
       <button
         v-if="puedeCrear"
         @click="cargarReferencias(); initForm(null)"
@@ -160,14 +162,14 @@ const tipoLabel = {
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-gray-50 text-left text-gray-500 font-medium">
-                <th class="px-4 py-3">Fecha</th>
-                <th class="px-4 py-3">Origen</th>
-                <th class="px-4 py-3">Item</th>
-                <th class="px-4 py-3">Cantidad</th>
-                <th class="px-4 py-3">Tipo</th>
-                <th class="px-4 py-3">Causa</th>
-                <th class="px-4 py-3">Registrado por</th>
-                <th class="px-4 py-3 text-right">Acciones</th>
+                <th class="px-4 py-3">{{ t('mermas.date') }}</th>
+                <th class="px-4 py-3">{{ t('mermas.origin') }}</th>
+                <th class="px-4 py-3">{{ t('mermas.item') }}</th>
+                <th class="px-4 py-3">{{ t('mermas.quantity') }}</th>
+                <th class="px-4 py-3">{{ t('mermas.type') }}</th>
+                <th class="px-4 py-3">{{ t('mermas.cause') }}</th>
+                <th class="px-4 py-3">{{ t('mermas.registeredBy') }}</th>
+                <th class="px-4 py-3 text-right">{{ t('mermas.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -247,7 +249,7 @@ const tipoLabel = {
 
         <form @submit.prevent="guardar" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Origen <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('mermas.origin') }} <span class="text-red-500">*</span></label>
             <select
               v-model="formData.origen"
               required
@@ -258,30 +260,30 @@ const tipoLabel = {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Ingrediente</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('mermas.ingredient') }}</label>
             <select
               v-model="formData.ingrediente_id"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option value="">Seleccionar ingrediente...</option>
+              <option value="">{{ t('mermas.selectIngredient') }}</option>
               <option v-for="i in ingredientes" :key="i.id" :value="i.id">{{ i.nombre }}</option>
             </select>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Producto</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('mermas.product') }}</label>
             <select
               v-model="formData.producto_id"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option value="">Seleccionar producto...</option>
+              <option value="">{{ t('mermas.selectProduct') }}</option>
               <option v-for="p in productos" :key="p.id" :value="p.id">{{ p.nombre }}</option>
             </select>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad <span class="text-red-500">*</span></label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('mermas.quantity') }} <span class="text-red-500">*</span></label>
               <input
                 v-model.number="formData.cantidad"
                 type="number"
@@ -292,19 +294,19 @@ const tipoLabel = {
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('mermas.selectUnit') }}</label>
               <select
                 v-model="formData.unidad_id"
                 class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
               >
-                <option value="">Seleccionar...</option>
+                <option value="">{{ t('crud.selectOption') }}</option>
                 <option v-for="u in unidades" :key="u.id" :value="u.id">{{ u.nombre }} ({{ u.simbolo }})</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('mermas.type') }} <span class="text-red-500">*</span></label>
             <select
               v-model="formData.tipo"
               required
@@ -315,7 +317,7 @@ const tipoLabel = {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Causa</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('mermas.cause') }}</label>
             <textarea
               v-model="formData.causa"
               rows="2"

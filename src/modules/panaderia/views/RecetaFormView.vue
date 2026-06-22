@@ -7,6 +7,8 @@ import { recetaSchema } from '../validations/index'
 import { useCategoriasRecetaQuery, useUnidadesMedidaQuery, useIngredientesQuery, useRecetasQuery, useCreateRecetaMutation, useUpdateRecetaMutation, useRecalcularCostoMutation, useCategoriasIngredienteQuery, useCreateCategoriaRecetaMutation, useCreateUnidadMedidaMutation, useCreateIngredienteMutation } from '../composables/queries'
 import { useQueryClient } from '@tanstack/vue-query'
 import InlineAddSelect from '../components/InlineAddSelect.vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -158,11 +160,11 @@ const onSubmit = handleSubmit(async (formValues) => {
     <form @submit="onSubmit" class="max-w-3xl space-y-6">
       <!-- Basic Info -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h3 class="text-lg font-semibold text-gray-900">Información General</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('recetas.formSection') }}</h3>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('recetas.formName') }} *</label>
             <input
               :value="values.nombre"
               @input="setFieldValue('nombre', $event.target.value)"
@@ -175,7 +177,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('recetas.formCategory') }} *</label>
             <InlineAddSelect
               :model-value="values.categoria_id"
               @update:model-value="setFieldValue('categoria_id', $event)"
@@ -190,7 +192,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Instrucciones</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('recetas.formInstructions') }}</label>
           <textarea
             :value="values.instrucciones"
             @input="setFieldValue('instrucciones', $event.target.value)"
@@ -201,7 +203,7 @@ const onSubmit = handleSubmit(async (formValues) => {
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Tiempo (min)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('recetas.formTime') }}</label>
             <input
               :value="values.tiempo_preparacion_min"
               @input="setFieldValue('tiempo_preparacion_min', $event.target.value === '' ? null : $event.target.valueAsNumber)"
@@ -212,7 +214,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Rendimiento *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('recetas.formYield') }} *</label>
             <input
               :value="values.rendimiento_cantidad"
               @input="setFieldValue('rendimiento_cantidad', $event.target.valueAsNumber)"
@@ -224,7 +226,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Unidad *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('recetas.formUnit') }} *</label>
             <InlineAddSelect
               :model-value="values.rendimiento_unidad_id"
               @update:model-value="setFieldValue('rendimiento_unidad_id', $event)"
@@ -243,7 +245,7 @@ const onSubmit = handleSubmit(async (formValues) => {
       <!-- Ingredients -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900">Ingredientes</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ t('recetas.formIngredients') }}</h3>
           <button
             type="button"
             @click="addIngrediente"
@@ -332,7 +334,7 @@ const onSubmit = handleSubmit(async (formValues) => {
 
       <!-- Costo Estimado -->
       <div v-if="isEdit" class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h3 class="text-lg font-semibold text-gray-900">Costo Estimado</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('recetas.formEstimatedCost') }}</h3>
         <div class="flex items-center gap-4">
           <div class="text-2xl font-bold text-gray-900 tabular-nums">
             $ {{ Number(recetaActual?.costo_estimado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}

@@ -1,8 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { supabase } from '@/core/supabase'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const email = ref('')
@@ -22,7 +24,7 @@ async function handleSubmit() {
     if (err) throw err
     sent.value = true
   } catch (err) {
-    error.value = err.message || 'Error al enviar el correo de recuperación'
+    error.value = t('forgotPassword.error')
   } finally {
     loading.value = false
   }
@@ -34,12 +36,12 @@ async function handleSubmit() {
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-primary-600">SIAS ERP</h1>
-        <p class="mt-2 text-gray-500">Recuperá tu contraseña</p>
+        <p class="mt-2 text-gray-500">{{ t('forgotPassword.subtitle') }}</p>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
 
-        <h2 class="text-lg font-semibold text-gray-900 mb-6">¿Olvidaste tu contraseña?</h2>
+        <h2 class="text-lg font-semibold text-gray-900 mb-6">{{ t('forgotPassword.title') }}</h2>
 
         <div
           v-if="error"
@@ -52,13 +54,13 @@ async function handleSubmit() {
           v-if="sent"
           class="mb-4 px-4 py-3 bg-green-50 border-l-4 border-green-500 text-green-700 text-sm rounded"
         >
-          Revisá tu correo. Te enviamos un link para restablecer la contraseña.
+          {{ t('forgotPassword.sent') }}
         </div>
 
         <form v-if="!sent" @submit.prevent="handleSubmit" class="space-y-4">
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-              Correo electrónico
+              {{ t('auth.email') }}
             </label>
             <input
               id="email"
@@ -66,7 +68,7 @@ async function handleSubmit() {
               type="email"
               required
               autocomplete="email"
-              placeholder="correo@ejemplo.com"
+              :placeholder="t('auth.emailPlaceholder')"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-3 py-2.5 text-sm"
             />
           </div>
@@ -77,7 +79,7 @@ async function handleSubmit() {
             class="w-full touch-input flex items-center justify-center bg-primary-600 text-white font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <i v-if="loading" class="pi pi-spin pi-spinner mr-2"></i>
-            {{ loading ? 'Enviando...' : 'Enviar link de recuperación' }}
+            {{ loading ? t('forgotPassword.sending') : t('forgotPassword.sendLink') }}
           </button>
         </form>
 
@@ -87,7 +89,7 @@ async function handleSubmit() {
             @click="router.push('/login')"
             class="text-primary-600 font-medium hover:underline"
           >
-            Volver a Iniciar Sesión
+            {{ t('forgotPassword.backToLogin') }}
           </button>
         </div>
       </div>

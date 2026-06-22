@@ -1,8 +1,11 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DataState from '@/core/components/DataState.vue'
 import PaginatorBar from '../components/PaginatorBar.vue'
 import { useAuditLogsPaginated } from '../composables/queries'
+
+const { t } = useI18n()
 
 const filterAction = ref('')
 const filterTable = ref('')
@@ -52,8 +55,8 @@ function formatDate(iso) {
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Auditoría</h2>
-      <span class="text-sm text-gray-500">{{ total }} registros</span>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('auditoria.title') }}</h2>
+      <span class="text-sm text-gray-500">{{ total }} {{ t('auditoria.records') }}</span>
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
@@ -63,7 +66,7 @@ function formatDate(iso) {
             v-model="filterAction"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
           >
-            <option value="">Todas las acciones</option>
+            <option value="">{{ t('auditoria.allActions') }}</option>
             <option v-for="a in actionsDisponibles" :key="a" :value="a">{{ a }}</option>
           </select>
         </div>
@@ -71,7 +74,7 @@ function formatDate(iso) {
           <input
             v-model="filterTable"
             type="text"
-            placeholder="Filtrar por tabla..."
+            :placeholder="t('auditoria.filterTable')"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -97,20 +100,20 @@ function formatDate(iso) {
       :error="error"
       :empty="!logs.length"
       empty-icon="pi pi-history"
-      empty-text="No hay registros de auditoría"
-      loading-text="Cargando auditoría..."
+      :empty-text="t('auditoria.empty')"
+      :loading-text="t('auditoria.loading')"
     >
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-gray-50 text-left text-gray-500 font-medium">
-                <th class="px-4 py-3 whitespace-nowrap">Fecha</th>
-                <th class="px-4 py-3 whitespace-nowrap">Usuario</th>
-                <th class="px-4 py-3 whitespace-nowrap">Acción</th>
-                <th class="px-4 py-3 whitespace-nowrap">Tabla</th>
-                <th class="px-4 py-3 whitespace-nowrap">Entidad</th>
-                <th class="px-4 py-3">IP</th>
+                <th class="px-4 py-3 whitespace-nowrap">{{ t('auditoria.date') }}</th>
+                <th class="px-4 py-3 whitespace-nowrap">{{ t('auditoria.user') }}</th>
+                <th class="px-4 py-3 whitespace-nowrap">{{ t('auditoria.action') }}</th>
+                <th class="px-4 py-3 whitespace-nowrap">{{ t('auditoria.table') }}</th>
+                <th class="px-4 py-3 whitespace-nowrap">{{ t('auditoria.entity') }}</th>
+                <th class="px-4 py-3">{{ t('auditoria.ip') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">

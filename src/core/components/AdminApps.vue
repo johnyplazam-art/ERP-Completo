@@ -283,7 +283,7 @@ onMounted(cargarApps)
 
             <!-- Description -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('admin.formDescription') }}</label>
               <textarea
                 v-model="form.description"
                 rows="2"
@@ -295,7 +295,7 @@ onMounted(cargarApps)
 
             <!-- Icon selector -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Icono</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('admin.formIcon') }}</label>
               <div class="flex flex-wrap gap-2">
                 <button
                   v-for="icono in ICONOS_DISPONIBLES"

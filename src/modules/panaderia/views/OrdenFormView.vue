@@ -7,6 +7,8 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { useProductosQuery, useRecetasQuery, useCreateOrdenMutation, useOrdenProduccionQuery, useUpdateOrdenMutation, useCalculoIngredientesQuery } from '../composables/queries'
 import { getSelectValue } from '@/core/composables/useSelectValue'
 import { ordenProduccionCrearSchema, ordenProduccionSchema } from '../validations/index'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -139,10 +141,10 @@ const onSubmit = handleSubmit(async (formValues) => {
     <form v-else @submit="onSubmit" class="max-w-3xl space-y-6">
       <!-- Info -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h3 class="text-lg font-semibold text-gray-900">Información</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ t('produccion.formSection') }}</h3>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Fecha programada *</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('produccion.formScheduledDate') }} *</label>
           <input
             :value="values.fecha_programada"
             @input="setFieldValue('fecha_programada', $event.target.value)"
@@ -153,21 +155,21 @@ const onSubmit = handleSubmit(async (formValues) => {
         </div>
 
         <div v-if="isEdit">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('produccion.formStatus') }}</label>
           <select
             :value="values.estado"
             @change="setFieldValue('estado', $event.target.value)"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
           >
-            <option value="pendiente">Pendiente</option>
-            <option value="en_proceso">En Proceso</option>
-            <option value="completada">Completada</option>
-            <option value="cancelada">Cancelada</option>
+            <option value="pendiente">{{ t('produccion.formStatusPendiente') }}</option>
+            <option value="en_proceso">{{ t('produccion.formStatusEnProceso') }}</option>
+            <option value="completada">{{ t('produccion.formStatusCompletada') }}</option>
+            <option value="cancelada">{{ t('produccion.formStatusCancelada') }}</option>
           </select>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Nota</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('produccion.formNote') }}</label>
           <textarea
             :value="values.nota"
             @input="setFieldValue('nota', $event.target.value)"
@@ -181,7 +183,7 @@ const onSubmit = handleSubmit(async (formValues) => {
       <!-- Detalles -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900">Productos a producir</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ t('produccion.formProducts') }}</h3>
           <button
             type="button"
             @click="addDetalle"
@@ -207,7 +209,7 @@ const onSubmit = handleSubmit(async (formValues) => {
               @change="setFieldValue('detalles[' + index + '].producto_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
             >
-              <option :value="null" disabled>Producto...</option>
+              <option :value="null" disabled>{{ t('produccion.formProduct') }}</option>
               <option v-for="p in productos?.filter(x => x.activo)" :key="p.id" :value="p.id">
                 {{ p.nombre }}
               </option>
@@ -223,7 +225,7 @@ const onSubmit = handleSubmit(async (formValues) => {
               @change="setFieldValue('detalles[' + index + '].receta_id', getSelectValue($event))"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-primary-500"
             >
-              <option :value="null" disabled>Receta...</option>
+              <option :value="null" disabled>{{ t('produccion.formRecipe') }}</option>
               <option v-for="r in recetasDeProducto(det.producto_id)" :key="r.id" :value="r.id">
                 {{ r.nombre }}
               </option>

@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from '@/core/supabase'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const props = defineProps({
   modelValue: {
@@ -48,7 +50,7 @@ async function fetchIndustries() {
     industries.value = data || []
   } catch (err) {
     console.error('Error fetching industries:', err)
-    error.value = 'No se pudieron cargar las industrias.'
+    error.value = t('auth.industryError')
   } finally {
     loading.value = false
   }
@@ -75,7 +77,7 @@ function selectIndustry(slug) {
 
     <!-- Empty state -->
     <div v-else-if="industries.length === 0" class="p-4 text-center text-gray-500 bg-gray-50 rounded-lg text-sm">
-      No hay industrias disponibles.
+      {{ t('auth.industryEmpty') }}
     </div>
 
     <!-- Grid of industries -->

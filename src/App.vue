@@ -3,6 +3,8 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/core/store/auth'
 import { useAppStore } from '@/core/store/app'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const authStore = useAuthStore()
 const appStore = useAppStore()
@@ -68,14 +70,14 @@ async function reintentar() {
   >
     <div class="text-center max-w-md mx-auto px-4">
       <i class="pi pi-exclamation-triangle text-4xl text-red-400 mb-4"></i>
-      <h2 class="text-lg font-semibold text-gray-800 mb-2">Error de conexión</h2>
+      <h2 class="text-lg font-semibold text-gray-800 mb-2">{{ t('errors.connectionError') }}</h2>
       <p class="text-sm text-gray-500 mb-6">{{ initError }}</p>
       <button
         @click="reintentar"
         class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
       >
         <i class="pi pi-refresh mr-2"></i>
-        Reintentar
+        {{ t('common.retry') }}
       </button>
     </div>
   </div>
@@ -87,7 +89,7 @@ async function reintentar() {
   >
     <div class="text-center text-gray-400">
       <i class="pi pi-spin pi-spinner text-3xl mb-3"></i>
-      <p class="text-sm">Cargando...</p>
+      <p class="text-sm">{{ t('common.loading') }}</p>
     </div>
   </div>
 

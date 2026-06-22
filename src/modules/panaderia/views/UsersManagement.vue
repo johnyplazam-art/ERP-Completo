@@ -32,7 +32,7 @@ async function cargarUsuarios() {
 }
 
 async function cargarRoles() {
-  const appId = await authStore.getAppId('panaderia')
+  const appId = await authStore.getAppId(authStore.currentAppSlug)
   if (!appId) return
 
   isLoadingRoles.value = true
@@ -56,7 +56,7 @@ const rolesAsignables = computed(() => {
 
 async function cambiarRol(usuarioId, nuevoRoleId) {
   const empresaId = authStore.currentEmpresaId
-  const appId = await authStore.getAppId('panaderia')
+  const appId = await authStore.getAppId(authStore.currentAppSlug)
   if (!empresaId || !appId) return
 
   try {
@@ -129,7 +129,7 @@ watch(() => authStore.currentEmpresaId, async () => {
           <thead>
             <tr class="bg-gray-50 text-left text-gray-500 font-medium">
               <th class="px-4 py-3">{{ t('users.title') }}</th>
-              <th class="px-4 py-3">Email</th>
+              <th class="px-4 py-3">{{ t('auth.email') }}</th>
               <th class="px-4 py-3">{{ t('users.role') }}</th>
               <th class="px-4 py-3">{{ t('users.status') }}</th>
               <th class="px-4 py-3">{{ t('common.actions') }}</th>

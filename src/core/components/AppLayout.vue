@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Toaster } from 'vue-sonner'
 import { useAuthStore } from '@/core/store/auth'
@@ -15,24 +15,22 @@ const router = useRouter()
 
 // ─── Nav sections ─────────────────────────────────────
 
-// Configuración de rutas por aplicación
-const APP_ROUTES_CONFIG = {
+const navRoutes = computed(() => ({
   panaderia: [
     { to: '/panaderia', icon: 'pi pi-chart-bar', label: t('nav.dashboard') },
     { to: '/panaderia/recetas', icon: 'pi pi-book', label: t('nav.recetas') },
     { to: '/panaderia/inventario', icon: 'pi pi-box', label: t('nav.inventario') },
-    { to: '/panaderia/stock-productos', icon: 'pi pi-box', label: 'Stock PT' },
-    { to: '/panaderia/productos', icon: 'pi pi-tag', label: 'Productos' },
-    { to: '/panaderia/proveedores', icon: 'pi pi-truck', label: 'Proveedores' },
+    { to: '/panaderia/stock-productos', icon: 'pi pi-box', label: t('nav.stockPt') },
+    { to: '/panaderia/productos', icon: 'pi pi-tag', label: t('nav.productos') },
+    { to: '/panaderia/proveedores', icon: 'pi pi-truck', label: t('nav.proveedores') },
     { to: '/panaderia/produccion', icon: 'pi pi-cog', label: t('nav.produccion') },
-    { to: '/panaderia/movimientos', icon: 'pi pi-arrow-right-arrow-left', label: 'Movimientos' },
-    { to: '/panaderia/mermas', icon: 'pi pi-exclamation-triangle', label: 'Mermas' },
-    { to: '/panaderia/catalogos', icon: 'pi pi-wrench', label: 'Catálogos' },
-    { to: '/panaderia/auditoria', icon: 'pi pi-history', label: 'Auditoría' },
+    { to: '/panaderia/movimientos', icon: 'pi pi-arrow-right-arrow-left', label: t('nav.movimientos') },
+    { to: '/panaderia/mermas', icon: 'pi pi-exclamation-triangle', label: t('nav.mermas') },
+    { to: '/panaderia/catalogos', icon: 'pi pi-wrench', label: t('nav.catalogos') },
+    { to: '/panaderia/auditoria', icon: 'pi pi-history', label: t('nav.auditoria') },
   ],
   restaurant: [
     { to: '/restaurant', icon: 'pi pi-chart-bar', label: t('nav.dashboard') },
-    // Aquí se añadirán más rutas de restaurant cuando se implementen
   ],
   pos: [
     { to: '/pos', icon: 'pi pi-chart-bar', label: t('nav.dashboard') },
@@ -44,7 +42,7 @@ const APP_ROUTES_CONFIG = {
     { to: '/academico', icon: 'pi pi-chart-bar', label: t('nav.dashboard') },
   ],
   admin: []
-}
+}))
 
 const appsDisponibles = ref([])
 const loadingApps = ref(true)
@@ -69,19 +67,19 @@ const navItems = computed(() => {
   if (authStore.isPlatformAdmin) {
     items.push({
       isSectionHeader: true,
-      label: 'Platform Admin',
+      label: t('nav.platformAdmin'),
       icon: 'pi pi-shield',
     })
-    items.push({ to: '/admin/empresas', icon: 'pi pi-building', label: 'Todas las Empresas' })
-    items.push({ to: '/admin/todos-usuarios', icon: 'pi pi-globe', label: 'Todos los Usuarios' })
-    items.push({ to: '/admin/apps', icon: 'pi pi-palette', label: 'Apps' })
-    items.push({ to: '/admin/planes', icon: 'pi pi-credit-card', label: 'Planes' })
-    items.push({ to: '/admin/suscripciones', icon: 'pi pi-sync', label: 'Suscripciones' })
+    items.push({ to: '/admin/empresas', icon: 'pi pi-building', label: t('nav.allCompanies') })
+    items.push({ to: '/admin/todos-usuarios', icon: 'pi pi-globe', label: t('nav.allUsers') })
+    items.push({ to: '/admin/apps', icon: 'pi pi-palette', label: t('nav.apps') })
+    items.push({ to: '/admin/planes', icon: 'pi pi-credit-card', label: t('nav.planes') })
+    items.push({ to: '/admin/suscripciones', icon: 'pi pi-sync', label: t('nav.suscripciones') })
   }
 
   // 3. Apps dinámicas — solo mostrar la sección activa
   appsDisponibles.value.forEach(app => {
-    const routes = APP_ROUTES_CONFIG[app.slug] || []
+    const routes = navRoutes.value[app.slug] || []
     if (routes.length === 0) return
     if (app.slug !== activeAppSlug.value) return
 
@@ -137,6 +135,10 @@ async function fetchApps() {
   }
 }
 
+watch(activeAppSlug, (slug) => {
+  if (slug) authStore.setCurrentApp(slug)
+}, { immediate: true })
+
 onMounted(async () => {
   await fetchApps()
 })
@@ -145,7 +147,7 @@ onMounted(async () => {
 
 const breadcrumbs = computed(() => {
   const route = router.currentRoute.value
-  const crumbs = [{ label: 'Inicio', to: '/' }]
+  const crumbs = [{ label: t('nav.home'), to: '/' }]
 
   // Partir la ruta en segmentos y buscar metadatos
   const pathParts = route.path.split('/').filter(Boolean)
@@ -303,7 +305,7 @@ const breadcrumbs = computed(() => {
           <button
             @click="appStore.setTheme(appStore.theme === 'dark' ? 'light' : 'dark')"
             class="p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            :title="appStore.theme === 'dark' ? 'Modo claro' : 'Modo oscuro'"
+            :title="appStore.theme === 'dark' ? t('theme.light') : t('theme.dark')"
           >
             <i :class="appStore.theme === 'dark' ? 'pi pi-sun' : 'pi pi-moon'"></i>
           </button>

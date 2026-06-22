@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { useConfirm } from 'primevue/useconfirm'
 import PaginatorBar from './PaginatorBar.vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const props = defineProps({
   fields: { type: Array, required: true },
@@ -128,7 +130,7 @@ defineExpose({ openCreate })
     <!-- Loading -->
     <div v-if="isLoading" class="text-center py-12 text-gray-400">
       <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-      <p>Cargando...</p>
+      <p>{{ t('crud.loading') }}</p>
     </div>
 
     <!-- Error -->
@@ -145,7 +147,7 @@ defineExpose({ openCreate })
     <!-- Empty with pagination (page beyond range) -->
     <div v-else-if="!data.length" class="bg-white rounded-xl border border-gray-200">
       <div class="text-center py-12 text-gray-400">
-        <p>No hay datos en esta página</p>
+        <p>{{ t('crud.noDataPage') }}</p>
       </div>
       <PaginatorBar
         :page="page"
@@ -165,7 +167,7 @@ defineExpose({ openCreate })
               <th v-for="header in headers" :key="header" class="px-4 py-3">
                 {{ header }}
               </th>
-              <th class="px-4 py-3 text-right">Acciones</th>
+              <th class="px-4 py-3 text-right">{{ t('crud.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">

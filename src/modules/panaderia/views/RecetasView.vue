@@ -3,6 +3,7 @@ import { useRecetasQuery, useDeleteRecetaMutation, useUpdateRecetaMutation } fro
 import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import { useConfirm } from 'primevue/useconfirm'
+import { useI18n } from 'vue-i18n'
 import DataState from '@/core/components/DataState.vue'
 
 const { data: recetas, isLoading, error } = useRecetasQuery()
@@ -10,6 +11,7 @@ const { mutate: eliminarReceta } = useDeleteRecetaMutation()
 const updateMutation = useUpdateRecetaMutation()
 const expandedRow = ref('')
 const confirm = useConfirm()
+const { t } = useI18n()
 const searchQuery = ref('')
 const mostrarInactivos = ref(false)
 
@@ -42,28 +44,28 @@ const toggleRow = (id) => {
 
 const confirmarDesactivar = (receta) => {
   confirm.require({
-    message: `¿Desactivar la receta "${receta.nombre}"?`,
-    header: 'Confirmar',
+    message: t('recetas.deactivateConfirm', { nombre: receta.nombre }),
+    header: t('common.confirm'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancelar',
-    acceptLabel: 'Confirmar',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('common.confirm'),
     accept: () => eliminarReceta(receta.id),
   })
 }
 
 function reactivar(receta) {
   confirm.require({
-    message: `¿Reactivar la receta "${receta.nombre}"?`,
-    header: 'Confirmar',
+    message: t('recetas.reactivateConfirm', { nombre: receta.nombre }),
+    header: t('common.confirm'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancelar',
-    acceptLabel: 'Confirmar',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('common.confirm'),
     accept: async () => {
       try {
         await updateMutation.mutateAsync({ id: receta.id, values: { activa: true } })
-        toast.success(`"${receta.nombre}" reactivada`)
+        toast.success(t('recetas.reactivated', { nombre: receta.nombre }))
       } catch (err) {
-        toast.error(err.message || 'Error al reactivar receta')
+        toast.error(err.message || t('recetas.reactivateError'))
       }
     },
   })
@@ -73,13 +75,13 @@ function reactivar(receta) {
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Recetas</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ t('recetas.title') }}</h2>
       <router-link
         to="/panaderia/recetas/nueva"
         class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
       >
         <i class="pi pi-plus mr-2"></i>
-        Nueva Receta
+        {{ t('recetas.new') }}
       </router-link>
     </div>
 
@@ -88,7 +90,7 @@ function reactivar(receta) {
       <input
         v-model="searchQuery"
         type="text"
-        placeholder="Buscar recetas..."
+        :placeholder="t('recetas.search')"
         class="touch-input block w-full sm:max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
       />
       <div class="flex items-center">
@@ -100,7 +102,7 @@ function reactivar(receta) {
             : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
         >
           <i class="pi pi-eye-slash text-xs"></i>
-          Inactivos
+          {{ t('recetas.inactive') }}
         </button>
       </div>
     </div>
@@ -110,21 +112,21 @@ function reactivar(receta) {
       :error="error"
       :empty="!filteredRecetas.length"
       empty-icon="pi pi-book"
-      :empty-text="mostrarInactivos ? 'Sin recetas inactivas' : (searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay recetas registradas')"
-      loading-text="Cargando recetas..."
+      :empty-text="mostrarInactivos ? t('recetas.emptyInactive') : (searchQuery ? t('recetas.emptySearch') : t('recetas.empty'))"
+      :loading-text="t('recetas.loading')"
     >
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-gray-50 text-left text-gray-500 font-medium">
-              <th class="px-4 py-3">Nombre</th>
-              <th class="px-4 py-3">Categoría</th>
-              <th class="px-4 py-3">Rendimiento</th>
-              <th class="px-4 py-3">Costo est.</th>
-              <th class="px-4 py-3">Tiempo</th>
-              <th class="px-4 py-3">Estado</th>
-              <th class="px-4 py-3">Acciones</th>
+              <th class="px-4 py-3">{{ t('recetas.name') }}</th>
+              <th class="px-4 py-3">{{ t('recetas.category') }}</th>
+              <th class="px-4 py-3">{{ t('recetas.yield') }}</th>
+              <th class="px-4 py-3">{{ t('recetas.estimatedCost') }}</th>
+              <th class="px-4 py-3">{{ t('recetas.time') }}</th>
+              <th class="px-4 py-3">{{ t('recetas.status') }}</th>
+              <th class="px-4 py-3">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
@@ -144,7 +146,7 @@ function reactivar(receta) {
                     v-if="receta.ingredientes?.length"
                     class="text-xs text-gray-400 font-normal"
                   >
-                    ({{ receta.ingredientes.length }} ingredientes)
+                    {{ t('recetas.ingredientsCount', { count: receta.ingredientes.length }) }}
                   </span>
                 </td>
                 <td class="px-4 py-3 text-gray-600">{{ receta.categoria?.nombre }}</td>
@@ -165,7 +167,7 @@ function reactivar(receta) {
                     class="px-2 py-1 text-xs font-medium rounded-full"
                     :class="receta.activa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
                   >
-                    {{ receta.activa ? 'Activa' : 'Inactiva' }}
+                    {{ receta.activa ? t('recetas.active') : t('recetas.inactiveStatus') }}
                   </span>
                 </td>
                 <td class="px-4 py-3" @click.stop>
@@ -174,21 +176,21 @@ function reactivar(receta) {
                       :to="`/panaderia/recetas/${receta.id}`"
                       class="text-primary-600 hover:text-primary-800 text-sm font-medium"
                     >
-                      Editar
+                      {{ t('recetas.edit') }}
                     </router-link>
                     <button
                       v-if="receta.activa"
                       @click="confirmarDesactivar(receta)"
                       class="text-red-500 hover:text-red-700 text-sm font-medium"
                     >
-                      Desactivar
+                      {{ t('recetas.deactivate') }}
                     </button>
                     <button
                       v-else
                       @click="reactivar(receta)"
                       class="text-green-600 hover:text-green-800 text-sm font-medium"
                     >
-                      Reactivar
+                      {{ t('recetas.reactivate') }}
                     </button>
                   </div>
                 </td>
@@ -198,7 +200,7 @@ function reactivar(receta) {
                 <td colspan="7" class="px-4 py-0 bg-gray-50">
                   <div class="py-3 animate-fadeIn">
                     <div v-if="!receta.ingredientes?.length" class="text-sm text-gray-400 text-center py-2">
-                      Sin ingredientes
+                      {{ t('recetas.noIngredients') }}
                     </div>
                     <div v-else class="max-w-lg">
                       <div
@@ -214,7 +216,7 @@ function reactivar(receta) {
                           <span
                             v-if="ing.es_opcional"
                             class="ml-1 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded"
-                          >Opcional</span>
+                          >{{ t('recetas.optional') }}</span>
                         </span>
                       </div>
                     </div>

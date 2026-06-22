@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { getSelectValue } from '@/core/composables/useSelectValue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const props = defineProps({
   modelValue: { type: [Number, String, null], default: null },
@@ -123,7 +125,7 @@ async function handleCreate() {
             :required="field.required"
             class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
           >
-            <option :value="null" disabled>Seleccionar...</option>
+            <option :value="null" disabled>{{ t('crud.selectOption') }}</option>
             <option
               v-for="opt in (field.options || [])"
               :key="opt[field.optionValue || 'id']"
