@@ -64,7 +64,7 @@ async function save() {
   // Validación básica
   for (const field of props.fields) {
     if (field.required && !formData.value[field.key]?.toString().trim()) {
-      toast.error(`"${field.label}" es requerido`)
+      toast.error(t('crud.fieldRequired', { label: field.label }))
       return
     }
   }
@@ -78,19 +78,19 @@ async function save() {
     if (editingItem.value) {
       if (props.onUpdate) {
         await props.onUpdate(editingItem.value.id, values)
-        toast.success(`${props.tableName} actualizado`)
+        toast.success(t('crud.updated', { name: props.tableName }))
         emit('updated', { id: editingItem.value.id, values })
       }
     } else {
       if (props.onCreate) {
         await props.onCreate(values)
-        toast.success(`${props.tableName} creado`)
+        toast.success(t('crud.created', { name: props.tableName }))
         emit('created', values)
       }
     }
     closeModal()
   } catch (err) {
-    toast.error(err.message || 'Error al guardar')
+    toast.error(err.message || t('crud.saveError'))
   } finally {
     submitPending.value = false
   }
@@ -101,20 +101,20 @@ async function save() {
 function remove(item) {
   const label = item.nombre || item.simbolo || `#${item.id}`
   confirm.require({
-    message: `¿Eliminar "${label}"?`,
-    header: 'Confirmar',
+    message: t('crud.confirmDelete', { label }),
+    header: t('crud.confirmHeader'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancelar',
-    acceptLabel: 'Eliminar',
+    rejectLabel: t('crud.cancel'),
+    acceptLabel: t('crud.confirmDeleteButton'),
     accept: async () => {
       try {
         if (props.onDelete) {
           await props.onDelete(item.id)
-          toast.success(`"${label}" eliminado`)
+          toast.success(t('crud.deleteSuccess', { label }))
           emit('deleted', item.id)
         }
       } catch (err) {
-        toast.error(err.message || 'Error al eliminar')
+        toast.error(err.message || t('crud.deleteError'))
       }
     },
   })
@@ -141,7 +141,7 @@ defineExpose({ openCreate })
     <!-- Empty -->
     <div v-else-if="!data.length && !total" class="text-center py-12 text-gray-400">
       <i class="pi pi-inbox text-4xl mb-3"></i>
-      <p>Sin registros en {{ tableName }}</p>
+      <p>{{ t('crud.noRecords', { name: tableName }) }}</p>
     </div>
 
     <!-- Empty with pagination (page beyond range) -->
@@ -186,14 +186,14 @@ defineExpose({ openCreate })
                   @click="openEdit(item)"
                   class="text-primary-600 hover:text-primary-800 text-sm font-medium mr-3"
                 >
-                  Editar
+                  {{ t('crud.edit') }}
                 </button>
                 <button
                   @click="remove(item)"
                   class="text-red-500 hover:text-red-700 text-sm font-medium"
                   v-if="onDelete"
                 >
-                  Eliminar
+                  {{ t('crud.delete') }}
                 </button>
               </td>
             </tr>
@@ -217,7 +217,7 @@ defineExpose({ openCreate })
       <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">
-            {{ editingItem ? 'Editar' : 'Nuevo' }} {{ tableName }}
+            {{ editingItem ? t('crud.modalTitleEdit') : t('crud.modalTitleNew') }} {{ tableName }}
           </h3>
           <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
             <i class="pi pi-times text-xl"></i>
@@ -235,7 +235,7 @@ defineExpose({ openCreate })
                 :required="field.required"
                 class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
               >
-                <option value="" disabled>{{ field.placeholder || 'Seleccionar...' }}</option>
+                <option value="" disabled>{{ field.placeholder || t('crud.selectOption') }}</option>
                 <option
                   v-for="opt in field.options"
                   :key="opt.value"
@@ -260,7 +260,7 @@ defineExpose({ openCreate })
               @click="closeModal"
               class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
-              Cancelar
+              {{ t('crud.cancel') }}
             </button>
             <button
               type="submit"
@@ -268,7 +268,7 @@ defineExpose({ openCreate })
               class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
             >
               <i v-if="submitPending" class="pi pi-spin pi-spinner mr-2"></i>
-              {{ submitPending ? 'Guardando...' : 'Guardar' }}
+              {{ submitPending ? t('crud.saving') : t('crud.save') }}
             </button>
           </div>
         </form>

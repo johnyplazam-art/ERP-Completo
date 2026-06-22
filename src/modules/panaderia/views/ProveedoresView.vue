@@ -57,28 +57,28 @@ function toggleRow(id) {
 
 const confirmarDesactivar = (prov) => {
   confirm.require({
-    message: `¿Desactivar el proveedor "${prov.nombre}"?`,
-    header: 'Confirmar',
+    message: t('proveedores.confirmDeactivate', { nombre: prov.nombre }),
+    header: t('common.confirm'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancelar',
-    acceptLabel: 'Confirmar',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('common.confirm'),
     accept: () => eliminarProveedor(prov.id),
   })
 }
 
 function reactivar(prov) {
   confirm.require({
-    message: `¿Reactivar el proveedor "${prov.nombre}"?`,
-    header: 'Confirmar',
+    message: t('proveedores.confirmReactivate', { nombre: prov.nombre }),
+    header: t('common.confirm'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancelar',
-    acceptLabel: 'Confirmar',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('common.confirm'),
     accept: async () => {
       try {
         await updateMutation.mutateAsync({ id: prov.id, values: { activo: true } })
-        toast.success(`"${prov.nombre}" reactivado`)
+        toast.success(t('proveedores.reactivated', { nombre: prov.nombre }))
       } catch (err) {
-        toast.error(err.message || 'Error al reactivar proveedor')
+        toast.error(err.message || t('proveedores.reactivateError'))
       }
     },
   })
@@ -115,18 +115,18 @@ async function guardarIngrediente() {
   try {
     if (editingItem.value) {
       await updateIngredienteProveedor(editingItem.value.id, formData.value)
-      toast.success('Precio actualizado')
+      toast.success(t('proveedores.priceUpdated'))
     } else {
       await createIngredienteProveedor({
         ...formData.value,
         proveedor_id: editingProvId.value,
       })
-      toast.success('Ingrediente agregado al proveedor')
+      toast.success(t('proveedores.ingredientAdded'))
     }
     showModal.value = false
     refetch()
   } catch (err) {
-    toast.error(err.message || 'Error al guardar')
+    toast.error(err.message || t('proveedores.saveError'))
   } finally {
     submitPending.value = false
   }
@@ -134,18 +134,18 @@ async function guardarIngrediente() {
 
 function confirmarEliminarIngrediente(item, provNombre) {
   confirm.require({
-    message: `¿Quitar "${item.ingrediente?.nombre}" de ${provNombre}?`,
-    header: 'Confirmar',
+    message: t('proveedores.confirmRemoveIngredient', { nombre: item.ingrediente?.nombre, proveedor: provNombre }),
+    header: t('common.confirm'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancelar',
-    acceptLabel: 'Quitar',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('common.remove'),
     accept: async () => {
       try {
         await deleteIngredienteProveedor(item.id)
-        toast.success('Ingrediente quitado del proveedor')
+        toast.success(t('proveedores.ingredientRemoved'))
         refetch()
       } catch (err) {
-        toast.error(err.message || 'Error al eliminar')
+        toast.error(err.message || t('proveedores.removeError'))
       }
     },
   })
@@ -161,7 +161,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
         class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
       >
         <i class="pi pi-plus mr-2"></i>
-        Nuevo Proveedor
+        {{ t('proveedores.newSupplier') }}
       </router-link>
     </div>
 
@@ -169,7 +169,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
       <input
         v-model="searchQuery"
         type="text"
-        placeholder="Buscar proveedores..."
+        :placeholder="t('proveedores.search')"
         class="touch-input block w-full sm:max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
       />
       <div class="flex items-center">
@@ -181,7 +181,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
             : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
         >
           <i class="pi pi-eye-slash text-xs"></i>
-          Inactivos
+          {{ t('common.inactive') }}
         </button>
       </div>
     </div>
@@ -191,8 +191,8 @@ function confirmarEliminarIngrediente(item, provNombre) {
       :error="error"
       :empty="!filteredProveedores.length"
       empty-icon="pi pi-truck"
-      :empty-text="mostrarInactivos ? 'Sin proveedores inactivos' : (searchQuery ? 'Sin resultados para tu búsqueda' : 'No hay proveedores registrados')"
-      loading-text="Cargando proveedores..."
+      :empty-text="mostrarInactivos ? t('proveedores.emptyInactive') : (searchQuery ? t('proveedores.emptySearch') : t('proveedores.emptyAll'))"
+      :loading-text="t('proveedores.loading')"
     >
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
@@ -229,7 +229,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
                     class="px-2 py-1 text-xs font-medium rounded-full"
                     :class="prov.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
                   >
-                    {{ prov.activo ? 'Activo' : 'Inactivo' }}
+                    {{ prov.activo ? t('common.active') : t('common.inactive') }}
                   </span>
                 </td>
                 <td class="px-4 py-3" @click.stop>
@@ -245,14 +245,14 @@ function confirmarEliminarIngrediente(item, provNombre) {
                       @click="confirmarDesactivar(prov)"
                       class="text-red-500 hover:text-red-700 text-sm font-medium"
                     >
-                      Desactivar
+                      {{ t('proveedores.deactivate') }}
                     </button>
                     <button
                       v-else
                       @click="reactivar(prov)"
                       class="text-green-600 hover:text-green-800 text-sm font-medium"
                     >
-                      Reactivar
+                      {{ t('proveedores.reactivate') }}
                     </button>
                   </div>
                 </td>
@@ -266,11 +266,11 @@ function confirmarEliminarIngrediente(item, provNombre) {
                         @click.stop="abrirAgregarIngrediente(prov.id)"
                         class="text-xs text-primary-600 hover:text-primary-800 font-medium"
                       >
-                        <i class="pi pi-plus mr-1"></i>Agregar
+                        <i class="pi pi-plus mr-1"></i>{{ t('common.add') }}
                       </button>
                     </div>
                     <div v-if="!prov.ingredientes?.length" class="text-sm text-gray-400 text-center py-2">
-                      Sin ingredientes asociados
+                      {{ t('proveedores.noIngredients') }}
                     </div>
                     <div v-else class="max-w-lg space-y-1">
                       <div
@@ -324,7 +324,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
       <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">
-            {{ editingItem ? 'Editar precio' : 'Agregar ingrediente' }}
+            {{ editingItem ? t('proveedores.editPrice') : t('proveedores.addIngredient') }}
           </h3>
           <button @click="showModal = false" class="text-gray-400 hover:text-gray-600">
             <i class="pi pi-times text-xl"></i>
@@ -333,19 +333,19 @@ function confirmarEliminarIngrediente(item, provNombre) {
 
         <form @submit.prevent="guardarIngrediente" class="space-y-4">
           <div v-if="!editingItem">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Ingrediente <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('common.ingredient') }} <span class="text-red-500">*</span></label>
             <select
               v-model="formData.ingrediente_id"
               required
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             >
-              <option value="" disabled>Seleccionar ingrediente...</option>
+              <option value="" disabled>{{ t('proveedores.selectIngredient') }}</option>
               <option v-for="i in ingredientesDisponibles" :key="i.id" :value="i.id">{{ i.nombre }}</option>
             </select>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Precio actual <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('proveedores.currentPrice') }} <span class="text-red-500">*</span></label>
             <input
               v-model.number="formData.precio_actual"
               type="number"
@@ -357,7 +357,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Plazo de entrega (días)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('proveedores.deliveryTime') }}</label>
             <input
               v-model.number="formData.plazo_entrega_dias"
               type="number"
@@ -373,7 +373,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
               type="checkbox"
               class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             />
-            Proveedor preferido para este ingrediente
+            {{ t('proveedores.preferredSupplier') }}
           </label>
 
           <div class="flex justify-end gap-3 pt-2">
@@ -382,7 +382,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
               @click="showModal = false"
               class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
-              Cancelar
+              {{ t('common.cancel') }}
             </button>
             <button
               type="submit"
@@ -390,7 +390,7 @@ function confirmarEliminarIngrediente(item, provNombre) {
               class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
             >
               <i v-if="submitPending" class="pi pi-spin pi-spinner mr-2"></i>
-              {{ submitPending ? 'Guardando...' : 'Guardar' }}
+              {{ submitPending ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </form>

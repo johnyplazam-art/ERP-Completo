@@ -133,7 +133,7 @@ const puedeCancelar = (estado) => {
       <input
         v-model="searchQuery"
         type="text"
-        placeholder="Buscar por ID, estado o producto..."
+        :placeholder="t('produccion.search')"
         class="touch-input block w-full max-w-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
       />
     </div>

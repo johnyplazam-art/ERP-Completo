@@ -189,7 +189,7 @@ async function cambiarIdioma(idioma) {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.address') }}</label>
-            <input v-model="form.direccion" type="text" placeholder="Calle y número" :disabled="isSaving"
+            <input v-model="form.direccion" type="text" :placeholder="t('admin.streetPlaceholder')" :disabled="isSaving"
               class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
           </div>
 
@@ -235,7 +235,7 @@ async function cambiarIdioma(idioma) {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('profile.position') }}</label>
-            <input v-model="form.puesto" type="text" placeholder="Ej: Panadero, Administrador, Vendedor" :disabled="isSaving"
+            <input v-model="form.puesto" type="text" :placeholder="t('admin.positionPlaceholder')" :disabled="isSaving"
               class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 disabled:opacity-50" />
           </div>
         </div>

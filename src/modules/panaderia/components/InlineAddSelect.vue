@@ -64,7 +64,7 @@ async function handleCreate() {
     showModal.value = false
     resetForm()
   } catch (err) {
-    createError.value = err.message || 'Error al crear'
+    createError.value = err.message || t('crud.saveError')
   } finally {
     isCreating.value = false
   }
@@ -151,7 +151,7 @@ async function handleCreate() {
             @click="showModal = false"
             class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
-            Cancelar
+            {{ t('crud.cancel') }}
           </button>
           <button
             type="button"
@@ -160,7 +160,7 @@ async function handleCreate() {
             class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
           >
             <i v-if="isCreating" class="pi pi-spin pi-spinner mr-1"></i>
-            {{ isCreating ? 'Creando...' : createLabel }}
+            {{ isCreating ? t('crud.saving') : createLabel }}
           </button>
         </div>
       </div>

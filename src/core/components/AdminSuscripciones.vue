@@ -343,7 +343,7 @@ function formatIngresos(n) {
                     v-if="sus.estado === 'cancelada'"
                     @click="cambiarEstado(sus, 'activa')"
                     class="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50"
-                    title="Reactivar"
+                    :title="t('admin.reactivate')"
                   >
                     <i class="pi pi-refresh"></i>
                   </button>

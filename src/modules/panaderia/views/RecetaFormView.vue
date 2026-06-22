@@ -48,9 +48,9 @@ const ingredientFields = computed(() => [
 async function handleRecalcular() {
   try {
     await recalcularCosto.mutateAsync(Number(route.params.id))
-    toast.success('Costo recalculado exitosamente')
+    toast.success(t('recetas.costRecalculated'))
   } catch (err) {
-    toast.error(err.message || 'Error al recalcular costo')
+    toast.error(err.message || t('recetas.costRecalcError'))
   }
 }
 
@@ -134,14 +134,14 @@ const onSubmit = handleSubmit(async (formValues) => {
   try {
     if (isEdit.value) {
       await updateMutation.mutateAsync({ id: Number(route.params.id), values: formValues })
-      toast.success('Receta actualizada exitosamente')
+      toast.success(t('recetas.updated'))
     } else {
       await createMutation.mutateAsync(formValues)
-      toast.success('Receta creada exitosamente')
+      toast.success(t('recetas.created'))
     }
     router.push('/panaderia/recetas')
   } catch (err) {
-    toast.error(err.message || `Error al ${isEdit ? 'actualizar' : 'crear'} receta`)
+    toast.error(err.message || t('recetas.saveError'))
   }
 })
 </script>
@@ -153,7 +153,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         <i class="pi pi-arrow-left text-xl"></i>
       </router-link>
       <h2 class="text-2xl font-bold text-gray-900">
-        {{ isEdit ? 'Editar Receta' : 'Nueva Receta' }}
+        {{ isEdit ? t('recetas.editTitle') : t('recetas.createTitle') }}
       </h2>
     </div>
 
@@ -183,7 +183,7 @@ const onSubmit = handleSubmit(async (formValues) => {
               @update:model-value="setFieldValue('categoria_id', $event)"
               :options="categorias ?? []"
               placeholder="Seleccionar..."
-              create-label="Nueva categoría"
+              :create-label="t('recetas.createCategory')"
               :fields="categoriaFields"
               :create-fn="(data) => createCategoriaMutation.mutateAsync(data)"
             />
@@ -233,7 +233,7 @@ const onSubmit = handleSubmit(async (formValues) => {
               :options="unidades ?? []"
               :format-option="u => `${u.nombre} (${u.simbolo})`"
               placeholder="Seleccionar..."
-              create-label="Nueva unidad"
+              :create-label="t('recetas.createUnit')"
               :fields="unidadFields"
               :create-fn="(data) => createUnidadMutation.mutateAsync(data)"
             />
@@ -252,7 +252,7 @@ const onSubmit = handleSubmit(async (formValues) => {
             class="inline-flex items-center px-3 py-2 text-sm text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50"
           >
             <i class="pi pi-plus mr-1"></i>
-            Agregar
+            {{ t('recetas.formAddIngredient') }}
           </button>
         </div>
 
@@ -269,9 +269,9 @@ const onSubmit = handleSubmit(async (formValues) => {
                 onIngredienteChange(index, $event)
               "
               :options="ingredientes ?? []"
-              placeholder="Ingrediente..."
+              :placeholder="t('recetas.formIngredientPlh')"
               select-class="text-sm"
-              create-label="Nuevo ingrediente"
+              :create-label="t('recetas.createIngredient')"
               :fields="ingredientFields"
               :create-fn="(data) => createIngredienteMutation.mutateAsync(data)"
               @create="onIngredienteCreate(index, $event)"
@@ -289,7 +289,7 @@ const onSubmit = handleSubmit(async (formValues) => {
               min="0.01"
               step="0.01"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 text-sm text-center focus:ring-2 focus:ring-primary-500"
-              placeholder="Cant."
+              :placeholder="t('recetas.formQtyPlh')"
             />
             <p v-if="errors[`ingredientes[${index}].cantidad`]" class="mt-1 text-sm text-red-600">
               {{ errors[`ingredientes[${index}].cantidad`] }}
@@ -302,9 +302,9 @@ const onSubmit = handleSubmit(async (formValues) => {
               @update:model-value="setFieldValue('ingredientes[' + index + '].unidad_id', $event)"
               :options="unidades ?? []"
               :format-option="u => u.simbolo"
-              placeholder="Unidad"
+              :placeholder="t('recetas.formUnitPlh')"
               select-class="text-sm"
-              create-label="Nueva unidad"
+              :create-label="t('recetas.createUnit')"
               :fields="unidadFields"
               :create-fn="(data) => createUnidadMutation.mutateAsync(data)"
             />
@@ -315,7 +315,7 @@ const onSubmit = handleSubmit(async (formValues) => {
 
           <label class="flex items-center gap-1 text-xs text-gray-500 mt-2">
             <input type="checkbox" :checked="values.ingredientes[index].es_opcional" @change="setFieldValue('ingredientes[' + index + '].es_opcional', $event.target.checked)" class="rounded" />
-            Opc.
+            {{ t('recetas.formOptional') }}
           </label>
 
           <button
@@ -328,7 +328,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         </div>
 
         <div v-if="!values.ingredientes.length" class="text-center py-6 text-gray-400 text-sm">
-          No hay ingredientes. Agregá al menos uno.
+          {{ t('recetas.noIngredients') }}
         </div>
       </div>
 
@@ -347,10 +347,10 @@ const onSubmit = handleSubmit(async (formValues) => {
           >
             <i v-if="recalcularCosto.isPending.value" class="pi pi-spin pi-spinner mr-1"></i>
             <i v-else class="pi pi-refresh mr-1"></i>
-            Recalcular costo
+            {{ t('recetas.formRecalculateCost') }}
           </button>
         </div>
-        <p class="text-xs text-gray-400">Calculado desde precios de proveedores (ingrediente_proveedor.precio_actual)</p>
+        <p class="text-xs text-gray-400">{{ t('recetas.formCostTooltip') }}</p>
       </div>
 
       <!-- Submit -->
@@ -359,7 +359,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           to="/panaderia/recetas"
           class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
         >
-          Cancelar
+          {{ t('crud.cancel') }}
         </router-link>
         <button
           type="submit"
@@ -367,7 +367,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
         >
           <i v-if="isEdit ? updateMutation.isPending.value : createMutation.isPending.value" class="pi pi-spin pi-spinner mr-2"></i>
-          {{ isEdit ? (updateMutation.isPending.value ? 'Guardando...' : 'Actualizar Receta') : (createMutation.isPending.value ? 'Guardando...' : 'Guardar Receta') }}
+          {{ isEdit ? (updateMutation.isPending.value ? t('crud.saving') : t('recetas.updateRecipe')) : (createMutation.isPending.value ? t('crud.saving') : t('recetas.saveRecipe')) }}
         </button>
       </div>
     </form>

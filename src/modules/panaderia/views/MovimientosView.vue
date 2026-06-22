@@ -433,7 +433,7 @@ const formatCantidad = (val, unit) => {
             <input
               v-model="newForm.nota"
               type="text"
-              placeholder="Opcional"
+              :placeholder="t('movimientos.noteOptional')"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             />
           </div>

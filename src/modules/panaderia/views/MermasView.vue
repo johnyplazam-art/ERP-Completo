@@ -321,7 +321,7 @@ const tipoLabel = {
             <textarea
               v-model="formData.causa"
               rows="2"
-              placeholder="Describí la causa de la merma..."
+              :placeholder="t('mermas.causePlaceholder')"
               class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500"
             ></textarea>
           </div>

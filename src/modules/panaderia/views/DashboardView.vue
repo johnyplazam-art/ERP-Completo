@@ -50,7 +50,7 @@ const ordenesPorDia = computed(() => {
   return {
     labels: dias.map(d => d.slice(5)), // MM-DD
     datasets: [{
-      label: 'Órdenes',
+      label: t('dashboard.chartOrders'),
       data: counts,
       backgroundColor: '#3B82F6',
       borderRadius: 4,
@@ -75,7 +75,7 @@ const chartOptions = {
       class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2"
     >
       <i class="pi pi-exclamation-triangle"></i>
-      <span>Error al cargar datos del dashboard. Algunos datos pueden no estar disponibles.</span>
+      <span>{{ t('dashboard.errorLoading') }}</span>
     </div>
 
     <!-- Stats Cards -->

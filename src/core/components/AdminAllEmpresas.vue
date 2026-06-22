@@ -511,7 +511,7 @@ cargarEmpresas()
 
             <div class="space-y-1">
               <label class="block text-sm font-medium text-gray-700">{{ t('profile.address') }}</label>
-              <input v-model="formData.direccion" type="text" placeholder="Calle y número"
+              <input v-model="formData.direccion" type="text" :placeholder="t('admin.streetPlaceholder')"
                 class="touch-input block w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 px-3 py-2 text-sm" />
             </div>
 
