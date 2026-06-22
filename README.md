@@ -1,6 +1,7 @@
 # SIAS ERP
 
-Sistema ERP modular para gestión de panadería y pastelería.  
+Sistema ERP modular para gestión de panadería, pastelería y más.  
+Arquitectura extensible por módulos — cada industria es un módulo independiente.  
 Construido con Vue 3 + Supabase, desplegado en GitHub Pages.
 
 ---
@@ -12,19 +13,20 @@ Construido con Vue 3 + Supabase, desplegado en GitHub Pages.
 | Frontend | Vue 3.5 (Composition API, `<script setup>`) |
 | Build | Vite 6 |
 | Routing | Vue Router 4 (hash history) |
-| State | Pinia + TanStack Query |
+| State | Pinia (global) + TanStack Query (módulos) |
 | UI | PrimeVue 4 + Tailwind CSS 3 + PrimeIcons |
 | Formularios | Vee-Validate + Zod |
 | Backend | Supabase (PostgreSQL + RLS + Edge Functions) |
 | Auth | Supabase Auth (email/password, magic link) |
-| i18n | vue-i18n (español, inglés) |
+| i18n | vue-i18n v11 (~740 keys, español/inglés, legacy-free mode) |
+| Charts | Chart.js + vue-chartjs |
 | Despliegue | GitHub Pages (GitHub Actions) |
 
 ---
 
 ## Funcionalidades
 
-### Módulo Panadería (core)
+### Módulo Panadería (actual)
 
 | Funcionalidad | Estado |
 |---|---|
@@ -35,17 +37,13 @@ Construido con Vue 3 + Supabase, desplegado en GitHub Pages.
 | CRUD Proveedores | ✅ |
 | Gestión de Inventario | ✅ |
 | Órdenes de producción | ✅ |
+| Stock de productos terminados | ✅ |
+| Mermas y desperdicios | ✅ |
+| Movimientos de stock | ✅ |
 | Catálogos (categorías, unidades, conversiones) | ✅ |
 | Exportación a Excel (SheetJS) | ✅ |
-| Reportes en PDF (jsPDF) | 🛠️ (Migrado de html2pdf) |
-
-### Dashboard y Aplicaciones
-
-| Funcionalidad | Estado |
-|---|---|
-| Home dashboard tipo Odoo con grid de apps | ✅ |
-| CMS de aplicaciones (icono, orden, visibilidad) | ✅ |
-| Sidebar dinámico por app activa | ✅ |
+| Reportes en PDF (jsPDF) | ✅ |
+| Auditoría de acciones | ✅ |
 
 ### Multi-tenant
 
@@ -61,58 +59,135 @@ Construido con Vue 3 + Supabase, desplegado en GitHub Pages.
 | Funcionalidad | Estado |
 |---|---|
 | Login con email/password (Supabase Auth) | ✅ |
-| Signup con creación de empresa automática | ✅ |
+| Signup con creación de empresa automática + selección de industria | ✅ |
+| Recuperación de contraseña | ✅ |
 | Invitaciones por código para unirse a empresa existente | ✅ |
 | CRUD completo de usuarios por empresa | ✅ |
-| Roles estilo Odoo por aplicación (`admin`, `produccion`, `ventas`) | ✅ |
+| Roles estilo Odoo por aplicación | ✅ |
 | Permisos granulares (`ingredientes.create`, `ordenes.edit`, etc.) | ✅ |
-| Multi-idioma (español / inglés) con detección de idioma | ✅ |
 | Auditoría de acciones (composable `useAudit`) | ✅ |
+| Perfil de usuario (idioma, datos personales, documento, dirección) | ✅ |
+
+### i18n — Internacionalización completa
+
+| Funcionalidad | Estado |
+|---|---|
+| ~740 keys en español e inglés | ✅ |
+| 100% de componentes traducidos (sin texto hardcodeado visible) | ✅ |
+| Selector de idioma en navbar | ✅ |
+| Persistencia de preferencia en perfil de usuario + localStorage | ✅ |
+| Fallback a español automático | ✅ |
+| `@` escapado como `\@` para compatibilidad con vue-i18n | ✅ |
+| Detección automática del navegador | ✅ |
 
 ---
 
 ## Arquitectura
 
-### Frontend
+### Filosofía
+
+El sistema separa **core** (plataforma) de **módulos** (industrias).  
+El core **no conoce los módulos por nombre** — usa `currentAppSlug` dinámico.
 
 ```
 src/
-├── App.vue                     # Auth gate + router-view con spinner
-├── main.js                     # Entry point (Pinia, Router, PrimeVue, i18n)
-├── core/
+├── core/                    # ⬅ Plataforma (no tocar para nuevo módulo)
 │   ├── store/
-│   │   ├── auth.js             # Auth store (sesión, login, signup, perfil, empresas)
-│   │   └── app.js              # App store (sidebar, theme)
+│   │   ├── auth.js          # Sesión, multi-tenant, permisos, currentAppSlug
+│   │   └── app.js           # Sidebar, theme, admin apps
 │   ├── router/
-│   │   └── index.js            # Router base + Role-based Guards
+│   │   └── index.js         # Router + guards + registro de módulos
 │   ├── components/
-│   │   ├── LoginView.vue       # Login / Signup / Invitación
-│   │   ├── AppLayout.vue       # Layout principal con sidebar + header
-│   │   ├── HomeDashboard.vue   # Dashboard Odoo-like con grid de apps
-│   │   ├── AdminUsers.vue      # Admin de usuarios por empresa
-│   │   ├── AdminApps.vue       # CMS de aplicaciones
-│   │   └── LanguageSelector.vue
+│   │   ├── AppLayout.vue    # Sidebar dinámico por app activa
+│   │   ├── LoginView.vue    # Login / Signup / Invitación
+│   │   ├── ForgotPasswordView.vue
+│   │   ├── ResetPasswordView.vue
+│   │   ├── HomeDashboard.vue       # Launcher Odoo-like
+│   │   ├── PerfilView.vue          # Perfil con i18n + país
+│   │   ├── LanguageSelector.vue    # Switch de idioma
+│   │   ├── IndustrySelector.vue    # Selector de industria
+│   │   ├── DataState.vue           # Loading/error/empty genérico
+│   │   ├── AdminUsers.vue          # Usuarios multi-empresa
+│   │   ├── AdminAllEmpresas.vue    # Admin de empresas
+│   │   ├── AdminApps.vue           # CMS de aplicaciones
+│   │   ├── AdminPlanes.vue         # Planes de suscripción
+│   │   └── AdminSuscripciones.vue  # Suscripciones
 │   ├── composables/
-│   │   ├── usePermissions.js   # Helper de permisos (can, hasRole, isAdmin)
-│   │   └── useAudit.js         # Registro de auditoría
-│   └── supabase.js             # Cliente Supabase singleton + Session Persist
-├── modules/
-│   └── panaderia/
-│       ├── routes.js           # Rutas del módulo
-│       ├── views/              # 10+ vistas (Dashboard, Recetas, Inventario, etc.)
-│       ├── components/         # Componentes específicos del módulo
+│   │   ├── useAudit.js       # Registro de auditoría (appSlug dinámico)
+│   │   ├── useCurrency.js    # Formateo de moneda
+│   │   ├── useInvite.js      # Invitaciones por link
+│   │   └── useSelectValue.js # Helper para <select> nativo
+│   └── supabase.js           # Cliente Supabase singleton
+│
+├── modules/                  # ⬅ Módulos de industria
+│   └── panaderia/            #     (único por ahora)
+│       ├── routes.js         # Rutas relativas al path /panaderia
 │       ├── composables/
-│       │   ├── database.js     # Consultas Supabase (CRUDs con soporte paginación)
-│       │   └── queries.js      # TanStack Query keys + mutations
+│       │   ├── database.js   # Consultas Supabase específicas
+│       │   ├── queries.js    # TanStack Query hooks
+│       │   └── crud-factory.js  # Factory genérica para CRUD hooks
+│       ├── components/
+│       │   ├── CrudTable.vue      # Tabla CRUD genérica con modal
+│       │   ├── PaginatorBar.vue   # Paginación server-side
+│       │   └── InlineAddSelect.vue # Select con creación inline
+│       ├── views/            # 13 vistas
 │       └── validations/
-│           └── index.js        # Esquemas Zod compartidos
+│           └── index.js      # Schemas Zod compartidos
+│
 ├── i18n/
-│   ├── es.json                 # Traducciones español
-│   ├── en.json                 # Traducciones inglés
-│   └── index.js                # Configuración vue-i18n con auto-detección
-└── styles/
-    └── main.css                # Tailwind + estilos globales
+│   ├── es.json               # ~740 keys en español
+│   ├── en.json               # ~740 keys en inglés
+│   └── index.js              # vue-i18n config (legacy: false)
+│
+├── styles/
+│   └── main.css              # Tailwind + estilos globales
+│
+└── tests/
+    ├── unit/                 # Vitest (auth store, database, queries, app)
+    └── integration/          # RLS policies
 ```
+
+### Registro de nuevo módulo
+
+Para crear un módulo (ej: POS, Restaurant, Médico):
+
+```
+src/modules/<slug>/
+├── routes.js                  # Rutas relativas
+├── composables/
+│   ├── database.js            # Queries Supabase
+│   └── queries.js             # TanStack Query hooks
+├── components/                # Componentes privados
+├── views/                     # Vistas
+└── validations/
+    └── index.js               # Zod schemas
+```
+
+Luego registrar en 2 archivos del core:
+
+1. `src/core/router/index.js` — importar rutas y agregar child route
+2. `src/core/components/AppLayout.vue` — agregar nav items en `navRoutes`
+
+El `currentAppSlug` se sincroniza automáticamente con la ruta activa.
+
+### i18n
+
+Archivos planos por idioma (`es.json` / `en.json`) organizados por feature:
+
+```
+home.*, nav.*, admin.*, auth.*, common.*, errors.*, roles.*,
+dashboard.*, recetas.*, productos.*, inventario.*, proveedores.*,
+produccion.*, movimientos.*, mermas.*, stock.*, auditoria.*,
+crud.*, paginator.*, datastate.*, countries.*, language.*,
+theme.*, profile.*, pricing.*, subscriptions.*, companies.*
+```
+
+Reglas:
+- Todo string visible usa `t('section.key')`
+- Toda key va en AMBOS archivos simultáneamente
+- `@` literal se escapa como `\@`
+- `fallbackLocale: 'es'`
+- Ver `GOLDEN_RULES.md` para la guía completa
 
 ### Auth Flow
 
@@ -120,17 +195,15 @@ src/
 1. app.use(router) → beforeEach guard:
    - loading=true → skip (deja pasar la ruta inicial)
    - isAuthenticated=true → si va a /login, redirige a /
-   - !isAuthenticated → redirige a /login (guardando la ruta de retorno en query)
-   - role mismatch → redirige a home
+   - !isAuthenticated → redirige a /login
 
 2. App.vue onMounted → initialize():
-   - getSession() → recupera sesión de Supabase
-   - Si hay sesión → carga perfil + empresas
-   - Si está en /login y autenticado → redirige a /
-   - Si no está autenticado y no está en /login → redirige a /login
+   - Restaurar sesión de localStorage
+   - setSession() → recupera sesión de Supabase
+   - Si hay sesión → carga perfil + empresas + permisos
    - isReady = true → router-view visible
 
-3. onAuthStateChange → escucha cambios de sesión en tiempo real
+3. onAuthStateChange → escucha cambios en tiempo real
 ```
 
 ### Permisos
@@ -138,55 +211,57 @@ src/
 Modelo tipo Odoo: **rol → permisos → acciones**.
 
 ```
-Usuario → empresa_usuarios (empresa_id, rol_slug) → user_roles (role_id, app)
-         → user_permissions (action_name) vía RPC get_user_permissions()
+Usuario → empresa_usuarios → user_roles (role_id, application_id)
+       → get_user_permissions() RPC → action_names[]
 ```
 
-El composable `usePermissions` expone:
-- `can('ingredientes.create')` — verifica permiso específico
-- `hasRole('admin')` — verifica rol
-- `isAdmin`, `isProduccion`, `isVentas` — shorthands
+El store expone:
+- `tienePermiso('ingredientes.create')` — verifica permiso
+- `currentRol` — slug del rol activo
+- `esAdmin` — shorthand para platform admin o permisos de gestión
+
+---
+
+## Reglas de Desarrollo (GOLDEN_RULES.md)
+
+El proyecto incluye `GOLDEN_RULES.md` con reglas vinculantes para agentes de IA:
+
+| Sección | Qué cubre |
+|---------|-----------|
+| i18n | `t()` siempre, ambos archivos, escapar `@`, namespaces |
+| Arquitectura | Core no conoce módulos, cada módulo se auto-describe |
+| Reusabilidad | `DataState`, `CrudTable`, `crud-factory`, `useAudit` |
+| Estado | Pinia para global, TanStack Query para módulos |
+| Estilo | Composition API, naming conventions, sin comentarios |
+| Testing | Unit para stores, integration para RPC/RLS |
 
 ---
 
 ## Base de Datos
 
-### Migraciones (cronológico)
+31 migraciones en `supabase/migrations/`. Las principales:
 
 | Migración | Descripción |
 |-----------|-------------|
-| `20260605132957_create_productos` | Tablas base: productos, ingredientes, recetas |
-| `20260605133316_fix_rls_policies` | Corrección de policies RLS |
-| `20260605145000_modulo_panaderia` | Módulo panadería completo |
-| `20260605150000_sistema_seguridad_roles` | Roles, permisos y RLS |
-| `20260605160000_fix_fk_to_perfiles` | Fix FK a tabla perfiles |
-| `20260605170000_catalogos_rls_update_delete` | RLS para catálogos |
-| `20260605200000_multi_tenant` | Multi-tenant con empresa_id |
-| `20260609140000_odoo_roles_multiidioma` | Roles tipo Odoo + multi-idioma |
-| `20260609160000_fix_functions_dropped_column` | Fix funciones post-drop columnas |
-| `20260609170000_fix_user_roles_rls_recursion` | Fix RLS recursión en user_roles |
-| `20260609180000_get_usuarios_email_rpc` | RPC para listar usuarios por email |
-| `20260609190000_add_es_dueno_to_empresa_usuarios` | Flag es_dueno en empresa_usuarios |
-| `20260609200000_get_usuarios_email_all_rpc` | RPC usuarios email multi-empresa |
-| `20260609210000_add_delete_empresa_usuarios_policy` | Policy DELETE para empresa_usuarios |
-| `20260609220000_add_icon_orden_to_applications` | CMS apps: icono y orden |
+| `create_productos` | Tablas base: productos, ingredientes, recetas |
+| `modulo_panaderia` | Módulo panadería completo |
+| `sistema_seguridad_roles` | Roles, permisos y RLS |
+| `multi_tenant` | Multi-tenant con empresa_id |
+| `odoo_roles_multiidioma` | Roles tipo Odoo + multi-idioma |
+| `multi_industria_seed` | Seed multi-industria + RLS policies |
+
+Seed data en `supabase/seed.sql`.
 
 ---
 
 ## Desarrollo
 
 ```bash
-# Instalar dependencias
 npm install
-
-# Iniciar dev server (Vite HMR)
-npm run dev
-
-# Build producción
-npm run build
-
-# Vista previa del build
-npm run preview
+npm run dev        # Vite HMR
+npm run build      # Build producción
+npm run preview    # Vista previa del build
+npm test           # Vitest (unit + integration)
 ```
 
 Variables de entorno (`.env`):
@@ -204,7 +279,6 @@ Automático vía GitHub Actions: al pushear a `main`, se buildea y deploya a Git
 
 ```bash
 git push origin main
-# → https://<user>.github.io/erp-completo/
 ```
 
 ---
@@ -213,14 +287,14 @@ git push origin main
 
 | Fecha | Cambio |
 |-------|--------|
-| 2026-06-10 | Refactor de Seguridad (Role-based Guards), Limpieza de Dependencias, Mejora de Auth/Session, Optimización de i18n y Vite Build |
+| 2026-06-22 | i18n completo: ~740 keys, 100% componentes traducidos, @ escapados |
+| 2026-06-22 | GOLDEN_RULES.md: reglas vinculantes para agentes de IA |
+| 2026-06-22 | Refactor: módulos desacoplados del core (currentAppSlug dinámico) |
+| 2026-06-10 | Refactor de Seguridad (Role-based Guards), Limpieza de Dependencias |
 | 2026-06-09 | CMS de aplicaciones (icono, orden en dashboard) |
 | 2026-06-09 | Auth gate: spinner hasta resolver sesión, fix redirect loop |
 | 2026-06-05 | CRUD usuarios completo + invitaciones funcionales |
-| 2026-06-05 | Signup completo con creación de empresa |
-| 2026-06-04 | Multi-tenant con empresa switcher |
-| 2026-06-04 | Roles tipo Odoo con permisos granulares |
-| 2026-06-04 | Multi-idioma (español/inglés) |
+| 2026-06-04 | Multi-tenant, roles tipo Odoo, multi-idioma inicial |
 | 2026-06-01 | Migración a Supabase + Vite |
 | 2026-05-28 | SIAS ERP inicial con GAS+Sheets |
 
@@ -228,14 +302,13 @@ git push origin main
 
 ## SDD (Spec-Driven Development)
 
-Todo el desarrollo sigue el proceso SDD. Los artefactos (exploración, propuesta, specs, diseño, tareas, verificación, archivo) están documentados en Engram y pueden consultarse con el agente `gentle-orchestrator`.
+Todo el desarrollo sigue el proceso SDD. Los artefactos están documentados en Engram.
 
 Comandos disponibles:
 
-- `/sdd-new <cambio>` — inicia un nuevo cambio (exploración → propuesta)
-- `/sdd-ff <nombre>` — fast-forward: propuesta → specs → diseño → tareas
-- `/sdd-continue` — continúa la siguiente fase del cambio activo
-- `/sdd-explore <tema>` — investiga una idea sin crear archivos
+- `/sdd-new <cambio>` — inicia un nuevo cambio
+- `/sdd-ff <nombre>` — fast-forward completo
+- `/sdd-continue` — continúa la siguiente fase
 - `/sdd-apply [cambio]` — implementa tareas
 - `/sdd-verify [cambio]` — valida contra specs
-- `/sdd-archive [cambio]` — cierra el cambio y persiste estado
+- `/sdd-archive [cambio]` — cierra el cambio
