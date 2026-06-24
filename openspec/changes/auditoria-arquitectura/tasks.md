@@ -64,11 +64,11 @@ Sub-tasks:
 **Acceptance**: "Completar" invoca `completar_orden()` RPC, otras transiciones siguen igual
 
 Sub-tasks:
-- [ ] Create mutation or direct supabase.rpc call for completar_orden
-- [ ] Replace the "completada" branch in cambiarEstado()
-- [ ] Keep other state transitions (pendiente→en_proceso, cancelar) unchanged
-- [ ] Add loading state during RPC execution
-- [ ] Handle RPC error: show toast with error.message
+- [x] Create mutation or direct supabase.rpc call for completar_orden
+- [x] Replace the "completada" branch in cambiarEstado()
+- [x] Keep other state transitions (pendiente→en_proceso, cancelar) unchanged
+- [x] Add loading state during RPC execution
+- [x] Handle RPC error: show toast with error.message
 
 ### T2.2 — Cache IP en useAudit.js
 **File**: `src/core/composables/useAudit.js`
@@ -76,10 +76,10 @@ Sub-tasks:
 **Acceptance**: IP se cachea 30 min con stale-while-revalidate
 
 Sub-tasks:
-- [ ] Replace simple cache with TTL-based cache
-- [ ] Add stale-while-revalidate logic
-- [ ] Ensure errors don't block audit log creation
-- [ ] Test with simulated network failures
+- [x] Replace simple cache with TTL-based cache
+- [x] Add stale-while-revalidate logic
+- [x] Ensure errors don't block audit log creation
+- [ ] ~~Test with simulated network failures~~ (manual — QA)
 
 ### T2.3 — Fix formatCurrency decimales
 **File**: `src/core/composables/useCurrency.js`
@@ -87,7 +87,7 @@ Sub-tasks:
 **Acceptance**: `minimumFractionDigits: 2, maximumFractionDigits: 2`
 
 Sub-tasks:
-- [ ] Change both min/max fraction digits from 0 to 2
+- [x] Change both min/max fraction digits from 0 to 2
 
 ### T2.4 — Agregar manejo global de errores Supabase
 **File**: New file `src/core/supabase-error.js`
@@ -95,12 +95,12 @@ Sub-tasks:
 **Acceptance**: 401 → logout, 403 → toast, red → toast
 
 Sub-tasks:
-- [ ] Create supabase-error.js with error handler
-- [ ] Create wrapper that intercepts query errors
-- [ ] Handle 401: auto logout + redirect to login
-- [ ] Handle 403: toast "No tenés permisos"
-- [ ] Handle network error: toast "Error de conexión"
-- [ ] Integrate wrapper in main.js
+- [x] Create supabase-error.js with error handler
+- [x] Create wrapper that intercepts query errors
+- [x] Handle 401: auto logout + redirect to login
+- [x] Handle 403: toast "No tenés permisos"
+- [x] Handle network error: toast "Error de conexión"
+- [x] Integrate wrapper in main.js
 
 ---
 
@@ -121,11 +121,11 @@ Sub-tasks:
 **Acceptance**: database.js se importa desde cada archivo nuevo en lugar de tener todo inline
 
 Sub-tasks:
-- [ ] Create individual domain files
-- [ ] Import all from a barrel `index.js`
-- [ ] Update imports in queries.js to use new files
-- [ ] Verify no broken imports
-- [ ] Remove or deprecate original database.js
+- [x] Create individual domain files (10 files + barrel)
+- [x] Import all from a barrel `index.js`
+- [x] Update imports in queries.js and 4 Vue views to use barrel
+- [x] Verify no broken imports
+- [x] Deprecated original database.js with header (kept for backward compat)
 
 ### T3.2 — Tests unitarios para flujos críticos
 **File**: `tests/unit/auditoria-arquitectura/`
