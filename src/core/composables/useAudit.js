@@ -1,18 +1,46 @@
 import { supabase } from '@/core/supabase'
 import { useAuthStore } from '@/core/store/auth'
 
-let cachedIp = null
-let ipPromise = null
+const STALE_MS = 30 * 60 * 1000 // 30 min
+
+const ipCache = {
+  value: null,
+  timestamp: 0,
+  refreshing: false,
+}
+
+async function refreshIp() {
+  if (ipCache.refreshing) return ipCache.value || ''
+  ipCache.refreshing = true
+  try {
+    const r = await fetch('https://api.ipify.org?format=json')
+    const d = await r.json()
+    ipCache.value = d.ip
+    ipCache.timestamp = Date.now()
+    return d.ip
+  } catch {
+    return ipCache.value || ''
+  } finally {
+    ipCache.refreshing = false
+  }
+}
 
 async function resolvePublicIp() {
-  if (cachedIp) return cachedIp
-  if (ipPromise) return ipPromise
-  ipPromise = fetch('https://api.ipify.org?format=json')
-    .then(r => r.json())
-    .then(d => { cachedIp = d.ip; return d.ip })
-    .catch(() => '')
-    .finally(() => { ipPromise = null })
-  return ipPromise
+  const now = Date.now()
+
+  // Fresco — devolver inmediato
+  if (ipCache.value && (now - ipCache.timestamp) < STALE_MS) {
+    return ipCache.value
+  }
+
+  // Stale — devolver el valor viejo y refrescar en background
+  if (ipCache.value) {
+    refreshIp() // fire-and-forget
+    return ipCache.value
+  }
+
+  // Sin cache — esperar el fetch
+  return refreshIp()
 }
 
 function getUserAgent() {

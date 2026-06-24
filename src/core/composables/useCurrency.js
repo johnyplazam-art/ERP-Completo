@@ -10,8 +10,8 @@ export function formatCurrency(value, currencyCode = 'USD') {
   return Number(value).toLocaleString(cfg.locale, {
     style: 'currency',
     currency: currencyCode,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   })
 }
 

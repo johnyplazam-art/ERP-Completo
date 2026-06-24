@@ -1,11 +1,11 @@
 <script setup>
 import { useOrdenesProduccionQuery, useUpdateOrdenEstadoMutation, useDescontarInventarioMutation, calcularIngredientesNecesarios } from '../composables/queries'
-import { crearMovimientoPt } from '../composables/database'
 import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import DataState from '@/core/components/DataState.vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useAuthStore } from '@/core/store/auth'
+import { supabase } from '@/core/supabase'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
@@ -15,7 +15,7 @@ const authStore = useAuthStore()
 const { data: ordenes, isLoading, error } = useOrdenesProduccionQuery()
 const updateEstado = useUpdateOrdenEstadoMutation()
 const descontarInventario = useDescontarInventarioMutation()
-const empresaId = computed(() => authStore.currentEmpresaId)
+const completandoLoading = ref(false)
 const expandedRow = ref('')
 const calculosMap = ref({})
 const searchQuery = ref('')
@@ -62,7 +62,6 @@ const toggleRow = async (id) => {
 
 const cambiarEstado = async (id, nuevoEstado) => {
   try {
-    // Si va a en_proceso, descontar inventario automáticamente
     if (nuevoEstado === 'en_proceso') {
       const orden = ordenes.value?.find(o => o.id === id)
       if (orden?.detalles?.length) {
@@ -75,32 +74,28 @@ const cambiarEstado = async (id, nuevoEstado) => {
         await descontarInventario.mutateAsync({ ordenId: id, detalles })
         toast.success('Inventario descontado automáticamente')
       }
+      await updateEstado.mutateAsync({ id, estado: nuevoEstado })
+    } else if (nuevoEstado === 'completada') {
+      completandoLoading.value = true
+      const { error } = await supabase.rpc('completar_orden', { p_orden_id: id })
+      if (error) throw error
+      toast.success('Orden completada exitosamente')
+      queryClient.invalidateQueries({ queryKey: ['movimientos_mp'] })
+      queryClient.invalidateQueries({ queryKey: ['movimientos_pt'] })
+      queryClient.invalidateQueries({ queryKey: ['stock_ingrediente'] })
+    } else {
+      // cancelada y otras transiciones
+      await updateEstado.mutateAsync({ id, estado: nuevoEstado })
     }
-    await updateEstado.mutateAsync({ id, estado: nuevoEstado })
 
-    // Auto-valorizar PT al completar
-    if (nuevoEstado === 'completada') {
-      const orden = ordenes.value?.find(o => o.id === id)
-      if (orden?.detalles?.length) {
-        for (const d of orden.detalles) {
-          const precio = Number(d.costo_unitario_estimado || 0)
-          if (precio > 0 && d.producto_id) {
-            await crearMovimientoPt({
-              producto_id: d.producto_id,
-              tipo: 'ingreso',
-              cantidad: Number(d.cantidad_programada),
-              precio_unitario: precio,
-              nota: `Auto: orden #${id}`,
-              empresa_id: empresaId.value,
-              creado_por: authStore.user?.id,
-            })
-          }
-        }
-        queryClient.invalidateQueries({ queryKey: ['movimientos_pt'] })
-      }
-    }
+    queryClient.invalidateQueries({ queryKey: ['ordenes_produccion'] })
   } catch (err) {
-    toast.error(err.message || 'Error al cambiar estado')
+    // El error ya fue mostrado por el global handler (supabase-error)
+    if (!err.__supabaseHandled) {
+      toast.error(err.message || 'Error al cambiar estado')
+    }
+  } finally {
+    completandoLoading.value = false
   }
 }
 
@@ -188,8 +183,11 @@ const puedeCancelar = (estado) => {
             <button
               v-if="puedeAvanzar(orden.estado)"
               @click="cambiarEstado(orden.id, orden.estado === 'pendiente' ? 'en_proceso' : 'completada')"
-              class="px-3 py-1.5 text-sm bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200"
+              class="px-3 py-1.5 text-sm rounded-lg transition-colors inline-flex items-center gap-1"
+              :class="orden.estado === 'completada' ? 'bg-primary-100 text-primary-700 hover:bg-primary-200' : 'bg-primary-100 text-primary-700 hover:bg-primary-200'"
+              :disabled="completandoLoading"
             >
+              <i v-if="completandoLoading" class="pi pi-spin pi-spinner text-xs"></i>
               {{ orden.estado === 'pendiente' ? 'Iniciar' : 'Completar' }}
             </button>
             <button
