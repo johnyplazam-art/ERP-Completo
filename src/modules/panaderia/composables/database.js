@@ -1,3 +1,11 @@
+// ╔═══════════════════════════════════════════════════╗
+// ║  DEPRECATED — usar index.js (barrel domain) en   ║
+// ║  lugar de este archivo.                           ║
+// ║                                                   ║
+// ║  Importar desde: '../composables'                 ║
+// ║  (el barrel re-exporta de archivos por dominio)   ║
+// ╚═══════════════════════════════════════════════════╝
+
 import { supabase } from '@/core/supabase'
 
 // ─── Helpers ───────────────────────────────────────────

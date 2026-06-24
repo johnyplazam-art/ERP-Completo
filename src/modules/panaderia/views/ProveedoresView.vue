@@ -10,7 +10,7 @@ import {
   createIngredienteProveedor,
   updateIngredienteProveedor,
   deleteIngredienteProveedor,
-} from '../composables/database'
+} from '../composables'
 const { t } = useI18n()
 
 const { data: proveedores, isLoading, error, refetch } = useProveedoresQuery()
