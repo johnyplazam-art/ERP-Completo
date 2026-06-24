@@ -489,19 +489,23 @@ CREATE POLICY "mermas_delete"
 
 -- ─── PERFILES (propio usuario + platform_admin) ─────────────────
 
+DROP POLICY IF EXISTS "perfiles_select" ON public.perfiles;
 CREATE POLICY "perfiles_select"
   ON public.perfiles FOR SELECT TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "perfiles_insert_propio" ON public.perfiles;
 CREATE POLICY "perfiles_insert_propio"
   ON public.perfiles FOR INSERT TO authenticated
   WITH CHECK (id = auth.uid());
 
+DROP POLICY IF EXISTS "perfiles_update_propio" ON public.perfiles;
 CREATE POLICY "perfiles_update_propio"
   ON public.perfiles FOR UPDATE TO authenticated
   USING (id = auth.uid())
   WITH CHECK (id = auth.uid());
 
+DROP POLICY IF EXISTS "perfiles_delete_admin" ON public.perfiles;
 CREATE POLICY "perfiles_delete_admin"
   ON public.perfiles FOR DELETE TO authenticated
   USING (
