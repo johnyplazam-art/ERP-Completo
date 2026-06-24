@@ -14,7 +14,7 @@ import {
   crearMovimientoPt,
   fetchPrecioIngrediente,
   fetchPrecioCostoProducto,
-} from '../composables/database'
+} from '../composables'
 import PaginatorBar from '../components/PaginatorBar.vue'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()

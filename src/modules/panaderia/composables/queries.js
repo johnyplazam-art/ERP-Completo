@@ -75,7 +75,7 @@ import {
   countMovimientosMp,
   countMovimientosPt,
   generarProductosFaltantes,
-} from './database'
+} from './index'
 import { createCrudHooks, usePaginatedList } from './crud-factory'
 
 // ─── Query Keys ──────────────────────────────────────
