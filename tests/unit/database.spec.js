@@ -1093,7 +1093,7 @@ describe('audit_logs', () => {
     supabase.from.mockReturnValue(chain)
     const from = '2024-01-01T00:00:00Z'
     const to = '2024-12-31T23:59:59Z'
-    await mod.fetchAuditLogs({ from, to })
+    await mod.fetchAuditLogs({ dateFrom: from, dateTo: to })
     expect(chain.gte).toHaveBeenCalledWith('created_at', from)
     expect(chain.lte).toHaveBeenCalledWith('created_at', to)
   })
